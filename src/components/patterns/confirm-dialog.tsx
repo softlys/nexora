@@ -15,34 +15,50 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Confirmation for destructive or irreversible actions.
- * `onConfirm` may be async; the dialog stays open and shows progress until it settles.
+ * Uncontrolled with a `trigger`, or controlled with `open` / `onOpenChange`.
+ * `onConfirm` may be async; the dialog stays open and shows progress until it settles,
+ * and stays open when it returns false.
  */
 export function ConfirmDialog({
   trigger,
+  open: controlledOpen,
+  onOpenChange,
+  defaultOpen = false,
   title,
   description,
   confirmLabel = "Confirm",
   destructive = false,
   onConfirm,
+  children,
 }: {
-  trigger: ReactNode;
+  trigger?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  defaultOpen?: boolean;
   title: string;
   description: ReactNode;
   confirmLabel?: string;
   destructive?: boolean;
   onConfirm: () => Promise<boolean | void> | boolean | void;
+  children?: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
   const [pending, startTransition] = useTransition();
 
   return (
     <AlertDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
-      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
           <Button

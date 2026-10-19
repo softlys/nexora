@@ -78,11 +78,22 @@ erDiagram
 | `api_keys` | Hashed API keys with scopes. | `key_hash` unique, hidden from the client role |
 | `audit_logs` | Who changed what, with before/after, IP, user agent and request id. | Append-only for the application |
 
+## Migrations
+
+| File | Contents |
+| --- | --- |
+| `20261019000001_core_schema.sql` | Tables, composite tenant keys, indexes, `updated_at` triggers |
+| `20261019000002_row_level_security.sql` | RLS helpers and policies, column grants |
+| `20261019000003_admin_functions.sql` | Role changes and pipeline stage editing with invariants |
+| `20261020000001_crm_core.sql` | `next_order_number()` (numbers orders across the organization even though RLS hides other users' orders), list/search indexes |
+
 ## Derived values
 
 - **Order totals** are computed in `src/domain/orders/totals.ts` (discount before tax, rounded per line) and stored on the order.
 - **Payment status** is derived in `src/domain/orders/payment-status.ts` from collected simulated payments, the total, the order status and the due date.
-- **Last interaction** for a contact is derived from activities (phase 2).
+- **Last interaction** for a contact is the latest non-system activity linked to it (`src/domain/timeline.ts`).
+- **Order numbers** are `NX-YYYY-NNNN`, sequential per organization and year (`src/domain/rules/orders.ts`, `next_order_number()` in SQL).
+- **Deal probability** defaults to the stage probability and resets on every stage move; it can be overridden per deal.
 
 ## Seed data
 

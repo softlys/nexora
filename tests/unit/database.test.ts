@@ -200,4 +200,13 @@ describe("admin functions", () => {
       asUser(db, DEMO_USER_IDS.repDaniel, (tx) => tx.query("select public.create_pipeline_stage('Sneaky', 10, false, false)")),
     ).rejects.toThrow(/forbidden/);
   });
+
+  it("numbers orders across the whole organization even when a rep sees only their own", async () => {
+    const year = Number(seed.orders[0]!.order_number.slice(3, 7));
+    const all = seed.orders.filter((o) => o.order_number.startsWith(`NX-${year}-`)).map((o) => Number(o.order_number.slice(8)));
+    const next = await asUser(db, DEMO_USER_IDS.repDaniel, async (tx) => (await tx.query<{ n: string }>("select public.next_order_number($1) as n", [year])).rows[0]!.n);
+    expect(next).toBe(`NX-${year}-${String(Math.max(...all) + 1).padStart(4, "0")}`);
+    const visibleToRep = seed.orders.filter((o) => o.owner_id === DEMO_USER_IDS.repDaniel).length;
+    expect(visibleToRep).toBeLessThan(seed.orders.length);
+  });
 });

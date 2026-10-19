@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, SquareKanban } from "lucide-react";
+import { Building2, Handshake, ListChecks, Package, Plus, SquareKanban, Target, Users } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useShell } from "./shell-context";
 
-const ICONS = { stage: SquareKanban };
+const ICONS = { company: Building2, contact: Users, lead: Target, deal: Handshake, order: Package, task: ListChecks, stage: SquareKanban };
 
 /** Lists only create actions that exist and that the current role may perform. Hidden when empty. */
 export function QuickCreate() {

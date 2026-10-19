@@ -9,6 +9,11 @@ export function formatMoney(value: number, currency = "USD", locale = "en-US", c
   }).format(value);
 }
 
+/** Exact money with cents, for orders, items and payments. */
+export function formatAmount(value: number, currency = "USD", locale = "en-US"): string {
+  return new Intl.NumberFormat(locale, { style: "currency", currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+}
+
 export function formatNumber(value: number, locale = "en-US"): string {
   return new Intl.NumberFormat(locale).format(value);
 }

@@ -4,7 +4,7 @@
 
 NEXORA is a portfolio project built to production standards: one permission model enforced on the server and in the database, deterministic demo data, and tests for the rules that matter. All company and person data is fictional.
 
-> Status: under active development. Phase 1 (foundation) is complete; see [PROGRESS.md](PROGRESS.md) for what works today and what is next.
+> Status: under active development. Phases 1 (foundation) and 2 (CRM core) are complete; see [PROGRESS.md](PROGRESS.md) for what works today and what is next.
 
 ## What works today
 
@@ -14,6 +14,12 @@ NEXORA is a portfolio project built to production standards: one permission mode
 - Demo mode with no setup: deterministic seed data stored server-side, and a user switcher for Admin, Manager and Sales Rep.
 - Roles enforced on the server: navigation and direct URLs follow the same permission matrix.
 - Settings: organization, profile, team roles, pipeline stage editor and demo data reset.
+- CRM: companies, contacts and leads with URL-based search and filters, record pages with timelines, comments and activity logging.
+- Lead conversion into company, contact and deal (once only), deals with full change history and a detail drawer.
+- Sales pipeline kanban with drag and drop (also keyboard), optimistic moves with rollback, lost reasons, quick edit and a weighted forecast.
+- Orders with a line-item editor, enforced status transitions, simulated payments and derived payment status; won deals convert into exactly one order.
+- Tasks with list, month and week calendar, one-click complete; an activity feed; global record search in the command palette.
+- Server-side security: tenant isolation, 404 on guessed ids, strict input schemas, Origin checks, rate limits, audit log with field-level diffs and security events.
 
 ## Quick start (demo mode)
 

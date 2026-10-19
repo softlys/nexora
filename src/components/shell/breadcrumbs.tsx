@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
 import { NAV_ITEMS, SETTINGS_SECTIONS } from "@/domain/navigation";
+import { useRecordLabels } from "./record-label";
 
 const EXTRA_LABELS: Record<string, string> = { "/help": "Help" };
 
@@ -16,10 +17,11 @@ function labelFor(href: string): string | null {
 /** Breadcrumbs derived from the pathname and the navigation map. */
 export function Breadcrumbs() {
   const pathname = usePathname();
+  const recordLabels = useRecordLabels();
   const segments = pathname.split("/").filter(Boolean);
   const crumbs = segments.map((_, i) => {
     const href = `/${segments.slice(0, i + 1).join("/")}`;
-    return { href, label: labelFor(href) ?? decodeURIComponent(segments[i]!) };
+    return { href, label: labelFor(href) ?? recordLabels.get(href) ?? (/^[0-9a-f-]{36}$/.test(segments[i]!) ? "Details" : decodeURIComponent(segments[i]!)) };
   });
   if (crumbs.length === 0) crumbs.push({ href: "/", label: "Overview" });
 

@@ -67,6 +67,38 @@ Defined in `supabase/migrations/20261019000002_row_level_security.sql`.
 - Data lives in `.data/demo.json` on the server, never in browser storage. On serverless hosts the file system is not persistent, so demo changes can be lost on a cold start.
 - Server code enforces the same permission matrix in demo mode as in Supabase mode.
 
+## CRM security controls (phase 2)
+
+Every CRM mutation goes through `serviceAction` (`src/server/service-action.ts`) and a service in `src/server/services`.
+
+| Threat | Control | Where |
+| --- | --- | --- |
+| Tenant mixing | Organization and actor come only from the server session. Every `Tx` is bound to one organization and filters every read and write by it. SQL uses composite tenant foreign keys and RLS. | `src/server/db`, migrations |
+| IDOR (guessing ids) | `getVisible()` loads by id **and** checks the actor's scope. A record outside the scope returns the same 404 as a missing one and records `authz.denied` (reason `not_visible`). Links to other records (task → deal, activity → company, …) are checked the same way, so they cannot be used to probe ids. | `src/server/services/context.ts`, `records.ts` |
+| Mass assignment | All inputs are Zod `.strict()` schemas. `organization_id`, ids, stage history, totals, payment status, `is_simulated` and timestamps are never accepted. `owner_id` is accepted only where reassignment exists, and `resolveOwner()` refuses it for sales reps and outside a manager's team (`authz.denied`, reason `forbidden_field`). A sales rep cannot change the amount or currency of a won deal. | `src/domain/inputs.ts`, services |
+| XSS | Notes, comments, descriptions and activity bodies are plain text rendered as React text with `white-space: pre-wrap`. No `dangerouslySetInnerHTML` anywhere. External links are http(s) only and open with `rel="noopener noreferrer"`. Notification links must be internal paths. | `src/components/crm/*` |
+| Injection | No SQL is built from strings: the demo adapter filters in memory and the Supabase adapter uses the query builder (parameterized). Search input is capped at 100 characters; `escapeLike()` exists for any future `ILIKE` use. | `src/domain/list.ts` |
+| CSRF / cross-site calls | `serviceAction` checks that `Origin` matches the host on every mutation (in addition to Next.js's own Server Action check). `NEXORA_ALLOWED_ORIGINS` adds trusted origins. | `src/server/security/origin.ts` |
+| Enumeration and scraping | Per-user rate limits: search 30/min, create 60/min, other mutations 240/min (`rate_limit.exceeded`, once per window). List page size is capped at 100. The limiter is in memory; a multi-instance deployment needs a shared store. | `src/server/security/rate-limit.ts` |
+| Information leaks in errors | Users see generic messages with a short reference; details are logged with the request id. | `serviceAction`, `error.tsx` |
+| Destructive actions | Archive (anyone with edit rights) and restore are confirmed in the UI; permanent delete is admin-only and the audit entry keeps a copy of the deleted row. | `src/server/services/records.ts` |
+| Repudiation | Every change emits a typed domain event; the audit subscriber stores actor, role, action, target, field-level before/after, IP, user agent, request id and time. | `src/domain/events`, `audit_logs` |
+
+### Security events
+
+Emitted through the same event bus as domain events (`src/domain/events/types.ts`) and, in phase 2, stored in `audit_logs`. Phase 3 moves them into a dedicated, hash-chained `security_events` log for the external SIEM.
+
+| Event | When |
+| --- | --- |
+| `authz.denied` | A record outside the actor's scope was requested, an action was not permitted, or a forbidden field change was attempted. Reason: `not_visible`, `not_permitted` or `forbidden_field`. |
+| `validation.failed` | Invalid input. Aggregated: at most one event per user and action per minute, carrying the failure count. |
+| `rate_limit.exceeded` | A user exceeded a rate-limit bucket. Once per window. |
+| `record.owner_changed` | A record was reassigned. |
+
+Security events raised inside a unit of work are queued and written after it finishes, even when the operation itself fails.
+
+Supabase mode note: RLS hides out-of-scope rows entirely, so a guessed id looks exactly like a missing one. The 404 behavior is identical, but `authz.denied` with reason `not_visible` is only recorded in demo mode.
+
 ## Headers
 
 `next.config.ts` sets `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY` and a restrictive `Permissions-Policy`, and removes `X-Powered-By`.

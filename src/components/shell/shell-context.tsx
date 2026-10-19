@@ -13,7 +13,7 @@ export type ShellData = {
   settingsSections: SettingsSection[];
   notifications: { items: Notification[]; unread: number };
   demoUsers: Array<{ id: string; full_name: string; role: Role; title: string }>;
-  quickCreate: Array<{ label: string; href: string; icon: "stage" }>;
+  quickCreate: Array<{ label: string; href: string; icon: "company" | "contact" | "lead" | "deal" | "order" | "task" | "stage" }>;
   sidebarCollapsed: boolean;
 };
 
