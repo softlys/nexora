@@ -1,0 +1,16 @@
+import { ROLE_LABELS } from "@/lib/format";
+import { requirePermission } from "@/server/guards";
+import { ProfileForm } from "./profile-form";
+
+export const metadata = { title: "Profile" };
+
+export default async function ProfileSettingsPage() {
+  const { user } = await requirePermission("update", "profile");
+  return (
+    <ProfileForm
+      defaults={{ full_name: user.profile.full_name, title: user.profile.title }}
+      email={user.profile.email}
+      roleLabel={ROLE_LABELS[user.profile.role]!}
+    />
+  );
+}

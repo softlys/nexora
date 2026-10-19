@@ -1,0 +1,122 @@
+/**
+ * Demo-mode persistence: the whole dataset lives server-side in a JSON file
+ * (.data/demo.json by default, git-ignored). Never in browser storage.
+ *
+ * This module has no Next.js imports so the demo:seed / demo:reset scripts can use it.
+ * Writes are serialized through a promise queue and written atomically (temp file + rename).
+ */
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import type { Dataset } from "../../domain/entities";
+import { generateSeed, SEED_NUMBER } from "../../domain/seed/generate";
+import { daysBetween, shiftDataset } from "../../domain/seed/shift";
+
+export const STORE_VERSION = 1;
+
+export type StoreFile = {
+  version: number;
+  seed_number: number;
+  /** Day the dataset dates are currently relative to. */
+  anchored_at: string;
+  data: Dataset;
+};
+
+export function createSeededStore(now: Date = new Date()): StoreFile {
+  return { version: STORE_VERSION, seed_number: SEED_NUMBER, anchored_at: now.toISOString(), data: generateSeed(now) };
+}
+
+/** Moves all dates forward if the store was anchored on an earlier day. Returns true when shifted. */
+export function reanchor(store: StoreFile, now: Date = new Date()): boolean {
+  const days = daysBetween(store.anchored_at, now.toISOString());
+  if (days <= 0) return false;
+  store.data = shiftDataset(store.data, days);
+  store.anchored_at = now.toISOString();
+  return true;
+}
+
+export async function readStoreFile(path: string): Promise<StoreFile | null> {
+  try {
+    const raw = await readFile(resolve(path), "utf8");
+    const parsed = JSON.parse(raw) as StoreFile;
+    if (parsed.version !== STORE_VERSION || parsed.seed_number !== SEED_NUMBER) return null;
+    return parsed;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  }
+}
+
+export async function writeStoreFile(path: string, store: StoreFile): Promise<void> {
+  const target = resolve(path);
+  await mkdir(dirname(target), { recursive: true });
+  const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
+  await writeFile(temp, JSON.stringify(store), "utf8");
+  await rename(temp, target);
+}
+
+/**
+ * In-process store with a serialized write queue. One instance per data file.
+ */
+export class DemoStore {
+  private store: StoreFile | null = null;
+  private lastMtime: number | null = null;
+  private queue: Promise<unknown> = Promise.resolve();
+
+  constructor(private readonly path: string) {}
+
+  private async persist(store: StoreFile): Promise<void> {
+    await writeStoreFile(this.path, store);
+    this.lastMtime = await stat(resolve(this.path)).then((s) => s.mtimeMs, () => null);
+  }
+
+  private async load(): Promise<StoreFile> {
+    // Pick up changes made by another process (e.g. `npm run demo:reset` while the server runs).
+    const mtime = await stat(resolve(this.path)).then((s) => s.mtimeMs, () => null);
+    if (this.store && mtime !== this.lastMtime) this.store = null;
+
+    if (!this.store) {
+      const existing = await readStoreFile(this.path);
+      if (existing) {
+        this.store = existing;
+        this.lastMtime = mtime;
+        if (reanchor(this.store)) await this.persist(this.store);
+      } else {
+        this.store = createSeededStore();
+        await this.persist(this.store);
+      }
+    } else if (reanchor(this.store)) {
+      await this.persist(this.store);
+    }
+    return this.store;
+  }
+
+  /** Read-only snapshot. Callers must not mutate it; use `mutate` instead. */
+  async read(): Promise<Dataset> {
+    await this.queue;
+    return (await this.load()).data;
+  }
+
+  /** Runs `fn` against a copy of the dataset and persists it if `fn` succeeds. Mutations run one at a time. */
+  mutate<T>(fn: (data: Dataset) => T | Promise<T>): Promise<T> {
+    const run = this.queue.then(async () => {
+      const store = await this.load();
+      const draft = structuredClone(store.data);
+      const result = await fn(draft);
+      store.data = draft;
+      await this.persist(store);
+      return result;
+    });
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
+  reset(now: Date = new Date()): Promise<void> {
+    const run = this.queue.then(async () => {
+      this.store = createSeededStore(now);
+      await this.persist(this.store);
+    });
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+}

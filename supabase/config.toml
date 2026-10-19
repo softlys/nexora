@@ -1,0 +1,17 @@
+# Minimal Supabase CLI configuration for local development (`supabase start`).
+# Migrations live in supabase/migrations. Demo data is loaded with `npm run supabase:seed`,
+# not with a seed.sql file, so the same generator feeds demo mode and Supabase.
+project_id = "nexora"
+
+[api]
+schemas = ["public"]
+
+[db]
+major_version = 17
+
+[db.seed]
+enabled = false
+
+[auth]
+site_url = "http://localhost:3000"
+enable_signup = false
