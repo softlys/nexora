@@ -219,6 +219,8 @@ describe("security API for the SIEM", () => {
     expect(page2.json.data[0].sequence).toBe(2);
     expect(page2.json.data[0].prev_hash).toBe(page1.json.data[0].hash);
     expect(page2.json.meta.has_more).toBe(false);
+    const alias = await call(v1.securityEvents, request("GET", "/security-events?after=1&limit=1", { key: siem }));
+    expect(alias.json.data[0].sequence).toBe(2);
   });
 
   it("revokes keys and disables users with a reason, never the last active admin", async () => {

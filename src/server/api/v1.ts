@@ -140,13 +140,14 @@ export const securityEvents = apiRoute(endpoint("GET", "/security-events"), asyn
   requireCan(ctx, "view", "audit_log");
   const q = query as z.output<typeof securityEventsQuery>;
   const all = await ctx.db.read(ctx.actor.organization_id, (tx) => tx.find("security_events"));
-  const sorted = all.filter((e) => e.sequence > q.after_sequence).sort((a, b) => a.sequence - b.sequence);
+  const after = q.after ?? q.after_sequence;
+  const sorted = all.filter((e) => e.sequence > after).sort((a, b) => a.sequence - b.sequence);
   const pageRows = sorted.slice(0, q.limit);
   const last = all.reduce((m, e) => Math.max(m, e.sequence), 0);
   return {
     body: {
       data: pageRows,
-      meta: { next_after_sequence: pageRows.length ? pageRows[pageRows.length - 1]!.sequence : q.after_sequence, has_more: sorted.length > pageRows.length, last_sequence: last },
+      meta: { next_after_sequence: pageRows.length ? pageRows[pageRows.length - 1]!.sequence : after, has_more: sorted.length > pageRows.length, last_sequence: last },
     },
   };
 });

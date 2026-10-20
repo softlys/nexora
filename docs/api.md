@@ -83,7 +83,7 @@ A wrong or stale signature (older than 5 minutes) returns 401 `signature_invalid
 curl "$NEXORA_URL/api/v1/security-events?after_sequence=0&limit=500" -H "Authorization: Bearer $NEXORA_SIEM_KEY"
 ```
 
-Events come in sequence order, with `prev_hash` and `hash`, so the reader can verify the chain itself ([security-events.md](security-events.md)). Continue with `after_sequence = meta.next_after_sequence` while `meta.has_more` is true. `meta.last_sequence` is the current head of the chain.
+Events come in sequence order, with `prev_hash` and `hash`, so the reader can verify the chain itself ([security-events.md](security-events.md)). Continue with `after_sequence = meta.next_after_sequence` while `meta.has_more` is true. `after` is accepted as an alias of `after_sequence`. `meta.last_sequence` is the current head of the chain.
 
 Both response actions:
 - require a `reason` of at least 3 characters

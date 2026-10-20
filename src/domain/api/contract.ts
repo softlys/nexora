@@ -87,6 +87,7 @@ export const testEventInput = z.object({ message: z.string().max(500).optional()
 export const securityEventsQuery = z
   .object({
     after_sequence: z.coerce.number().int().min(0).default(0).describe("Return events with a sequence number greater than this."),
+    after: z.coerce.number().int().min(0).optional().describe("Alias of after_sequence (used by VIGIL). Takes precedence when both are sent."),
     limit: z.coerce.number().int().min(1).max(500).default(100),
   })
   .strict();
