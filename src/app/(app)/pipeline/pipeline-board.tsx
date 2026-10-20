@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/core";
 import { CalendarDays, GripVertical, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { DealDrawer, type DrawerDeal } from "@/components/crm/deal-drawer";
 import type { DealFormOptions } from "@/components/crm/deal-form";
@@ -71,6 +71,8 @@ export function PipelineBoard({ stages, deals: serverDeals, options, currency, d
   const [lostMove, setLostMove] = useState<{ dealId: string; stageId: string } | null>(null);
   const [, startTransition] = useTransition();
 
+  // Stable id: dnd-kit's own counter differs between server and client render (hydration mismatch).
+  const dndId = useId();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor));
   const stageById = useMemo(() => new Map(stages.map((s) => [s.id, s])), [stages]);
   const summary = useMemo(() => summarizeStages(stages, deals), [stages, deals]);
@@ -144,7 +146,7 @@ export function PipelineBoard({ stages, deals: serverDeals, options, currency, d
         <Stat label="Won in view" value={formatMoney(deals.filter((d) => d.is_won).reduce((s, d) => s + d.amount, 0), currency)} />
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)} accessibility={{ announcements }}>
+      <DndContext id={dndId} sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)} accessibility={{ announcements }}>
         <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6" data-testid="pipeline-board">
           <div className="flex min-w-max gap-3">
             {stages.map((stage) => {

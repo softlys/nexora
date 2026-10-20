@@ -14,7 +14,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
@@ -46,6 +46,7 @@ export function PipelineEditor({ stages: initial, openNew }: { stages: Stage[]; 
     setStages(initial);
   }
 
+  const dndId = useId();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -97,7 +98,7 @@ export function PipelineEditor({ stages: initial, openNew }: { stages: Stage[]; 
       <p id="reorder-help" className="mb-3 text-xs text-text-muted">
         Drag a stage by its handle, or focus the handle and use Space and the arrow keys. The arrow buttons also reorder.
       </p>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={stages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <ol className="divide-y divide-border rounded-md border border-border" aria-label="Pipeline stages in order">
             {stages.map((stage, index) => (

@@ -7,7 +7,142 @@ The project is built in four phases (plus a separate companion app, VIGIL). Each
 | 1 | Foundation: shell, design system, data model, seed, demo mode, roles, base settings | Done |
 | 2 | CRM core: companies, contacts, leads, deals, pipeline, orders, tasks, search, security hardening | Done |
 | 3 | Dashboard, analytics, automation engine, security telemetry | Done |
-| 4 | Integrations, public API, UI kit, documentation, release | Not started |
+| 4 | Integrations, public API, UI kit, documentation, release | Done |
+
+
+## Final verification (2026-10-20)
+
+Run from the project root on Windows 11, Node 24.21, after a clean install:
+
+| Command | Result |
+| --- | --- |
+| `npm ci` | pass. npm only warns that the esbuild and unrs-resolver install scripts await approval; all commands below work |
+| `npm run lint` | pass, 0 problems |
+| `npm run typecheck` | pass |
+| `npm test` | 212 passed (13 files) |
+| `npm run build` | pass |
+| `npm run test:e2e` | 17 passed (production build, demo mode, isolated data file) |
+| Browser | All main pages render without console errors. No horizontal scroll at 390 px. README screenshots taken from the production build with Playwright |
+
+Next: VIGIL, the companion SIEM, in its own repository.
+
+---
+
+## Phase 4: Integrations, API, UI kit, release (2026-10-20)
+
+### Done
+
+**A. Outbound webhooks**
+- Event catalog: `lead.created`, `deal.stage_changed`, `deal.won`, `order.created`, `task.overdue` and `workflow.webhook`, all raised by the Send webhook step. Envelope: `{ event_id, type, occurred_at, organization_id, data }`, where `data` carries a snapshot of the record.
+- Signature header `X-Nexora-Signature: t=<unix>,v1=HMAC-SHA256(secret, "t.body")`, plus `X-Nexora-Event-Id` and `X-Nexora-Event-Type`. There is an optional header-token mode for receivers like n8n Header Auth.
+- Delivery:
+  - 5 s timeout and a 64 KB response cap.
+  - Retries for timeouts, 408, 429 and 5xx after 1 and 4 minutes, run by the scheduler, with at most 3 attempts.
+  - Every attempt is stored in `webhook_deliveries` with status code, duration, response excerpt, error, next retry and reason (event, test, retry, redeliver).
+  - Each event is delivered once per integration.
+  - Webhooks are sent after the HTTP response (Next.js `after`), so a slow receiver never delays a user action.
+- SSRF protection:
+  - https only in production; no credentials, no internal hostnames.
+  - DNS is checked inside the socket's lookup hook, so the checked address is the connected address.
+  - Blocked: private, loopback, link-local (including 169.254.169.254), CGNAT, multicast, documentation and metadata ranges, for IPv4, IPv6 and IPv4-mapped addresses.
+  - Redirects are followed only to the same host, at most 2.
+  - Checked when a URL is saved and again at send time. Every block raises `security.ssrf_blocked`.
+- Signing secrets are encrypted at rest (AES-256-GCM, `NEXORA_ENCRYPTION_KEY`; demo mode generates a key into `.data/`). They are shown once, then masked to the last 4 characters. Column grants hide them from the client role.
+- The Send webhook workflow step and the `webhook.received` trigger are implemented. Events caused by workflow runs are delivered too, through the engine's `onEvent` hook.
+
+**B. Public API `/api/v1`**
+- API keys (Settings → API keys, admin only):
+  - Format `nxk_<int|siem>_<prefix>_<secret>`. Stored as SHA-256 and shown once.
+  - Scopes: `leads:write`, `records:read`, `events:write`, `security:read`, `security:respond`.
+  - Integration and SIEM keys are separate kinds with disjoint scopes.
+  - A key acts as its creator: a disabled creator blocks the key.
+- Endpoints:
+  - `POST /leads` (runs the New lead automation)
+  - `GET /companies`, `/contacts`, `/deals`, `/orders` (paginated, permission-scoped)
+  - `POST /events` (raises `webhook.received`, with an optional integration signature check)
+  - `POST /test-event`, `GET /health`
+  - `GET /security-events` (cursor by sequence, includes chain hashes)
+  - `POST /security-actions/revoke-api-key` and `/disable-user` (reason required; audit_logs plus a security event; never the last active admin; a key cannot revoke itself)
+- Shared pipeline:
+  - strict Zod validation, envelope `{ data, meta }` / `{ error: { code, message, details, request_id } }`
+  - 64 KB body limit, `Idempotency-Key` with a stored response for 24 h (`api_idempotency_keys`)
+  - in-memory rate limits: 120 per minute per key, 20 failed authentications per minute per IP
+- Security events: `api_key.created`, `api_key.revoked`, `api_key.used_after_revoke`, `api.auth_failed`, `api.scope_denied`, `webhook.signature_invalid`, `security.ssrf_blocked`, `integration.changed` and `integration.webhook_sent`. Audit rows from API calls carry `via_api_key_id`. Automation runs started by the API stay `service` actors, with `caused_by_api_key_id`.
+- OpenAPI 3.1 at `/api/v1/openapi.json`, generated from the contract's Zod schemas (`z.toJSONSchema`; named schemas become components). There is an in-app API reference at `/integrations/api`.
+
+**C. Integrations section**
+- The overview lists Make, n8n, Generic webhook and Email provider. Status is honest:
+  - Not configured
+  - Configured (untested)
+  - Connected (last test succeeded, with its time)
+  - Error
+- Each webhook provider page has:
+  - URL, auth mode, events and an enable switch
+  - Send test event, Rotate secret and Disconnect
+  - a delivery log with status and event filters, a payload and response viewer, and Redeliver with the same `event_id`
+  - a step-by-step guide
+- The Make guide covers new lead → custom webhook → Slack or email → `POST /events` → activity in NEXORA. The n8n guide covers Webhook → validate → IF → NEXORA API → notify → log.
+- **No Make blueprint and no n8n workflow JSON are shipped**: their formats could not be verified against current vendor documentation, so the written guides are the supported path. This is stated in the app and in the docs.
+- "Which engine runs what" panel, plus a warning when an event routed to an external platform is also handled by an enabled internal workflow (it lists the workflow's actions). The idempotency strategy is documented in `docs/architecture.md`.
+- Email provider page: Resend through env vars, with a real test email that sets the status. Without configuration, Send email steps are logged as skipped. SMTP is not implemented.
+
+**D. Figma & UI Kit**
+- `/ui-kit` living style guide, rendered from `tokens/tokens.json` and the real components. It covers:
+  - principles
+  - semantic and primitive colors (theme-aware)
+  - typography, spacing, radius and shadows
+  - buttons and states
+  - inputs and validation
+  - tables and badges
+  - modals, drawers, confirmations and toasts
+  - tabs, cards, empty and loading states
+  - charts
+  - responsive rules and accessibility
+- Downloads: `/ui-kit/tokens-studio.json`, in Tokens Studio format with sets core, light and dark, the themes Light and Dark, and aliases kept; and the source `/ui-kit/tokens.json`.
+- `docs/figma-design-system.md` covers the plugin steps, the file structure 01–08 and the sync process. No live Figma connection is claimed.
+
+**E. Hardening**
+- Every route handler goes through `apiRoute` or the cron secret check. Every server action uses `serviceAction` or `runAction`, and `runAction` now also checks `Origin`.
+- Audit entries for API keys (create, revoke), integration settings (create, update, secret rotation, disconnect) and SIEM responses.
+- Responsive pass at 390 px: no main screen scrolls horizontally any more. Fixes:
+  - grid and flex children got `min-w-0`
+  - `relative` on scroll wrappers, so absolutely positioned `sr-only` text no longer widens the page
+  - record header actions wrap
+- Fixed a hydration mismatch on the pipeline board and the stage editor (dnd-kit ids). The console is now clean on all main pages.
+
+**F. Documentation**
+- README rewritten: features, architecture diagram, real screenshots, setup, demo mode, Supabase, integration guides, limitations and roadmap.
+- New docs: `architecture.md`, `api.md`, `make-integration.md`, `n8n-integration.md`, `figma-design-system.md`, `deployment.md` (Vercel + Supabase, cron, all env vars, demo storage on serverless), `demo-guide.md` (5-minute click path).
+- Updated: `security.md`, `security-events.md`, `data-model.md`, `automation-guide.md` and `.env.example` (`NEXORA_ENCRYPTION_KEY`, `NEXORA_WEBHOOK_ALLOW_PRIVATE`).
+- Migration `20261022000001_integrations_api.sql`.
+
+**G. Tests**
+- Vitest: 212 tests (+47).
+  - `integrations.test.ts`: SSRF ranges and URL rules; sign and verify (tamper, stale, malformed); backoff; event mapping; encrypted secret shown once; signed delivery; one delivery per event; 3-attempt retry log; no retry on 4xx; test status Connected or Error; redelivery with the same id; SSRF block on save; real HTTP transport (loopback block, same-host redirects, size cap).
+  - `api.test.ts`: key authentication (missing, wrong, revoked), scope denial, kind separation, validation errors, 413, `POST /leads` with the New lead automation, `Idempotency-Key` replay and reuse, inbound event running a workflow, integration signature check, the SIEM read API with the hash chain, revoke and disable (last admin refused), OpenAPI coverage of every endpoint and route file.
+- Playwright: 17 tests (+3). The main journey: API key in Settings → lead via the API (with an idempotent replay and a wrong key) → follow-up task appears → convert to a deal → Won → exactly one order → the dashboard's Won deal value rises by the deal amount. Also: honest integration statuses, the API reference and OpenAPI, a refused metadata URL, and the UI kit with the Tokens Studio export.
+
+### Verified in this session
+
+See the final verification table at the top of this file.
+
+### Known issues
+
+- The Supabase adapter, Auth and RLS are verified on PGlite with a stubbed `auth` schema, not against a live Supabase project.
+- Rate limits, the failed-auth limiter and the bulk-read detector are in memory, per instance.
+- Webhook sends run after the response, and retries run from the scheduler. A crash between the commit and the send can drop an attempt (no durable queue). Without a cron, retries and `task.overdue` events wait for a manual scheduler run.
+- Unknown API keys (no matching prefix) belong to no organization, so they are logged only on the server, not in a security log.
+- No SMTP; email goes through Resend only. No Make blueprint and no n8n workflow file (see above).
+- `NEXORA_ENCRYPTION_KEY` rotation is manual: rotate the integration secrets after changing it.
+
+### Decisions
+
+- **The contract drives the API.** Zod schemas in `src/domain/api/contract.ts` are used by the handlers, the OpenAPI generator and the reference page. A test asserts every endpoint has a route file and a path in the document.
+- **Encrypt signing secrets, hash API keys.** HMAC signing needs the secret itself; API keys only need comparing.
+- **API keys act as their creator.** Scopes limit what a key may call; the creator's role limits what it may see. Disabling the creator disables the key.
+- **Integration and SIEM keys are different kinds.** A leaked Make key can never read the security log or disable users.
+- **Data changes belong to one engine.** External platforms call back through `POST /events`, and a NEXORA workflow performs the change. Idempotency is per layer: run key, event id, `Idempotency-Key`, unique side effects.
+- **Prefer honest gaps to unverified artifacts.** No blueprint or workflow files whose format could not be checked.
 
 ---
 
