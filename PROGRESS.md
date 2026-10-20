@@ -24,7 +24,7 @@ Run from the project root on Windows 11, Node 24.21, after a clean install:
 | `npm run test:e2e` | 17 passed (production build, demo mode, isolated data file) |
 | Browser | All main pages render without console errors. No horizontal scroll at 390 px. README screenshots taken from the production build with Playwright |
 
-Next: VIGIL, the companion SIEM, in its own repository.
+VIGIL, the companion SIEM, is built in its own repository (https://github.com/softlys/vigil). It was verified live against this NEXORA: ingestion with chain verification, a drill, and an approved key revocation through the security API.
 
 ---
 

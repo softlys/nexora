@@ -36,7 +36,7 @@ All company and person data is fictional.
   - Org API keys, stored hashed and limited by scopes.
   - Zod validation, `Idempotency-Key` support and per-key rate limits.
   - An OpenAPI 3.1 document generated from the same schemas the server validates with, plus an in-app reference.
-- **Security telemetry.** A tamper-evident, hash-chained security log with in-app verification. A security API lets the companion SIEM (VIGIL) read the log and respond: revoke a key or disable a user.
+- **Security telemetry.** A tamper-evident, hash-chained security log with in-app verification. A security API lets the companion SIEM, [VIGIL](https://github.com/softlys/vigil), read the log and respond: revoke a key or disable a user.
 - **Design system.** Tokens drive every color and size. The living style guide at `/ui-kit` is rendered from the real components, and the tokens export to Tokens Studio for Figma.
 - **Roles.** Admin, Manager and Sales Rep. Navigation, direct URLs, server actions, the API and row-level security all follow the same permission matrix.
 
@@ -154,7 +154,7 @@ Deployment to Vercel, the cron setup and all environment variables are covered i
 - Webhook delivery through a durable queue instead of the request and scheduler.
 - Import and export of records (CSV).
 - Real payment provider integration behind the simulated payments.
-- VIGIL, the companion SIEM, in its own repository.
+- Further VIGIL detections as NEXORA logs more activity (successful API key use, sign-ins in demo mode).
 
 ## License
 
