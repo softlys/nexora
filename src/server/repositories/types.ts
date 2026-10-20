@@ -19,6 +19,8 @@ export type RequestMeta = {
   ip: string | null;
   user_agent: string | null;
   request_id: string;
+  /** Set when the request was authenticated with an API key (public API). */
+  api_key_id?: string | null;
 };
 
 export type RepoContext = {

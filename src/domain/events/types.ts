@@ -12,7 +12,7 @@ import { isSecurityAction, type SecurityAction, type SecurityOutcome, type Secur
 
 export type FieldChanges = Record<string, { before: unknown; after: unknown }>;
 
-export type RecordEntity = EntityType | "comment" | "activity" | "payment" | "order_item" | "workflow" | "notification";
+export type RecordEntity = EntityType | "comment" | "activity" | "payment" | "order_item" | "workflow" | "notification" | "integration" | "api_key" | "profile";
 
 /** Payload for security events without a dedicated type below. */
 export type SecurityPayload = {
@@ -59,7 +59,7 @@ export type EventType = keyof Payloads;
 
 export type EventActor = { id: string; role: Role } | { id: null; role: "service" } | { id: null; role: "anonymous" };
 
-export type EventMeta = { ip: string | null; user_agent: string | null; request_id: string };
+export type EventMeta = { ip: string | null; user_agent: string | null; request_id: string; api_key_id?: string | null };
 
 export type DomainEvent<T extends EventType = EventType> = {
   [K in T]: {

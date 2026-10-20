@@ -53,6 +53,7 @@ export const INTEGRATION_PROVIDERS = ["make", "n8n", "generic_webhook", "email"]
 export const EXECUTION_STATUSES = ["running", "success", "failed", "skipped"] as const;
 export const DELIVERY_STATUSES = ["pending", "success", "failed"] as const;
 export const API_KEY_KINDS = ["integration", "siem"] as const;
+export const DELIVERY_REASONS = ["event", "test", "retry", "redeliver"] as const;
 export const ORDER_CONVERSION_MODES = ["draft", "confirmed"] as const;
 
 export type CompanySize = (typeof COMPANY_SIZES)[number];
@@ -393,8 +394,16 @@ export const integrationSettingSchema = z.object({
   name: requiredText(120),
   /** Non-secret configuration only (URLs, options). */
   config: z.record(z.string(), z.unknown()),
-  /** Hash of the signing secret; the secret itself is shown once. */
+  /** SHA-256 of the signing secret, to recognize it without decrypting. */
   secret_hash: z.string().nullable(),
+  /**
+   * The signing secret, encrypted with AES-256-GCM under the server key
+   * (src/server/integrations/secret-box.ts). HMAC signing needs the secret itself, so a hash
+   * is not enough. Never sent to the browser; the UI shows `secret_preview` only.
+   */
+  secret_ciphertext: z.string().nullable(),
+  /** Last four characters of the secret, for the masked display. */
+  secret_preview: z.string().max(8).nullable(),
   subscribed_events: z.array(z.string().max(64)).max(32),
   enabled: z.boolean(),
   last_tested_at: timestamp.nullable(),
@@ -418,6 +427,8 @@ export const webhookDeliverySchema = z.object({
   response_excerpt: shortText(2000).nullable(),
   error: shortText(1000).nullable(),
   next_retry_at: timestamp.nullable(),
+  /** Why this attempt was made. Redeliveries reuse the original event_id. */
+  reason: z.enum(DELIVERY_REASONS),
   created_at: timestamp,
 });
 export type WebhookDelivery = z.infer<typeof webhookDeliverySchema>;
@@ -436,6 +447,21 @@ export const apiKeySchema = z.object({
   revoked_at: timestamp.nullable(),
 });
 export type ApiKey = z.infer<typeof apiKeySchema>;
+
+/** Stored responses for POST requests that carried an Idempotency-Key header (kept 24 hours). */
+export const apiIdempotencyKeySchema = z.object({
+  id,
+  organization_id: id,
+  api_key_id: id,
+  key: z.string().min(1).max(200),
+  /** SHA-256 of method, path and body: the same key with a different request is refused. */
+  request_hash: z.string().regex(/^[a-f0-9]{64}$/),
+  status_code: z.number().int(),
+  response_body: z.record(z.string(), z.unknown()),
+  created_at: timestamp,
+  expires_at: timestamp,
+});
+export type ApiIdempotencyKey = z.infer<typeof apiIdempotencyKeySchema>;
 
 export const auditLogSchema = z.object({
   id,
@@ -479,6 +505,7 @@ export const TABLES = [
   "integration_settings",
   "webhook_deliveries",
   "api_keys",
+  "api_idempotency_keys",
   "audit_logs",
   "security_events",
 ] as const;
@@ -506,6 +533,7 @@ export type Dataset = {
   integration_settings: IntegrationSetting[];
   webhook_deliveries: WebhookDelivery[];
   api_keys: ApiKey[];
+  api_idempotency_keys: ApiIdempotencyKey[];
   audit_logs: AuditLog[];
   security_events: SecurityEvent[];
 };
@@ -532,6 +560,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   integration_settings: integrationSettingSchema,
   webhook_deliveries: webhookDeliverySchema,
   api_keys: apiKeySchema,
+  api_idempotency_keys: apiIdempotencyKeySchema,
   audit_logs: auditLogSchema,
   security_events: securityEventSchema,
 };

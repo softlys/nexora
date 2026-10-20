@@ -12,7 +12,7 @@ import { generateSeed, SEED_NUMBER } from "../../domain/seed/generate";
 import { daysBetween, shiftDataset } from "../../domain/seed/shift";
 
 /** Bump when the dataset shape changes; older files are replaced by a fresh seed. */
-export const STORE_VERSION = 2;
+export const STORE_VERSION = 3;
 
 export type StoreFile = {
   version: number;

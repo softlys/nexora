@@ -10,6 +10,10 @@ export const RATE_LIMITS = {
   search: { limit: 30, windowSeconds: 60 },
   create: { limit: 60, windowSeconds: 60 },
   mutate: { limit: 240, windowSeconds: 60 },
+  /** Public API, per key. */
+  api: { limit: 120, windowSeconds: 60 },
+  /** Public API requests with a missing or wrong key, per client IP. */
+  api_auth: { limit: 20, windowSeconds: 60 },
 } satisfies Record<string, RateLimitRule>;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;
@@ -19,7 +23,7 @@ type Window = { start: number; count: number };
 export class RateLimiter {
   private windows = new Map<string, Window>();
 
-  constructor(private readonly rules: Record<string, RateLimitRule> = RATE_LIMITS) {}
+  constructor(readonly rules: Record<string, RateLimitRule> = RATE_LIMITS) {}
 
   /** Records a hit and returns whether it is allowed. */
   hit(key: string, bucket: string, now = Date.now()): { allowed: boolean; remaining: number; rule: RateLimitRule; firstBlocked: boolean } {
@@ -44,7 +48,8 @@ export class RateLimiter {
 
 const globalLimiter = globalThis as unknown as { __nexoraRateLimiter?: RateLimiter };
 export function getRateLimiter(): RateLimiter {
-  globalLimiter.__nexoraRateLimiter ??= new RateLimiter();
+  // Recreated when the rules change (dev hot reload keeps globalThis across module versions).
+  if (globalLimiter.__nexoraRateLimiter?.rules !== RATE_LIMITS) globalLimiter.__nexoraRateLimiter = new RateLimiter();
   return globalLimiter.__nexoraRateLimiter;
 }
 

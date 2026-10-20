@@ -57,7 +57,7 @@ export function RunSchedulerButton() {
             return;
           }
           const r = result.data;
-          toast.success("Scheduler ran", { description: `${r.dateEvents} date triggers, ${r.executions} new runs, ${r.resumed} resumed${r.heartbeat ? ", heartbeat recorded" : ""}.` });
+          toast.success("Scheduler ran", { description: `${r.dateEvents} date triggers, ${r.executions} new runs, ${r.resumed} resumed, ${r.webhookRetries} webhook retries${r.heartbeat ? ", heartbeat recorded" : ""}.` });
           router.refresh();
         })
       }

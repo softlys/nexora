@@ -74,7 +74,7 @@ export function auditRowFromEvent(event: DomainEvent): AuditLog {
     action: event.type,
     target_type: targetType,
     target_id: targetId,
-    changes: { ...p, event_id: event.id },
+    changes: event.meta.api_key_id ? { ...p, event_id: event.id, via_api_key_id: event.meta.api_key_id } : { ...p, event_id: event.id },
     ip: event.meta.ip,
     user_agent: event.meta.user_agent,
     request_id: event.meta.request_id,
@@ -84,12 +84,16 @@ export function auditRowFromEvent(event: DomainEvent): AuditLog {
 
 export function securityDraftFromEvent(event: DomainEvent): SecurityEventDraft {
   const p = { ...(event.payload as Record<string, unknown>) };
+  // Automation runs are the service even when an API request started them; the key is kept as context.
   const actor: SecurityActor =
-    event.actor.id !== null
-      ? { type: "user", user_id: event.actor.id, role: event.actor.role }
-      : event.actor.role === "service"
-        ? { type: "service", name: "nexora" }
-        : { type: "anonymous" };
+    event.actor.role === "service"
+      ? { type: "service", name: "nexora" }
+      : event.meta.api_key_id
+        ? { type: "api_key", api_key_id: event.meta.api_key_id }
+        : event.actor.id !== null
+          ? { type: "user", user_id: event.actor.id, role: event.actor.role }
+          : { type: "anonymous" };
+  if (event.actor.role === "service" && event.meta.api_key_id) p.caused_by_api_key_id = event.meta.api_key_id;
   let target = (p.target as { type: string | null; id: string | null } | undefined) ?? null;
   if (!target && event.type === "authz.denied") target = { type: p.resource as string, id: (p.target_id as string | null) ?? null };
   if (!target && typeof p.entity === "string") target = { type: p.entity, id: (p.id as string) ?? null };

@@ -817,6 +817,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     integration_settings: [],
     webhook_deliveries: [],
     api_keys: [],
+    api_idempotency_keys: [],
     audit_logs: [],
     security_events: [],
   };

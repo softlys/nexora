@@ -27,6 +27,7 @@ export const LOAD_ORDER: TableName[] = [
   "integration_settings",
   "webhook_deliveries",
   "api_keys",
+  "api_idempotency_keys",
   "audit_logs",
 ];
 

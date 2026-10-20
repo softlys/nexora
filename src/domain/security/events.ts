@@ -42,6 +42,16 @@ export const SECURITY_ACTIONS = {
   "cron.unauthorized": { category: "system", outcome: "failure", severity: "high" },
   "demo.reset": { category: "system", outcome: "success", severity: "medium" },
   "system.heartbeat": { category: "system", outcome: "success", severity: "info" },
+  // Phase 4: API keys, public API, integrations
+  "api_key.created": { category: "configuration", outcome: "success", severity: "medium" },
+  "api_key.revoked": { category: "configuration", outcome: "success", severity: "medium" },
+  "api_key.used_after_revoke": { category: "authentication", outcome: "failure", severity: "high" },
+  "api.auth_failed": { category: "authentication", outcome: "failure", severity: "medium" },
+  "api.scope_denied": { category: "authorization", outcome: "failure", severity: "medium" },
+  "integration.changed": { category: "configuration", outcome: "success", severity: "medium" },
+  "integration.webhook_sent": { category: "integration", outcome: "success", severity: "info" },
+  "webhook.signature_invalid": { category: "integration", outcome: "failure", severity: "high" },
+  "security.ssrf_blocked": { category: "integration", outcome: "failure", severity: "high" },
 } as const satisfies Record<string, { category: SecurityCategory; outcome: SecurityOutcome; severity: SecuritySeverity }>;
 
 export type SecurityAction = keyof typeof SECURITY_ACTIONS;

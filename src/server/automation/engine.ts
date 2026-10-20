@@ -33,10 +33,10 @@ export interface EmailSender {
   readonly configured: boolean;
   send(message: EmailMessage): Promise<{ id: string }>;
 }
-/** Outbound webhooks are delivered by the integrations module (phase 4). */
+/** Outbound webhooks, delivered by the integrations module (src/server/integrations/webhooks.ts). */
 export interface WebhookSender {
   readonly available: boolean;
-  send(input: { organization_id: string; event_type: string; data: Record<string, unknown> }): Promise<{ delivered: number }>;
+  send(input: { organization_id: string; event_id: string; event_type: string; data: Record<string, unknown> }): Promise<{ delivered: number; attempted: number }>;
 }
 
 export type EngineDeps = {
@@ -45,6 +45,8 @@ export type EngineDeps = {
   now?: () => Date;
   email?: EmailSender;
   webhooks?: WebhookSender;
+  /** Called for every event the engine handles, including events its runs caused (outbound webhooks). */
+  onEvent?: (event: DomainEvent) => Promise<void>;
 };
 
 type StepResult = {
@@ -444,11 +446,14 @@ async function executeStep(deps: EngineDeps, svc: ServiceContext, state: RunStat
     }
 
     case "send_webhook": {
-      if (!deps.webhooks?.available) return { status: "skipped", output: { reason: "Outbound webhooks are not available yet; nothing was sent" } };
+      if (!deps.webhooks?.available) return { status: "skipped", output: { reason: "Outbound webhooks are not available; nothing was sent" } };
       const { vars } = await load();
       if (test) return { status: "success", output: { would_send: step.event_type } };
-      const result = await deps.webhooks.send({ organization_id: orgId, event_type: step.event_type, data: vars });
-      return { status: result.delivered > 0 ? "success" : "skipped", output: result };
+      // Stable id per workflow, triggering event and step: a retried run resends the same event id.
+      const result = await deps.webhooks.send({ organization_id: orgId, event_id: `${state.workflow.id}:${state.event.id}:${step.id}`, event_type: step.event_type, data: vars });
+      if (result.attempted === 0) return { status: "skipped", output: { reason: "No enabled integration subscribes to workflow.webhook" } };
+      if (result.delivered === 0) return { status: "failed", error: "Every webhook delivery failed; failed attempts are retried by the scheduler (see the delivery log)", output: result };
+      return { status: "success", output: result };
     }
 
     case "delay": {
@@ -649,6 +654,13 @@ export async function handleEvent(deps: EngineDeps, event: DomainEvent): Promise
   const queue: DomainEvent[] = [event];
   while (queue.length > 0) {
     const current = queue.shift()!;
+    if (deps.onEvent) {
+      try {
+        await deps.onEvent(current);
+      } catch (error) {
+        console.error(`[automation] onEvent failed for ${current.type}`, error);
+      }
+    }
     const workflows = await enabledWorkflows(deps, current.organization_id);
     for (const workflow of workflows) {
       const parsed = validateDefinition(workflow.definition);

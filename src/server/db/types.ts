@@ -60,4 +60,5 @@ export const UNIQUE_KEYS: Partial<Record<TableName, string[][]>> = {
   automation_executions: [["idempotency_key"]],
   products: [["sku"]],
   api_keys: [["key_hash"]],
+  api_idempotency_keys: [["api_key_id", "key"]],
 };

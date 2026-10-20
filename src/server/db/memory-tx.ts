@@ -26,7 +26,8 @@ export function matches(row: Record<string, unknown>, where: Record<string, unkn
 }
 
 export function createMemoryTx(data: Dataset, orgId: string, writable: boolean): Tx {
-  const rows = (table: TableName) => data[table] as unknown as AnyRow[];
+  // A table added in a later release may be missing from an older in-memory dataset.
+  const rows = (table: TableName) => ((data as Record<string, unknown>)[table] ??= []) as unknown as AnyRow[];
   const guard = () => {
     if (!writable) throw new Error("Write attempted in a read-only transaction");
   };

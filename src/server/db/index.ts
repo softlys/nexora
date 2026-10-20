@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TableName } from "@/domain/entities";
+import type { ApiKey, TableName } from "@/domain/entities";
 import { getDataMode } from "@/server/env";
 import { getDemoStore } from "@/server/repositories/demo";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -126,6 +126,29 @@ export async function listOrganizationIds(): Promise<string[]> {
     return (data ?? []).map((o) => o.id as string);
   }
   return (await getDemoStore().read()).organizations.map((o) => o.id);
+}
+
+/**
+ * Finds an API key by the hash of the presented key, across organizations: the key itself
+ * says which organization it belongs to. Used only by the public API authentication.
+ */
+export async function findApiKeyByHash(hash: string): Promise<ApiKey | null> {
+  if (getDataMode() === "supabase") {
+    const { data, error } = await createSupabaseServiceClient().from("api_keys").select("*").eq("key_hash", hash).maybeSingle();
+    if (error) throw new Error(`api_keys: ${error.message}`);
+    return (data as ApiKey | null) ?? null;
+  }
+  return (await getDemoStore().read()).api_keys.find((k) => k.key_hash === hash) ?? null;
+}
+
+/** Keys with a given public prefix (to attribute a wrong secret to an organization's log). */
+export async function findApiKeysByPrefix(prefix: string): Promise<ApiKey[]> {
+  if (getDataMode() === "supabase") {
+    const { data, error } = await createSupabaseServiceClient().from("api_keys").select("*").eq("prefix", prefix);
+    if (error) throw new Error(`api_keys: ${error.message}`);
+    return (data ?? []) as ApiKey[];
+  }
+  return (await getDemoStore().read()).api_keys.filter((k) => k.prefix === prefix);
 }
 
 export type { Db, Row, Tx, Where } from "./types";

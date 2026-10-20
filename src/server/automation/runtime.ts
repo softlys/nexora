@@ -1,14 +1,16 @@
 import "server-only";
+import { after } from "next/server";
 import { getServiceDb } from "@/server/db";
 import type { RequestMeta } from "@/server/repositories/types";
 import type { ServiceContext } from "@/server/services/context";
+import { dispatchDomainEvent, sendWorkflowWebhook, type WebhookDeps } from "@/server/integrations/webhooks";
 import { handleEvent, type EmailSender, type EngineDeps, type WebhookSender } from "./engine";
 
 /**
  * Email through Resend when RESEND_API_KEY and NEXORA_EMAIL_FROM are set. Without them the
  * send_email step is skipped and logged as skipped, never as sent.
  */
-function emailSender(): EmailSender {
+export function emailSender(): EmailSender {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.NEXORA_EMAIL_FROM;
   return {
@@ -27,16 +29,46 @@ function emailSender(): EmailSender {
   };
 }
 
-/** Outbound webhooks are implemented by the integrations module in phase 4. */
-const webhookSender: WebhookSender = {
-  available: false,
-  async send() {
-    return { delivered: 0 };
-  },
-};
+function webhookSender(deps: WebhookDeps): WebhookSender {
+  return {
+    available: true,
+    async send(input) {
+      const result = await sendWorkflowWebhook(deps, input);
+      return { delivered: result.delivered, attempted: result.attempted };
+    },
+  };
+}
+
+/**
+ * Runs work after the response is sent (Next.js `after`). Outside a request (tests, scripts)
+ * `after` throws, and the work runs right away instead.
+ */
+export function runAfterResponse(work: () => Promise<unknown>, label: string): void {
+  const guarded = () =>
+    work().catch((error) => {
+      console.error(`[after] ${label} failed`, error);
+    });
+  try {
+    after(guarded);
+  } catch {
+    void guarded();
+  }
+}
 
 export function engineDeps(meta: RequestMeta): EngineDeps {
-  return { db: getServiceDb(), meta, email: emailSender(), webhooks: webhookSender };
+  const db = getServiceDb();
+  const webhookDeps: WebhookDeps = { db, meta };
+  return {
+    db,
+    meta,
+    email: emailSender(),
+    webhooks: webhookSender(webhookDeps),
+    // Outbound webhooks for every handled event, including events caused by workflow runs.
+    // Sent after the response so a slow receiver never delays the user's action.
+    onEvent: async (event) => {
+      runAfterResponse(() => dispatchDomainEvent(webhookDeps, event), `webhooks for ${event.type}`);
+    },
+  };
 }
 
 /**

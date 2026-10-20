@@ -24,7 +24,7 @@ export default async function SecurityLogPage({ searchParams }: PageProps<"/sett
   return (
     <SettingsCard
       title="Security log"
-      description="Append-only and hash-chained: each event includes the hash of the previous one, so a modified or deleted event breaks verification. Secrets, passwords and full request bodies are never logged. The companion SIEM reads this log through the API (phase 4)."
+      description="Append-only and hash-chained: each event includes the hash of the previous one, so a modified or deleted event breaks verification. Secrets, passwords and full request bodies are never logged. The companion SIEM reads it through GET /api/v1/security-events with a SIEM key."
     >
       <div className="space-y-4">
         <ChainStatus initial={chain} />
