@@ -80,7 +80,7 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
       {executions.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border-strong p-6 text-center text-sm text-text-muted">No runs match these filters.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="relative overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full text-sm">
             <caption className="sr-only">Runs</caption>
             <thead className="border-b border-border bg-surface-subtle text-xs text-text-muted">

@@ -45,7 +45,7 @@ export async function IntegrationPage({ provider, description, urlHint, guide, p
       )}
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <IntegrationForm key={`${data.integration.url}-${data.integration.secret_preview}`} value={data.integration} canManage={canManage} urlHint={urlHint} />
-        <section aria-labelledby="guide-heading" className="space-y-4 rounded-lg border border-border bg-surface p-5 text-sm shadow-xs [&_code]:font-mono [&_code]:text-xs [&_h3]:font-medium [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-surface-muted [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-[11px] [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5">
+        <section aria-labelledby="guide-heading" className="min-w-0 space-y-4 rounded-lg border border-border bg-surface p-5 text-sm shadow-xs [&_code]:font-mono [&_code]:text-xs [&_code]:break-all [&_h3]:font-medium [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-surface-muted [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-[11px] [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5">
           <h2 id="guide-heading" className="text-md font-semibold">
             Setup guide
           </h2>

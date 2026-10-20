@@ -177,7 +177,7 @@ export function DataTable<T>({
         </DropdownMenu>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="relative overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="w-full caption-bottom text-sm">
           {caption && <caption className="sr-only">{caption}</caption>}
           <thead className="border-b border-border bg-surface-subtle">

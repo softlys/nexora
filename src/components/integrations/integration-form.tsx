@@ -90,7 +90,7 @@ export function IntegrationForm({ value, canManage, urlHint }: { value: Integrat
   };
 
   return (
-    <section className="space-y-5 rounded-lg border border-border bg-surface p-5 shadow-xs" aria-labelledby="connection-heading">
+    <section className="min-w-0 space-y-5 rounded-lg border border-border bg-surface p-5 shadow-xs" aria-labelledby="connection-heading">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="connection-heading" className="text-md font-semibold">

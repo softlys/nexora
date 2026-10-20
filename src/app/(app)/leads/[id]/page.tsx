@@ -67,7 +67,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
           </Link>
         </div>
       )}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-6 lg:col-span-2">
           {!lead.archived_at && <ActivityComposer links={{ lead_id: lead.id }} />}
           <Panel title="Activity timeline">

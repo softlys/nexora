@@ -62,7 +62,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
           </RecordActions>
         }
       />
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-6 lg:col-span-2">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[

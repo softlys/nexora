@@ -48,7 +48,7 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
           </RecordActions>
         }
       />
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-6 lg:col-span-2">
           <ActivityComposer links={{ contact_id: contact.id, ...(contact.company_id && company ? { company_id: contact.company_id } : {}) }} />
           <Panel title="Activity timeline">

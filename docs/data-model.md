@@ -73,10 +73,11 @@ erDiagram
 | `notifications` | Per-user notifications. | `(organization_id, dedupe_key)` unique so automations never notify twice |
 | `automation_workflows` | Workflow definitions (JSON, validated in phase 3). | |
 | `automation_executions` | One row per run with step results. | `(organization_id, idempotency_key)` unique: a repeated event returns the earlier execution |
-| `integration_settings` | Make, n8n, generic webhook and email configuration. | Secret stored only as a hash, hidden from the client role |
+| `integration_settings` | Make, n8n, generic webhook and email configuration. | Signing secret encrypted (AES-256-GCM) plus hash; both hidden from the client role. One per provider |
 | `webhook_deliveries` | Every outbound webhook attempt. | |
 | `api_keys` | Hashed API keys with scopes. | `key_hash` unique, hidden from the client role |
 | `audit_logs` | Who changed what, with before/after, IP, user agent and request id. | Append-only for the application |
+| `api_idempotency_keys` | Stored responses for POST requests with an `Idempotency-Key` (24 hours). | `unique (api_key_id, key)`; no client access |
 | `security_events` | Security telemetry for the SIEM: per-organization hash chain ([security-events.md](security-events.md)). | Insert-only; `unique (organization_id, sequence)` |
 
 ## Migrations
@@ -87,6 +88,7 @@ erDiagram
 | `20261019000002_row_level_security.sql` | RLS helpers and policies, column grants |
 | `20261019000003_admin_functions.sql` | Role changes and pipeline stage editing with invariants |
 | `20261020000001_crm_core.sql` | `next_order_number()` (numbers orders across the organization even though RLS hides other users' orders), list/search indexes |
+| `20261022000001_integrations_api.sql` | Encrypted integration secrets (`secret_ciphertext`, `secret_preview`, one integration per provider), delivery `reason` and retry index, `api_idempotency_keys` (server-only, 24 h), API key prefix index |
 | `20261021000001_security_events_and_automation.sql` | `security_events` (hash chain, unique `(organization_id, sequence)`, insert-only), `automation_executions.resume_at` / `resume_step_id` for delayed runs, `set_profile_active()` for disabling users |
 
 ## Derived values

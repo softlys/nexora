@@ -64,7 +64,7 @@ export function TaskCalendar({ mode, anchor, tasks, params }: { mode: "month" | 
           </Link>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <div className="grid min-w-[700px] grid-cols-7 overflow-hidden rounded-lg border border-border bg-border gap-px" role="grid" aria-label={`Tasks, ${title}`}>
           {weekdays.map((d) => (
             <div key={d} role="columnheader" className="bg-surface-subtle px-2 py-1.5 text-xs font-medium text-text-muted">

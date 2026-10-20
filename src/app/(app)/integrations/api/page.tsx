@@ -49,7 +49,7 @@ export default async function ApiReferencePage() {
       />
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-2 rounded-lg border border-border bg-surface p-5 text-sm shadow-xs">
+        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-surface p-5 text-sm shadow-xs">
           <h2 className="text-md font-semibold">Authentication</h2>
           <p className="text-text-muted">
             Create a key in <Link className="underline" href="/settings/api-keys">Settings → API keys</Link> and send it as <code className="font-mono text-xs">Authorization: Bearer nxk_…</code>. Keys are shown once and stored as SHA-256 hashes. A key acts with the permissions of the admin who created it, limited by its scopes.
@@ -63,7 +63,7 @@ export default async function ApiReferencePage() {
           </ul>
           <p className="text-xs text-text-muted">Integration keys and SIEM keys are separate kinds: an integration key can never hold a security scope.</p>
         </div>
-        <div className="space-y-2 rounded-lg border border-border bg-surface p-5 text-sm shadow-xs">
+        <div className="min-w-0 space-y-2 rounded-lg border border-border bg-surface p-5 text-sm shadow-xs">
           <h2 className="text-md font-semibold">Conventions</h2>
           <ul className="list-disc space-y-1 pl-5 text-text-muted">
             <li>
@@ -83,7 +83,7 @@ export default async function ApiReferencePage() {
           Endpoints
         </h2>
         {ENDPOINTS.map((e) => (
-          <article key={`${e.method} ${e.path}`} className="space-y-3 rounded-lg border border-border bg-surface p-4 shadow-xs" id={`${e.method}-${e.path}`.replace(/[^a-z0-9-]/gi, "-")}>
+          <article key={`${e.method} ${e.path}`} className="min-w-0 space-y-3 rounded-lg border border-border bg-surface p-4 shadow-xs" id={`${e.method}-${e.path}`.replace(/[^a-z0-9-]/gi, "-")}>
             <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded px-1.5 py-0.5 font-mono text-xs font-semibold ${e.method === "GET" ? "bg-info-bg text-info" : "bg-success-bg text-success"}`}>{e.method}</span>
               <code className="font-mono text-sm">/api/v1{e.path}</code>
@@ -92,11 +92,11 @@ export default async function ApiReferencePage() {
             </div>
             <p className="text-sm text-text-muted">{e.description}</p>
             <div className="grid gap-3 lg:grid-cols-2">
-              <div>
+              <div className="min-w-0">
                 <h3 className="mb-1 text-xs font-medium text-text-muted">Request</h3>
                 <pre className="overflow-x-auto rounded bg-surface-muted p-3 font-mono text-[11px]">{curl(e)}</pre>
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="mb-1 text-xs font-medium text-text-muted">Response {e.status}</h3>
                 <pre className="max-h-64 overflow-auto rounded bg-surface-muted p-3 font-mono text-[11px]">{e.example ? JSON.stringify(e.example.response, null, 2) : "See openapi.json for the full schema."}</pre>
               </div>
@@ -109,7 +109,7 @@ export default async function ApiReferencePage() {
         <h2 id="errors-heading" className="text-md font-semibold">
           Errors
         </h2>
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="relative overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-subtle text-xs text-text-muted">
               <tr>

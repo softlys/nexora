@@ -70,7 +70,7 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
       {keys.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border-strong p-6 text-center text-sm text-text-muted">No API keys yet. Create one for Make, n8n, a website form or the SIEM.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="relative overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <caption className="sr-only">API keys</caption>
             <thead className="border-b border-border bg-surface-subtle text-xs text-text-muted">

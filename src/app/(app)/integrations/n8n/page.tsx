@@ -36,7 +36,7 @@ export default async function N8nPage({ searchParams }: PageProps<"/integrations
               </li>
               <li>
                 <strong>HTTP Request</strong> (true branch): <code>POST /api/v1/events</code> with an API key that has <code>events:write</code>, header <code>Idempotency-Key</code> set to the event id, body{" "}
-                <code>{`{"event_type":"n8n.follow_up_requested","entity":"lead","record_id":"<lead id>"}`}</code>. A NEXORA workflow with the trigger <em>Webhook received</em> → <em>Create follow-up task</em> owns the task, so the task logic stays in one engine.
+                <code>{`{"event_type":"n8n.follow_up_requested","entity":"lead","record_id":"<lead id>"}`}</code>. A NEXORA workflow with the trigger <em>Webhook received</em> → <em>Create task</em> owns the task, so the task logic stays in one engine.
               </li>
               <li>
                 <strong>Notify</strong>: Slack, email or Teams node with the lead title and owner.

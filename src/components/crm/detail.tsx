@@ -56,7 +56,7 @@ export function Facts({ items, className }: { items: Array<[string, ReactNode]>;
 
 export function Panel({ title, actions, children, className }: { title: string; actions?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cn("rounded-lg border border-border bg-surface", className)}>
+    <section className={cn("min-w-0 rounded-lg border border-border bg-surface", className)}>
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <h2 className="text-sm font-medium">{title}</h2>
         {actions}

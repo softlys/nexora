@@ -54,7 +54,7 @@ export function ListTable<T>({
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="relative overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="w-full text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead className="border-b border-border bg-surface-subtle">

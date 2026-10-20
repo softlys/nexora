@@ -110,12 +110,27 @@ Supabase mode note: RLS hides out-of-scope rows entirely, so a guessed id looks 
 | Runaway automations | 20 steps, 30 runs per workflow per minute, 5 s step timeout, causation depth 3, no self-retrigger, idempotency key per workflow and event (`workflow.limit_exceeded`). | `src/server/automation/engine.ts` |
 | Unauthenticated scheduler calls | `/api/cron/scheduler` is disabled without `CRON_SECRET` (16+ characters), compares the bearer token in constant time and logs `cron.unauthorized`. | `src/app/api/cron/scheduler/route.ts` |
 
+## Integrations and public API (phase 4)
+
+| Concern | Control | Where |
+| --- | --- | --- |
+| Stolen API keys | Keys are random 256-bit secrets shown once and stored as SHA-256 hashes. Each key carries scopes, and acts as its creator: a disabled creator disables the key, a demoted creator narrows it. Revocation is immediate; later use is logged as `api_key.used_after_revoke`. | `src/domain/api/keys.ts`, `src/server/api/handler.ts` |
+| Privilege separation | Integration keys (`leads:write`, `records:read`, `events:write`) and SIEM keys (`security:read`, `security:respond`) are separate kinds with disjoint scopes. | `SCOPES_BY_KIND` |
+| Abuse of the API | Strict Zod schemas (unknown fields rejected), 64 KB body limit, per-key rate limit (120/min), per-IP limit on failed authentication (20/min), `Idempotency-Key` for POST. | `src/domain/api/contract.ts` |
+| Forged webhooks | Every outbound request is signed: `X-Nexora-Signature: t=…,v1=HMAC-SHA256(secret, "t.body")`. Receivers reject stale timestamps (5 min). Callbacks into `POST /events` can be signed the same way. | `src/domain/integrations/webhooks.ts` |
+| SSRF through webhook URLs | URLs must be https in production, without credentials or internal hostnames. DNS is resolved in the socket's lookup hook, and every address is checked against private, loopback, link-local, CGNAT, multicast, documentation and metadata ranges (IPv4 and IPv6, including mapped addresses). The check runs both when the URL is saved and at connection time, which closes the DNS-rebinding window. Redirects are followed only to the same host (at most 2). Responses are capped at 64 KB, with a 5 s timeout. Every block raises `security.ssrf_blocked`. | `src/domain/integrations/ssrf.ts`, `src/server/integrations/transport.ts` |
+| Secret exposure | Signing secrets are encrypted at rest (AES-256-GCM, `NEXORA_ENCRYPTION_KEY`) because HMAC needs the secret itself. They are shown once, then masked to the last four characters. Column grants hide the hash and ciphertext from the client role. | `src/server/integrations/secret-box.ts`, migration `20261022000001` |
+| Incident response | The SIEM can revoke keys and disable users through `security:respond`. Both require a reason, write `audit_logs` and a security event, and can never disable the last active admin. | `src/server/services/api-keys.ts` |
+| Repudiation | API keys, integration settings, secret rotation and disconnects are written to `audit_logs`. Changes made through the API carry `via_api_key_id`. | services |
+
 ### Service role
 
-In Supabase mode the server uses the service-role key (`SUPABASE_SERVICE_ROLE_KEY`, server-only, `src/server/supabase/service.ts`) for exactly three things:
+In Supabase mode the server uses the service-role key (`SUPABASE_SERVICE_ROLE_KEY`, server-only, `src/server/supabase/service.ts`) for these things only:
 - automation runs, which need to see records outside the triggering user's RLS scope (for example, managers to notify)
 - appending to the security log, which must also work for anonymous events such as failed logins
 - sending member invites
+- the public API, which has no user session: the key is resolved by its hash, and every query is then scoped to that key's organization and filtered by its creator's permissions in the services
+- webhook deliveries and their retries
 
 Every user-facing read and write still goes through the anon key and the user's session, so it remains subject to RLS. Service-role code paths are scoped to one organization by the `Tx` and never accept an organization id from the client.
 

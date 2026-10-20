@@ -140,7 +140,7 @@ export function OrderFormButton({
 
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Line items</legend>
-          <div className="overflow-x-auto rounded-md border border-border">
+          <div className="relative overflow-x-auto rounded-md border border-border">
             <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-surface-subtle text-xs text-text-muted">
                 <tr>

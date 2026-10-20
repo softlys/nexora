@@ -58,10 +58,10 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
           </RecordActions>
         }
       />
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-6 lg:col-span-2">
           <Panel title="Line items">
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full min-w-[520px] text-sm">
                 <thead className="text-xs text-text-muted">
                   <tr className="border-b border-border">

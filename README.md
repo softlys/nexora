@@ -1,28 +1,44 @@
 # NEXORA
 
-**B2B operations platform for an equipment supplier: CRM, sales pipeline, orders and workflow automation.**
+**B2B operations platform for an equipment supplier: CRM, sales pipeline, orders, workflow automation and integrations.**
 
-NEXORA is a portfolio project built to production standards: one permission model enforced on the server and in the database, deterministic demo data, and tests for the rules that matter. All company and person data is fictional.
+NEXORA is a portfolio project built to production standards:
+- one permission model, enforced on the server and in the database
+- deterministic demo data
+- signed webhooks
+- a documented public API
+- tests for the rules that matter
 
-> Status: under active development. Phases 1 (foundation), 2 (CRM core) and 3 (dashboard, analytics, automation) are complete; see [PROGRESS.md](PROGRESS.md) for what works today and what is next.
+All company and person data is fictional.
 
-## What works today
+> Status: phases 1–4 are complete. See [PROGRESS.md](PROGRESS.md) for exactly what was built and verified, and for the known limitations.
 
-- App shell with a collapsible sidebar, breadcrumbs, a Ctrl/Cmd+K command palette, notifications, light and dark themes, and a mobile drawer.
-- Design system: tokens in [`tokens/tokens.json`](tokens/tokens.json) generate the CSS variables used by every component.
-- Complete data model: 22 tables in [`supabase/migrations`](supabase/migrations) with composite tenant foreign keys and row-level security.
-- Demo mode with no setup: deterministic seed data stored server-side, and a user switcher for Admin, Manager and Sales Rep.
-- Roles enforced on the server: navigation and direct URLs follow the same permission matrix.
-- Settings: organization, profile, team roles, pipeline stage editor and demo data reset.
-- CRM: companies, contacts and leads with URL-based search and filters, record pages with timelines, comments and activity logging.
-- Lead conversion into company, contact and deal (once only), deals with full change history and a detail drawer.
-- Sales pipeline kanban with drag and drop (also keyboard), optimistic moves with rollback, lost reasons, quick edit and a weighted forecast.
-- Orders with a line-item editor, enforced status transitions, simulated payments and derived payment status; won deals convert into exactly one order.
-- Tasks with list, month and week calendar, one-click complete; an activity feed; global record search in the command palette.
-- Server-side security: tenant isolation, 404 on guessed ids, strict input schemas, Origin checks, rate limits, audit log with field-level diffs and security events.
-- Overview dashboard and Analytics: revenue, pipeline, conversion, receivables ageing, sales by owner and source, task completion, with period filters in the URL, comparison to the previous period, and charts that drill down to the filtered records.
-- Automation Studio: no-code workflows (triggers, conditions, tasks, notifications, owner assignment, order creation, email, delays), validation, versions, test runs, run history with retry, and guardrails against loops and runaway runs. A scheduler endpoint handles due dates and delays.
-- Tamper-evident security log (hash chain) with in-app verification, ready to feed the companion SIEM.
+## Features
+
+- **CRM.** Companies, contacts and leads, with URL-based search and filters, record timelines, comments and activity logging. A lead converts into a company, contact and deal, once only.
+- **Sales pipeline.** A kanban board with drag and drop and full keyboard support. Moves are optimistic with rollback. It also covers lost reasons, quick edits, a weighted forecast and full deal change history.
+- **Orders.**
+  - A line-item editor with enforced status transitions.
+  - Simulated payments and a derived payment status.
+  - A won deal becomes exactly one order.
+- **Tasks and activities.** List, month and week calendar views, one-click completion, and an activity feed.
+- **Dashboard and analytics.** Revenue, pipeline, conversion, receivables ageing, sales by owner and source, and task completion. Every metric is computed from data and defined in [docs/metrics.md](docs/metrics.md). Periods live in the URL, values are compared with the previous period, and charts drill down to the records behind them.
+- **Automation Studio.**
+  - No-code workflows: triggers, conditions, tasks, notifications, owner assignment, deal to order, email, webhooks and delays.
+  - Each workflow is validated and versioned, and supports test runs.
+  - Run history with retry from the failed step.
+  - Guardrails against loops and runaway runs.
+- **Integrations.**
+  - Outbound webhooks for Make, n8n and any HTTPS endpoint, signed with HMAC-SHA256 and protected against SSRF.
+  - Retries with backoff, a delivery log and redelivery.
+  - Statuses are honest: an integration shows Connected only after a real test event succeeded.
+- **Public API** at `/api/v1`.
+  - Org API keys, stored hashed and limited by scopes.
+  - Zod validation, `Idempotency-Key` support and per-key rate limits.
+  - An OpenAPI 3.1 document generated from the same schemas the server validates with, plus an in-app reference.
+- **Security telemetry.** A tamper-evident, hash-chained security log with in-app verification. A security API lets the companion SIEM (VIGIL) read the log and respond: revoke a key or disable a user.
+- **Design system.** Tokens drive every color and size. The living style guide at `/ui-kit` is rendered from the real components, and the tokens export to Tokens Studio for Figma.
+- **Roles.** Admin, Manager and Sales Rep. Navigation, direct URLs, server actions, the API and row-level security all follow the same permission matrix.
 
 ## Quick start (demo mode)
 
@@ -31,28 +47,44 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. No environment variables are needed. Use the user menu in the top right to act as a different role.
-
-## Tech stack
-
-Next.js (App Router) · React · TypeScript (strict) · Tailwind CSS · shadcn/ui · Lucide · Recharts · React Hook Form + Zod · dnd-kit · Supabase (PostgreSQL, Auth, RLS) · Vitest · Playwright · PGlite (migration tests)
+Open http://localhost:3000. No environment variables are needed. Use the user menu in the top right to act as a different role. For a five-minute tour to show a client, see [docs/demo-guide.md](docs/demo-guide.md).
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  UI[Pages and client components] -->|server actions| Actions[Server actions<br/>Zod + can()]
-  Pages[Server components] --> Repos
-  Actions --> Repos[Repository layer<br/>src/server/repositories]
-  Repos -->|NEXORA_DATA_MODE=demo| Demo[(Demo store<br/>.data/demo.json)]
-  Repos -->|NEXORA_DATA_MODE=supabase| SB[(Supabase PostgreSQL<br/>RLS)]
-  Domain[src/domain<br/>permissions, seed, totals] --- Actions
-  Domain --- Repos
+  Browser[Browser] -->|server actions| Actions[Server actions<br/>Origin check, rate limit, Zod, can()]
+  Client[Make / n8n / forms / VIGIL] -->|/api/v1 + API key| API[API pipeline<br/>key hash, scopes, Zod, idempotency]
+  Actions --> Services[Domain services<br/>src/server/services]
+  API --> Services
+  Services --> Db[(Tx: demo store or<br/>Supabase with RLS)]
+  Services -->|events| Bus{{Event bus}}
+  Bus --> Audit[audit_logs]
+  Bus --> SecLog[security_events<br/>hash chain]
+  Bus -->|after commit| Engine[Automation engine]
+  Engine --> Services
+  Engine -->|after response| Webhooks[Signed webhooks<br/>SSRF-safe transport]
+  Cron[Cron every 5 min] --> Scheduler[Scheduler: due dates,<br/>delays, retries, heartbeat]
+  Scheduler --> Engine
 ```
 
-- `src/domain`: pure, tested business logic (permission matrix, entities, seed, order math).
-- `src/server`: session, repositories (demo and Supabase adapters behind one interface), server actions.
-- `src/components`: UI primitives (shadcn/ui restyled to the tokens), patterns and the app shell.
+See [docs/architecture.md](docs/architecture.md) for the layers, the request lifecycle and the main decisions.
+
+## Tech stack
+
+Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 · shadcn/ui · Lucide · Recharts · React Hook Form + Zod · dnd-kit · Supabase (PostgreSQL, Auth, RLS) · Vitest · Playwright · PGlite (migration and RLS tests)
+
+## Screenshots
+
+Real screenshots of the demo build (fictional data), taken with Playwright.
+
+| Overview | Sales pipeline |
+| --- | --- |
+| ![Overview dashboard](docs/screenshots/overview.png) | ![Sales pipeline](docs/screenshots/pipeline.png) |
+| **Automation Studio** | **Integrations: n8n** |
+| ![Workflow editor](docs/screenshots/automation.png) | ![n8n integration](docs/screenshots/integrations.png) |
+| **Analytics (dark)** | **UI kit** |
+| ![Analytics in dark mode](docs/screenshots/analytics-dark.png) | ![Living style guide](docs/screenshots/ui-kit.png) |
 
 ## Scripts
 
@@ -62,8 +94,8 @@ flowchart LR
 | `npm run build` / `npm start` | Production build and server |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Generate route types and run `tsc --noEmit` |
-| `npm test` | Vitest unit tests, including migrations and RLS on PGlite |
-| `npm run test:e2e` | Playwright end-to-end tests (run `npx playwright install chromium` once) |
+| `npm test` | Vitest unit and integration tests, including migrations and RLS on PGlite |
+| `npm run test:e2e` | Playwright end-to-end tests against a production build (run `npx playwright install chromium` once) |
 | `npm run demo:seed` | Create the demo dataset if it does not exist |
 | `npm run demo:reset` | Replace the demo dataset with a fresh seed |
 | `npm run supabase:seed` | Load the demo dataset and demo users into Supabase |
@@ -71,31 +103,58 @@ flowchart LR
 
 ## Supabase mode
 
-1. Create a Supabase project and apply the migrations: `supabase link` then `supabase db push`.
-2. Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `DEMO_USER_PASSWORD`.
-3. Load the demo data and users: `npm run supabase:seed` (reads `.env.local`).
+1. Create a Supabase project and apply the migrations: `supabase link`, then `supabase db push`.
+2. Copy `.env.example` to `.env.local` and set these variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEXORA_ENCRYPTION_KEY`
+   - `DEMO_USER_PASSWORD`
+3. Load the demo data and users: `npm run supabase:seed`.
 4. Set `NEXORA_DATA_MODE=supabase`, run `npm run dev`, and sign in as one of the printed demo accounts.
 
-User-facing queries use the anon key and the signed-in user's session, so they are subject to RLS. The service-role key is also needed on the server for automation runs, the security log and invites (see [docs/security.md](docs/security.md#service-role)). Set `CRON_SECRET` and call `/api/cron/scheduler` every 5 minutes for due-date automations and delays ([docs/automation-guide.md](docs/automation-guide.md#the-scheduler)).
+Deployment to Vercel, the cron setup and all environment variables are covered in [docs/deployment.md](docs/deployment.md).
+
+## Integration guides
+
+- [Make](docs/make-integration.md): new lead → custom webhook → Slack or email → call back to NEXORA
+- [n8n](docs/n8n-integration.md): signed webhook → validate → IF → NEXORA API → notify → log
+- [Public API](docs/api.md): keys, scopes, endpoints, errors, idempotency, the SIEM API
+- [Automation guide](docs/automation-guide.md): workflows, steps, limits, scheduler
 
 ## Documentation
 
-- [docs/data-model.md](docs/data-model.md): tables, relationships, ER diagram
-- [docs/security.md](docs/security.md): roles, permission matrix, RLS, demo-mode limits
-- [docs/metrics.md](docs/metrics.md): definition of every dashboard and analytics metric
-- [docs/automation-guide.md](docs/automation-guide.md): workflows, steps, limits, scheduler and cron setup
-- [docs/security-events.md](docs/security-events.md): security event schema, hash chain, action catalog
-- [PROGRESS.md](PROGRESS.md): build log, known issues, decisions
-
-## Screenshots
-
-Screenshots will be added once the main screens are complete.
+| Document | Contents |
+| --- | --- |
+| [architecture.md](docs/architecture.md) | Layers, request lifecycle, events, engines, decisions |
+| [data-model.md](docs/data-model.md) | Tables, relationships, ER diagram, migrations |
+| [security.md](docs/security.md) | Roles, permission matrix, RLS, threats and controls, demo-mode limits |
+| [security-events.md](docs/security-events.md) | Security event schema, hash chain, action catalog (contract with VIGIL) |
+| [metrics.md](docs/metrics.md) | Definition of every metric |
+| [automation-guide.md](docs/automation-guide.md) | Workflows, triggers, steps, limits, scheduler |
+| [api.md](docs/api.md) | Public API reference and conventions |
+| [make-integration.md](docs/make-integration.md), [n8n-integration.md](docs/n8n-integration.md) | Step-by-step integration guides |
+| [figma-design-system.md](docs/figma-design-system.md) | Tokens, Tokens Studio import, Figma file structure |
+| [deployment.md](docs/deployment.md) | Vercel + Supabase, cron, environment variables |
+| [demo-guide.md](docs/demo-guide.md) | A five-minute click path for showing the product |
+| [PROGRESS.md](PROGRESS.md) | Build log, verification results, known issues, decisions |
 
 ## Known limitations
 
 - Demo mode stores data in a local file. On serverless hosts it does not persist between cold starts.
 - In demo mode anyone can switch to any demo user. Never put real data in a demo instance.
-- The Supabase adapter and RLS are tested against PostgreSQL via PGlite with a stubbed `auth` schema; they have not yet been run against a live Supabase project in this repository's CI.
+- Rate limits and the bulk-read detector are in memory, per server instance. A multi-instance deployment needs a shared store.
+- The Supabase adapter and RLS are tested against PostgreSQL via PGlite with a stubbed `auth` schema. They have not been run against a live Supabase project in this repository's checks.
+- Email is supported through Resend only; there is no SMTP.
+- No Make blueprint or n8n workflow file is shipped, because their formats could not be verified for this release. The guides describe how to build both scenarios.
+
+## Roadmap
+
+- Shared rate-limit store (Upstash/Redis) for multi-instance deployments.
+- Webhook delivery through a durable queue instead of the request and scheduler.
+- Import and export of records (CSV).
+- Real payment provider integration behind the simulated payments.
+- VIGIL, the companion SIEM, in its own repository.
 
 ## License
 

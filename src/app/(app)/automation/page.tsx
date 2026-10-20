@@ -38,7 +38,7 @@ export default async function AutomationPage() {
       {workflows.length === 0 ? (
         <EmptyState icon={Workflow} title="No workflows yet" description="Start from a template or a blank workflow." action={canCreate ? <NewWorkflowMenu /> : undefined} />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="relative overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full text-sm">
             <caption className="sr-only">Workflows</caption>
             <thead className="border-b border-border bg-surface-subtle text-xs text-text-muted">

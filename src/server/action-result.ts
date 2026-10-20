@@ -3,18 +3,21 @@ import { z } from "zod";
 import { PermissionError } from "@/domain/permissions";
 import { DomainError } from "@/server/repositories/types";
 import { getRequestMeta } from "@/server/auth";
+import { assertSameOrigin, OriginError } from "@/server/security/origin";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
   | { ok: false; error: string; fieldErrors?: Record<string, string[]>; requestId?: string };
 
 /**
- * Runs a server action body and maps failures to safe, user-facing results.
+ * Runs a mutating server action body (after an explicit Origin check) and maps failures
+ * to safe, user-facing results.
  * Validation, permission and business-rule errors return their message; anything
  * else is logged server-side and the user sees a generic message with a request id.
  */
 export async function runAction<T>(body: () => Promise<T>): Promise<ActionResult<T>> {
   try {
+    await assertSameOrigin();
     return { ok: true, data: await body() };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -30,6 +33,9 @@ export async function runAction<T>(body: () => Promise<T>): Promise<ActionResult
     }
     if (error instanceof DomainError) {
       return { ok: false, error: error.message };
+    }
+    if (error instanceof OriginError) {
+      return { ok: false, error: "This request was blocked because it came from another site." };
     }
     // Next.js redirect/notFound signals must propagate.
     if (error && typeof error === "object" && "digest" in error && String((error as { digest: unknown }).digest).startsWith("NEXT_")) {

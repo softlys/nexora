@@ -90,12 +90,26 @@ Callers never pass request bodies. A failed login stores `account_key`, the firs
 | `demo.reset` | system | success | medium | An admin reset the demo dataset. |
 | `system.heartbeat` | system | success | info | The scheduler ran (at most every five minutes). |
 
-Phase 4 adds the integration events (`integration.webhook_sent`, `security.ssrf_blocked`, API key events). They are documented in this file when they land.
+| `api_key.created` | configuration | success | medium | An admin created an API key (`kind`, `prefix`, `scopes`; never the key). |
+| `api_key.revoked` | configuration | success | medium | A key was revoked in Settings or by the SIEM (`via`, `reason`). |
+| `api_key.used_after_revoke` | authentication | failure | high | A revoked key was presented to the API. |
+| `api.auth_failed` | authentication | failure | medium | A known key prefix with a wrong secret, or a key whose creator is disabled (`reason`). |
+| `api.scope_denied` | authorization | failure | medium | A key called an endpoint outside its scopes (`required`, `scopes`). |
+| `integration.changed` | configuration | success | medium | An integration was created, updated, had its secret rotated, or was disconnected (`change`, `domain`). |
+| `integration.webhook_sent` | integration | success / failure | info | An outbound webhook attempt got an HTTP response (`domain`, `event_type`, `event_id`, `attempt`, `status_code`). |
+| `webhook.signature_invalid` | integration | failure | high | A callback to `POST /api/v1/events` carried an invalid integration signature. |
+| `security.ssrf_blocked` | integration | failure | high | A webhook URL resolved to, or pointed at, a private, loopback, link-local or metadata address, or redirected to another host (`host`, `reason`, `stage`). |
+
+Events caused by an API request have the actor `{ "type": "api_key", "api_key_id": … }`. Automation runs started by an API request stay `{ "type": "service" }` and carry `caused_by_api_key_id` in their metadata.
+
+VIGIL reads the log through `GET /api/v1/security-events` with a SIEM key (see [api.md](api.md#security-api-siem)).
 
 ## Rules VIGIL can build on
 
 - Brute force: many `auth.login_failed` events for one `account_key`, or for one `source.ip`, within a short window.
 - Privilege escalation: `role.changed` to `admin` outside business hours, or by an admin created recently.
 - Scraping: `data.bulk_read`, or repeated `authz.denied` with `reason = not_visible` (id guessing).
-- Automation tampering: `workflow.updated` followed by `workflow.enabled` and a webhook to a new domain.
+- Automation tampering: `workflow.updated` followed by `workflow.enabled` and `integration.webhook_sent` to a new `domain`.
+- Key abuse: `api_key.used_after_revoke`, bursts of `api.scope_denied`, or `api.auth_failed` for one prefix.
+- Exfiltration attempts: `security.ssrf_blocked`, `webhook.signature_invalid`.
 - Liveness: no `system.heartbeat` for more than 15 minutes, or a broken chain.

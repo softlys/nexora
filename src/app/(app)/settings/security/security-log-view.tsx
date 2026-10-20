@@ -59,7 +59,7 @@ export function SecurityEventsTable({ events }: { events: Row[] }) {
   if (events.length === 0) return <p className="rounded-lg border border-dashed border-border-strong p-6 text-center text-sm text-text-muted">No security events match these filters.</p>;
   return (
     <>
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="relative overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="w-full text-sm">
           <caption className="sr-only">Security events</caption>
           <thead className="border-b border-border bg-surface-subtle text-xs text-text-muted">

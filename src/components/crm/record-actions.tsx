@@ -51,7 +51,7 @@ export function RecordActions({
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {children}
       {archived && canArchive && (
         <Button variant="outline" onClick={() => run("restore")}>

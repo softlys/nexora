@@ -46,7 +46,7 @@ A workflow definition is JSON stored in `automation_workflows.definition`:
 | `record.updated` | One of those records is updated. | `entity`, optional `fields` (fires only if one of them changed) |
 | `deal.stage_changed` | A deal moves to another stage. | `to`: `won`, `lost` or `any` |
 | `date.reached` | A task's `due_at` passes while the task is open. Fires once per task and due date; moving the due date arms it again. | `task_type` (or `any`) |
-| `webhook.received` | An inbound integration event arrives (phase 4). | `entity`, `event_type` |
+| `webhook.received` | An external system calls `POST /api/v1/events` with this `event_type` (see [api.md](api.md#send-an-external-event)). | `entity`, `event_type` |
 
 Variables available to conditions and templates are listed per entity in `VARIABLES` (`src/domain/automation/schema.ts`). `event.type`, `event.occurred_at` and `workflow.name` are always available. The Studio editor shows the valid variables for the chosen trigger.
 
@@ -62,7 +62,7 @@ Variables available to conditions and templates are listed per entity in `VARIAB
 | `create_notification` | Notifies the record owner, assignee, managers and/or admins. | `once_per_record` deduplicates per workflow, record and recipient. |
 | `convert_deal_to_order` | Creates the order for a won deal. | Uses the same service as the "Create order" button, so a deal never gets a second order. A rerun returns the existing order. |
 | `send_email` | Emails the record owner or assignee. | Sent through Resend when `RESEND_API_KEY` and `NEXORA_EMAIL_FROM` are set. Otherwise the step is recorded as **skipped (email not configured)**, never as sent. |
-| `send_webhook` | Sends an event to subscribed outbound webhooks. | Delivered by the integrations module (phase 4). Until then the step is recorded as skipped. |
+| `send_webhook` | Sends a signed event to every enabled integration subscribed to `workflow.webhook`. | The envelope type is the step's `event_type`; the event id is stable per workflow, triggering event and step, so a retried run resends the same id. No subscriber → skipped; every delivery failed → failed (the scheduler retries them). |
 | `delay` | Pauses the run for 1–720 hours. | The run is stored as `waiting` with `resume_at`, and the scheduler resumes it from the next step. |
 
 ## Execution log
@@ -108,9 +108,10 @@ The Studio shows success rate, last run and run history, with filters by status 
 
 Time-based work happens only when the scheduler runs:
 
-1. `date.reached` triggers, such as follow-up tasks that are now overdue
+1. `date.reached` triggers, such as follow-up tasks that are now overdue (and `task.overdue` webhooks)
 2. resuming runs whose `delay` has elapsed
-3. a `system.heartbeat` security event, written at most every five minutes, which VIGIL uses to detect a stopped scheduler
+3. retrying failed webhook deliveries whose backoff has elapsed
+4. a `system.heartbeat` security event, written at most every five minutes, which VIGIL uses to detect a stopped scheduler
 
 Admins can run it by hand with **Run scheduler** in the Studio. In production, call the cron endpoint every 5 minutes:
 
