@@ -139,12 +139,14 @@ export async function updateWorkflow(ctx: ServiceContext, input: z.output<typeof
     const patch = { name: input.name, description: input.description, trigger_type: definition.trigger.type, definition: definition as unknown as Record<string, unknown> };
     const changes = diffFields(current as unknown as Record<string, unknown>, patch);
     if (Object.keys(changes).length === 0) return current;
-    const version = current.version + 1;
+    // Captured before the update so the audit diff records the old version.
+    const previousVersion = current.version;
+    const version = previousVersion + 1;
     const updated = await tx.update("automation_workflows", current.id, { ...patch, version, updated_by: ctx.actor.id, updated_at: nowOf(ctx).toISOString() });
     await emit(
       tx,
       ctx,
-      { type: "record.updated", payload: { entity: "workflow", id: current.id, changes: { ...changes, version: { before: current.version, after: version } } } },
+      { type: "record.updated", payload: { entity: "workflow", id: current.id, changes: { ...changes, version: { before: previousVersion, after: version } } } },
       { type: "workflow.updated", payload: { target: { type: "workflow", id: current.id }, version, fields: Object.keys(changes) } },
     );
     return updated;

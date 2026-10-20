@@ -60,12 +60,15 @@ test.describe("foundation", () => {
   });
 
   test("switching roles changes both navigation and server-side data scope", async ({ page }) => {
-    await page.goto("/");
-    const companies = page.getByRole("link", { name: /^Companies \d+$/ });
-    const adminCount = Number((await companies.innerText()).match(/\d+/)![0]);
+    // The list footer ("1–25 of 25") counts the companies the server returned for this role.
+    const total = async () => {
+      await page.goto("/companies");
+      return Number((await page.getByText(/^\d+–\d+ of \d+$/).innerText()).split(" of ")[1]);
+    };
+    const adminCount = await total();
 
     await switchUser(page, "sales_rep");
-    const repCount = Number((await companies.innerText()).match(/\d+/)![0]);
+    const repCount = await total();
     expect(repCount).toBeGreaterThan(0);
     expect(repCount).toBeLessThan(adminCount);
 

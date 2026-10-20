@@ -25,6 +25,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
     payment: enumFilter(params, "payment", PAYMENT_STATUSES),
     owner: stringFilter(params, "owner", 36),
     company: stringFilter(params, "company", 36),
+    receivable: first(params.receivable) === "1" || undefined,
   };
   const { page, people, perms, companies, products, currency } = await loadPage(async (ctx) => ({
     page: await listOrders(ctx, query, filters),

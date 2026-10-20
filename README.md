@@ -4,7 +4,7 @@
 
 NEXORA is a portfolio project built to production standards: one permission model enforced on the server and in the database, deterministic demo data, and tests for the rules that matter. All company and person data is fictional.
 
-> Status: under active development. Phases 1 (foundation) and 2 (CRM core) are complete; see [PROGRESS.md](PROGRESS.md) for what works today and what is next.
+> Status: under active development. Phases 1 (foundation), 2 (CRM core) and 3 (dashboard, analytics, automation) are complete; see [PROGRESS.md](PROGRESS.md) for what works today and what is next.
 
 ## What works today
 
@@ -20,6 +20,9 @@ NEXORA is a portfolio project built to production standards: one permission mode
 - Orders with a line-item editor, enforced status transitions, simulated payments and derived payment status; won deals convert into exactly one order.
 - Tasks with list, month and week calendar, one-click complete; an activity feed; global record search in the command palette.
 - Server-side security: tenant isolation, 404 on guessed ids, strict input schemas, Origin checks, rate limits, audit log with field-level diffs and security events.
+- Overview dashboard and Analytics: revenue, pipeline, conversion, receivables ageing, sales by owner and source, task completion, with period filters in the URL, comparison to the previous period, and charts that drill down to the filtered records.
+- Automation Studio: no-code workflows (triggers, conditions, tasks, notifications, owner assignment, order creation, email, delays), validation, versions, test runs, run history with retry, and guardrails against loops and runaway runs. A scheduler endpoint handles due dates and delays.
+- Tamper-evident security log (hash chain) with in-app verification, ready to feed the companion SIEM.
 
 ## Quick start (demo mode)
 
@@ -73,12 +76,15 @@ flowchart LR
 3. Load the demo data and users: `npm run supabase:seed` (reads `.env.local`).
 4. Set `NEXORA_DATA_MODE=supabase`, run `npm run dev`, and sign in as one of the printed demo accounts.
 
-The service-role key is used only by the seed script on your machine. The app itself uses the anon key and the signed-in user's session, so every query is subject to RLS.
+User-facing queries use the anon key and the signed-in user's session, so they are subject to RLS. The service-role key is also needed on the server for automation runs, the security log and invites (see [docs/security.md](docs/security.md#service-role)). Set `CRON_SECRET` and call `/api/cron/scheduler` every 5 minutes for due-date automations and delays ([docs/automation-guide.md](docs/automation-guide.md#the-scheduler)).
 
 ## Documentation
 
 - [docs/data-model.md](docs/data-model.md): tables, relationships, ER diagram
 - [docs/security.md](docs/security.md): roles, permission matrix, RLS, demo-mode limits
+- [docs/metrics.md](docs/metrics.md): definition of every dashboard and analytics metric
+- [docs/automation-guide.md](docs/automation-guide.md): workflows, steps, limits, scheduler and cron setup
+- [docs/security-events.md](docs/security-events.md): security event schema, hash chain, action catalog
 - [PROGRESS.md](PROGRESS.md): build log, known issues, decisions
 
 ## Screenshots

@@ -26,6 +26,8 @@ export function ChartContainer({
   height = 260,
   summary,
   children,
+  empty,
+  footer,
   className,
 }: {
   title: string;
@@ -35,6 +37,10 @@ export function ChartContainer({
   /** Text alternative describing what the chart shows. */
   summary: string;
   children: ReactNode;
+  /** Shown instead of the chart when there is nothing to plot. */
+  empty?: ReactNode;
+  /** Rendered under the chart (for example a "Show data" table). */
+  footer?: ReactNode;
   className?: string;
 }) {
   return (
@@ -47,10 +53,13 @@ export function ChartContainer({
         {actions}
       </div>
       <div style={{ height }} role="img" aria-label={summary}>
-        <ResponsiveContainer width="100%" height="100%">
-          {children as React.ReactElement}
-        </ResponsiveContainer>
+        {empty ?? (
+          <ResponsiveContainer width="100%" height="100%">
+            {children as React.ReactElement}
+          </ResponsiveContainer>
+        )}
       </div>
+      {footer}
     </figure>
   );
 }

@@ -42,11 +42,16 @@ export function createMemoryTx(data: Dataset, orgId: string, writable: boolean):
 
   return {
     orgId,
+    // Reads return copies, like a database round trip: callers can keep a "before" row
+    // while updating, and nothing mutates the store outside update().
     async find<T extends TableName>(table: T, where?: Where<Row<T>>) {
-      return rows(table).filter((r) => belongs(table, r, orgId) && matches(r, where as Record<string, unknown>)) as unknown as Row<T>[];
+      return rows(table)
+        .filter((r) => belongs(table, r, orgId) && matches(r, where as Record<string, unknown>))
+        .map((r) => ({ ...r })) as unknown as Row<T>[];
     },
     async get<T extends TableName>(table: T, id: string) {
-      return (rows(table).find((r) => r.id === id && belongs(table, r, orgId)) as unknown as Row<T>) ?? null;
+      const row = rows(table).find((r) => r.id === id && belongs(table, r, orgId));
+      return row ? ({ ...row } as unknown as Row<T>) : null;
     },
     async insert<T extends TableName>(table: T, row: Row<T>) {
       guard();
@@ -66,7 +71,7 @@ export function createMemoryTx(data: Dataset, orgId: string, writable: boolean):
       if ("organization_id" in target) next.organization_id = target.organization_id;
       checkUnique(table, next);
       Object.assign(target, next);
-      return target as unknown as Row<T>;
+      return { ...target } as unknown as Row<T>;
     },
     async appendSecurityEvent(draft) {
       guard();

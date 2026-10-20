@@ -6,8 +6,102 @@ The project is built in four phases (plus a separate companion app, VIGIL). Each
 | --- | --- | --- |
 | 1 | Foundation: shell, design system, data model, seed, demo mode, roles, base settings | Done |
 | 2 | CRM core: companies, contacts, leads, deals, pipeline, orders, tasks, search, security hardening | Done |
-| 3 | Dashboard, analytics, automation engine, security telemetry | Not started |
+| 3 | Dashboard, analytics, automation engine, security telemetry | Done |
 | 4 | Integrations, public API, UI kit, documentation, release | Not started |
+
+---
+
+## Phase 3: Dashboard, analytics, automation (2026-10-20)
+
+### Done
+
+- **Metrics module** (`src/domain/metrics`). Pure functions for every number on the dashboard and analytics pages:
+  - money: won deal value, order value, collected, outstanding receivables, open and weighted pipeline, average deal size (six distinct money metrics, never mixed)
+  - deals: active deals, conversion rate, sales cycle
+  - breakdowns: receivables ageing buckets, orders by status, deals by stage, conversion funnel from stage history, sales by owner and by source, pipeline distribution
+  - tasks: overdue tasks, task completion rate
+  - time: revenue series with day, week or month buckets
+  - periods: presets and custom ranges in the URL (`?range=`, `?from=&to=`), comparison with the previous period of equal length
+  - Every definition is written down in `docs/metrics.md`. 19 unit tests check them against a hand-computed fixture.
+- **Overview dashboard** (replaces the placeholder):
+  - six KPI cards with change versus the previous period
+  - a sales-over-time chart and a deals-by-stage chart
+  - recent activities, upcoming tasks, recent orders and high-priority deals
+  - Scope follows the role (admin: organization, manager: team, rep: own records).
+  - Every number and every bar drills down to the filtered list. Clicking a revenue point opens `/deals?status=won&closed_from…`. Clicking a stage bar opens `/deals?stage=…&created_from…`. Receivables open `/orders?receivable=1` and overdue tasks open `/tasks?status=overdue`. The deals and orders lists gained the matching filters (`created_from/to`, `closed_from/to`, `status=closed`, `receivable`).
+- **Analytics page.** Totals, revenue over time, conversion funnel, pipeline distribution, receivables ageing, orders by status, sales by owner and source, and work completion, with the same period filter.
+- **Charts** (`src/components/charts`) on Recharts 3:
+  - The chart palette is moved into tokens (`chart-1..5`, separate light and dark steps) and validated with the dataviz palette validator against both surfaces.
+  - Thin marks, a single axis, recessive grid, token tooltips.
+  - Each chart has a "Show data" table and an accessible summary, plus an empty state.
+- **Security events.**
+  - Dedicated `security_events` table: an ECS-style schema with a per-organization SHA-256 hash chain over canonical JSON and a gap-free sequence (`src/domain/security/events.ts`).
+  - Redaction of secret-looking metadata.
+  - A catalog of 22 actions, emitted for logins, the demo user switch, demo reset, settings, role changes, user disable, enable and invite, pipeline stages, workflow changes and limits, unauthorized cron calls, bulk reads (`data.bulk_read`), authz denials, validation failures, rate limits and the scheduler heartbeat.
+  - **Settings → Security log** (admin): event table with a detail sheet, plus chain verification on demand.
+  - Documented in `docs/security-events.md`, the contract for VIGIL.
+  - Migration `20261021000001_security_events_and_automation.sql`: insert-only table, admin-only reads, unique `(organization_id, sequence)`.
+- **Automation engine** (`src/server/automation`). Workflows are JSON validated by strict schemas, with no code evaluation:
+  - 5 trigger types and 10 step types: condition, assign owner, create task, update record (field allowlist), activity, notification, deal → order, email via Resend, webhook (phase 4), delay
+  - per-step execution log, idempotency key per workflow and event, causation chain (depth 3, no self-retrigger)
+  - guardrails: 20 steps, 30 runs per minute, 5 s step timeout, 30-day delay
+  - retry from the failed step, and dry-mode test runs
+  - Runs act as a service principal and execute after the user's action commits, so a failing automation never breaks the user's action.
+- **Scheduler.** Handles `date.reached` triggers, resumes delayed runs and writes a heartbeat. It runs from the "Run scheduler" button and from `/api/cron/scheduler`, which is disabled without `CRON_SECRET`, compares the bearer token in constant time and logs `cron.unauthorized`.
+- **Automation Studio UI.**
+  - Workflow list with stats and enable toggles.
+  - "New workflow" blank or from three templates (new lead, deal won, overdue follow-up), all seeded and enabled in the demo with a run history.
+  - Editor with flow view, trigger and step panels, inline validation, versions, test run and archive.
+  - Run history with filters, a detail sheet and Retry.
+  - Documented in `docs/automation-guide.md`.
+- **Team actions.** Admins can disable or re-enable users (`set_profile_active()`); invites work in Supabase mode. The server actions exist; their UI is still pending (see Remaining).
+- **Docs.** `docs/metrics.md`, `docs/automation-guide.md` and `docs/security-events.md` are new. `docs/security.md` covers telemetry, automation controls and the service role. `docs/data-model.md`, the README and `.env.example` are updated with `CRON_SECRET`, `RESEND_API_KEY`, `NEXORA_EMAIL_FROM`, `NEXORA_BULK_READ_THRESHOLD` and `NEXORA_ALLOWED_ORIGINS`.
+- **Tests.**
+  - Vitest: 165 tests across 11 files. New suites cover metrics, automation logic, the automation engine (idempotency, loops, limits, retry, delays, scheduler) and security events (chain, tamper detection, redaction). There are new regressions for stage history and owner-change metadata.
+  - Playwright: 14 tests, 5 of them new:
+    - creating a lead runs the New lead automation (follow-up task plus execution log)
+    - clicking a dashboard stage bar opens the filtered deals list
+    - KPI drill-downs
+    - a sales rep gets 403 on the Studio and the security log
+    - the security log chain verifies
+  - The CRM test now expects the order to be created by the Deal won automation, with no second order.
+
+### Verified in this session
+
+Commands run from the project root on Windows 11, Node 24.21:
+
+| Command | Result |
+| --- | --- |
+| `npm run lint` | pass |
+| `npm run typecheck` | pass |
+| `npm test` | 165 passed (11 files) |
+| `npm run build` | pass; every app route is dynamic |
+| `npm run test:e2e` | 14 passed (production build, demo mode, isolated data file) |
+| Browser | Overview, Analytics, Automation Studio, a workflow detail page and the security log were checked at desktop width in light and dark, and Overview at 390 px. A failed run was retried successfully. |
+
+### Remaining (phase 4)
+
+- The `send_webhook` step and the `webhook.received` trigger are wired into the engine but need the integrations module: outbound webhooks with HMAC signatures and SSRF protection, plus inbound endpoints.
+- Public API `/api/v1` with keys and scopes, a SIEM pull API for `security_events`, OpenAPI, Make/n8n pages, the UI kit page with a Tokens Studio export, and hardening.
+- Team settings UI for disable, enable and invite (the server actions exist), and a "filtered by" chip on deals and orders when they are opened from a drill-down.
+
+### Known issues
+
+- In Supabase mode a service action is not one database transaction: the adapter runs statements one by one under RLS, as it did in phase 2. Automations run after commit and are idempotent, so a retry is safe, but a crash between two statements of a user action can leave a partial write.
+- Supabase mode now **requires `SUPABASE_SERVICE_ROLE_KEY` on the server** (automation runs, security log, invites). This is documented in `.env.example` and `docs/security.md`. It has not yet been run against a live Supabase project; the migration and RLS were checked on PGlite.
+- Time-based automations and the heartbeat only happen when something calls the scheduler. Vercel Hobby allows only daily crons, so use an external cron there (`docs/automation-guide.md`).
+- The rate limiter and the bulk-read counter are in memory, per instance.
+- Resolved from phase 1: "managers can see unassigned leads" now holds in both layers (`ownerInScope()` allows a null owner for leads with team or all scope).
+
+### Decisions
+
+- **Automations run after commit**, on events collected in `ctx.pendingEvents`, each step in its own unit of work. Nested writes would deadlock the demo store's serialized queue, and a user action should never fail because a workflow failed.
+- **The in-memory adapter returns copies of rows** (`find`, `get` and `update`). It used to return live objects, so "before" values read ahead of an update were silently overwritten. That made demo-mode stage history record `from = to` and lost owner-change `from` values. Regression tests cover it.
+- **Separate `security_events` from `audit_logs`.** The audit log answers "what changed in my data"; the security log is the SIEM feed, hash-chained, with its own schema contract.
+- **The service role is used only where RLS cannot express the need** (automation, security log, invites), always bound to one organization by the server.
+- **Cookie first in the demo session.** Reading the cookie before any file I/O marks every authenticated page dynamic, so `next build` never prerenders a page or writes the demo store. Store renames on Windows retry on `EPERM`/`EBUSY`.
+- **Cache Components stays disabled** (decided in phase 1). Every page depends on the session.
+- **The stage chart is horizontal** so long stage names stay readable at any width.
 
 ---
 

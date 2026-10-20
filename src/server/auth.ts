@@ -30,8 +30,10 @@ function toActor(profile: Profile, all: Profile[]): Actor {
 }
 
 async function demoSession(): Promise<SessionUser> {
-  const data = await getDemoStore().read();
+  // Read the cookie first: it marks the route dynamic before any file I/O, so builds never
+  // prerender (and write the demo store from) an authenticated page.
   const cookieStore = await cookies();
+  const data = await getDemoStore().read();
   const chosenId = await verifySignedValue(cookieStore.get(DEMO_USER_COOKIE)?.value);
   const profiles = data.profiles.filter((p) => p.organization_id === DEMO_ORG_ID);
   // Without a valid signed cookie the demo starts as the admin user.

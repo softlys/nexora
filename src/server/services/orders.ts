@@ -20,7 +20,14 @@ function livePaymentStatus(ctx: ServiceContext, order: Order, payments: Payment[
   return derivePaymentStatus({ total: order.total, collected, status: order.status, payment_due_date: order.payment_due_date, today: today(ctx) });
 }
 
-export type OrderFilters = { status?: Order["status"]; payment?: Order["payment_status"]; owner?: string; company?: string };
+export type OrderFilters = {
+  status?: Order["status"];
+  payment?: Order["payment_status"];
+  owner?: string;
+  company?: string;
+  /** Drill-down from "Outstanding receivables": confirmed+ orders with money still owed. */
+  receivable?: boolean;
+};
 
 export async function listOrders(ctx: ServiceContext, query: ListQuery, filters: OrderFilters) {
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
@@ -49,7 +56,8 @@ export async function listOrders(ctx: ServiceContext, query: ListQuery, filters:
           (!filters.status || o.status === filters.status) &&
           (!filters.payment || o.payment_status === filters.payment) &&
           (!filters.owner || o.owner_id === filters.owner) &&
-          (!filters.company || o.company_id === filters.company),
+          (!filters.company || o.company_id === filters.company) &&
+          (!filters.receivable || (["confirmed", "processing", "shipped", "delivered"].includes(o.status) && o.total - o.collected > 0.005)),
       );
     const page = applyListQuery(enriched, query, {
       searchText: (o) => `${o.order_number} ${o.company_name} ${o.owner_name}`,

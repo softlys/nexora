@@ -28,8 +28,13 @@ export type DealFilters = {
   to?: string;
   min?: number;
   max?: number;
-  status?: "open" | "won" | "lost";
+  status?: "open" | "won" | "lost" | "closed";
   company?: string;
+  /** Drill-down from metrics: created or closed within a date range (inclusive, YYYY-MM-DD). */
+  created_from?: string;
+  created_to?: string;
+  closed_from?: string;
+  closed_to?: string;
 };
 
 /** Visible, non-archived deals enriched for lists and the board, with all filters applied. */
@@ -53,7 +58,11 @@ async function filteredDeals(tx: Tx, ctx: ServiceContext, filters: DealFilters, 
         (!filters.stage || d.stage_id === filters.stage) &&
         (!filters.owner || d.owner_id === filters.owner) &&
         (!filters.company || d.company_id === filters.company) &&
-        (!filters.status || status === filters.status) &&
+        (!filters.status || status === filters.status || (filters.status === "closed" && status !== "open")) &&
+        (!filters.created_from || d.created_at.slice(0, 10) >= filters.created_from) &&
+        (!filters.created_to || d.created_at.slice(0, 10) <= filters.created_to) &&
+        (!filters.closed_from || (d.closed_at !== null && d.closed_at.slice(0, 10) >= filters.closed_from)) &&
+        (!filters.closed_to || (d.closed_at !== null && d.closed_at.slice(0, 10) <= filters.closed_to)) &&
         (filters.min === undefined || d.amount >= filters.min) &&
         (filters.max === undefined || d.amount <= filters.max) &&
         (!filters.from || (d.expected_close_date ?? "") >= filters.from) &&

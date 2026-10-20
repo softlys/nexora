@@ -5,7 +5,7 @@
  * This module has no Next.js imports so the demo:seed / demo:reset scripts can use it.
  * Writes are serialized through a promise queue and written atomically (temp file + rename).
  */
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { Dataset } from "../../domain/entities";
 import { generateSeed, SEED_NUMBER } from "../../domain/seed/generate";
@@ -53,7 +53,20 @@ export async function writeStoreFile(path: string, store: StoreFile): Promise<vo
   await mkdir(dirname(target), { recursive: true });
   const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
   await writeFile(temp, JSON.stringify(store), "utf8");
-  await rename(temp, target);
+  // Windows refuses a rename while another process has the target open (EPERM/EBUSY): retry briefly.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rename(temp, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if ((code !== "EPERM" && code !== "EBUSY" && code !== "EACCES") || attempt >= 10) {
+        await unlink(temp).catch(() => undefined);
+        throw error;
+      }
+      await new Promise((r) => setTimeout(r, 20 * (attempt + 1)));
+    }
+  }
 }
 
 /**

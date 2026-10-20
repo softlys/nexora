@@ -9,6 +9,8 @@ export type KpiDelta = {
   /** Whether an increase is good (revenue) or bad (overdue tasks). */
   positiveIsGood?: boolean;
   label?: string;
+  /** Shown instead of the change when value is null (nothing to compare against). */
+  emptyLabel?: string;
 };
 
 export function KpiCard({
@@ -37,9 +39,13 @@ export function KpiCard({
         {illustrative && <span className="rounded border border-warning-border bg-warning-bg px-1 text-[11px] font-medium text-warning">Illustrative</span>}
       </div>
       <div className="mt-2 text-2xl font-semibold tracking-tight text-foreground tabular-nums">{value}</div>
-      <div className="mt-1.5 flex min-h-5 items-center gap-2 text-xs text-text-muted">
-        {delta && <DeltaPill delta={delta} />}
-        {hint && <span className="truncate">{hint}</span>}
+      <div className="mt-1.5 min-h-5 space-y-0.5 text-xs text-text-muted">
+        {delta && (
+          <div>
+            <DeltaPill delta={delta} />
+          </div>
+        )}
+        {hint && <div className="truncate">{hint}</div>}
       </div>
     </>
   );
@@ -58,16 +64,16 @@ export function KpiCard({
 }
 
 function DeltaPill({ delta }: { delta: KpiDelta }) {
-  if (delta.value === null) return <span className="text-text-muted">{delta.label ?? "No prior data"}</span>;
+  if (delta.value === null) return <span className="text-text-muted">{delta.emptyLabel ?? "No prior data to compare"}</span>;
   const up = delta.value > 0;
   const flat = Math.abs(delta.value) < 0.005;
   const good = flat ? null : up === (delta.positiveIsGood ?? true);
   const Icon = flat ? ArrowRight : up ? ArrowUpRight : ArrowDownRight;
   return (
-    <span className={cn("inline-flex items-center gap-0.5 font-medium tabular-nums", good === null ? "text-text-muted" : good ? "text-success" : "text-danger")}>
+    <span className={cn("inline-flex flex-wrap items-center gap-x-0.5 font-medium tabular-nums", good === null ? "text-text-muted" : good ? "text-success" : "text-danger")}>
       <Icon className="size-3.5" aria-hidden />
       {`${up ? "+" : ""}${(delta.value * 100).toFixed(1)}%`}
-      {delta.label && <span className="ml-1 font-normal text-text-muted">{delta.label}</span>}
+      {delta.label && <span className="ml-1 font-normal whitespace-nowrap text-text-muted">{delta.label}</span>}
     </span>
   );
 }

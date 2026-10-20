@@ -43,11 +43,6 @@
   --nx-color-info-bg: #f0f9ff;
   --nx-color-info-border: #bae6fd;
   --nx-color-info-solid: #0284c7;
-  --nx-chart-1: var(--nx-color-accent-600);
-  --nx-chart-2: #0ea5e9;
-  --nx-chart-3: #14b8a6;
-  --nx-chart-4: #f59e0b;
-  --nx-chart-5: #94a3b8;
   --nx-font-family-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --nx-font-family-mono: var(--font-geist-mono), ui-monospace, monospace;
   --nx-font-size-xs: 12px;
@@ -123,6 +118,11 @@
   --nx-info-fg: var(--nx-color-info-fg);
   --nx-info-bg: var(--nx-color-info-bg);
   --nx-info-border: var(--nx-color-info-border);
+  --nx-chart-1: var(--nx-color-accent-600);
+  --nx-chart-2: #0d9488;
+  --nx-chart-3: #d97706;
+  --nx-chart-4: #db2777;
+  --nx-chart-5: #0284c7;
 }
 
 .dark {
@@ -155,4 +155,9 @@
   --nx-info-fg: #38bdf8;
   --nx-info-bg: #0c2232;
   --nx-info-border: #0c4a6e;
+  --nx-chart-1: var(--nx-color-accent-400);
+  --nx-chart-2: #0d9488;
+  --nx-chart-3: #d97706;
+  --nx-chart-4: #db2777;
+  --nx-chart-5: #0284c7;
 }

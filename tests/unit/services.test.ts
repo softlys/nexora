@@ -122,7 +122,8 @@ describe("mass assignment and protected fields", () => {
     const strip = ({ id, name, website, industry, size, country, city, address, phone, lifecycle_stage, notes }: typeof company) => ({ id, name, website, industry, size, country, city, address, phone, lifecycle_stage, notes });
     await updateCompany(manager, companyUpdateInput.parse({ ...strip(company), owner_id: DEMO_USER_IDS.repSofia }));
     expect(data().companies.find((c) => c.id === company.id)!.owner_id).toBe(DEMO_USER_IDS.repSofia);
-    expect(data().security_events.some((e) => e.action === "record.owner_changed" && e.target.id === company.id)).toBe(true);
+    const ownerEvent = data().security_events.find((e) => e.action === "record.owner_changed" && e.target.id === company.id)!;
+    expect(ownerEvent.metadata).toMatchObject({ from: DEMO_USER_IDS.repDaniel, to: DEMO_USER_IDS.repSofia });
     await expect(updateCompany(manager, companyUpdateInput.parse({ ...strip(company), owner_id: DEMO_USER_IDS.repEthan }))).rejects.toBeInstanceOf(PermissionError);
   });
 
@@ -188,6 +189,16 @@ describe("pipeline stage moves", () => {
     expect(moved.closed_at).not.toBeNull();
     expect(data().deal_stage_history.filter((h) => h.deal_id === deal.id)).toHaveLength(historyBefore + 1);
     expect(data().audit_logs.some((l) => l.action === "deal.stage_changed" && l.target_id === deal.id)).toBe(true);
+  });
+
+  it("stores the previous stage in history and the previous values in audit diffs", async () => {
+    const deal = data().deals.find((d) => d.stage_id === firstStage().id)!;
+    const ctx = ctxFor(db, data(), deal.owner_id);
+    await moveDealStage(ctx, { deal_id: deal.id, stage_id: wonStage().id });
+    const last = data().deal_stage_history.filter((h) => h.deal_id === deal.id).sort((a, b) => b.changed_at.localeCompare(a.changed_at))[0]!;
+    expect(last).toMatchObject({ from_stage_id: firstStage().id, to_stage_id: wonStage().id });
+    const event = data().audit_logs.find((l) => l.action === "deal.stage_changed" && l.target_id === deal.id)!;
+    expect(event.changes).toMatchObject({ from_stage_id: firstStage().id, to_stage_id: wonStage().id });
   });
 
   it("requires a lost reason and refuses moving to the same stage", async () => {

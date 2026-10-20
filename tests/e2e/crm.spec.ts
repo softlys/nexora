@@ -71,16 +71,16 @@ test.describe("CRM core", () => {
     await page.reload();
     await expect(page.getByTestId("stage-column-Won").locator(`[data-deal-name="${DEAL}"]`)).toBeVisible();
 
-    // Create the order from the deal, then try again
+    // The "Deal won" automation creates the order; the deal links to it and offers no second one.
     await page.locator(`[data-deal-name="${DEAL}"]`).getByRole("button", { name: `Open ${DEAL}` }).click();
     await page.getByRole("link", { name: "Open full deal page" }).click();
     await expect(page.getByRole("heading", { level: 1, name: DEAL })).toBeVisible();
-    await page.getByRole("button", { name: "Create order" }).click();
+    const orderLink = page.getByRole("link", { name: /^Order NX-\d{4}-\d{4}$/ });
+    await expect(orderLink).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create order" })).toHaveCount(0);
+    await orderLink.click();
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/);
     await expect(page.getByText("$48,250.00").first()).toBeVisible();
-
-    await page.goBack();
-    await expect(page.getByRole("link", { name: /^Order NX-\d{4}-\d{4}$/ })).toBeVisible();
 
     await page.goto(`/orders?q=${encodeURIComponent(COMPANY)}`);
     await expect(page.getByRole("link", { name: /^NX-\d{4}-\d{4}$/ })).toHaveCount(1);

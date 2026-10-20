@@ -78,6 +78,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   { href: "/settings/organization", label: "Organization", description: "Company name, currency, locale and order conversion mode.", requires: { action: "update", resource: "organization" } },
   { href: "/settings/team", label: "Team", description: "Members, roles and reporting lines.", requires: { action: "view", resource: "team" } },
   { href: "/settings/pipeline", label: "Pipeline stages", description: "Rename, reorder and set probability and won/lost flags.", requires: { action: "manage", resource: "pipeline_stage" } },
+  { href: "/settings/security", label: "Security log", description: "Tamper-evident log of security events, with chain verification.", requires: { action: "view", resource: "audit_log" } },
   { href: "/settings/demo", label: "Demo data", description: "Reset the demo dataset to its seeded state.", requires: { action: "manage", resource: "demo" } },
 ];
 

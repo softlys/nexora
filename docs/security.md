@@ -86,7 +86,7 @@ Every CRM mutation goes through `serviceAction` (`src/server/service-action.ts`)
 
 ### Security events
 
-Emitted through the same event bus as domain events (`src/domain/events/types.ts`) and, in phase 2, stored in `audit_logs`. Phase 3 moves them into a dedicated, hash-chained `security_events` log for the external SIEM.
+Emitted through the same event bus as domain events (`src/domain/events/types.ts`) and stored in the dedicated, hash-chained `security_events` log (phase 3). The full schema, chain and action catalog are in [security-events.md](security-events.md).
 
 | Event | When |
 | --- | --- |
@@ -98,6 +98,26 @@ Emitted through the same event bus as domain events (`src/domain/events/types.ts
 Security events raised inside a unit of work are queued and written after it finishes, even when the operation itself fails.
 
 Supabase mode note: RLS hides out-of-scope rows entirely, so a guessed id looks exactly like a missing one. The 404 behavior is identical, but `authz.denied` with reason `not_visible` is only recorded in demo mode.
+
+## Security telemetry and automation (phase 3)
+
+| Concern | Control | Where |
+| --- | --- | --- |
+| Tampering with the security log | `security_events` is a per-organization hash chain (SHA-256 over canonical JSON, gap-free sequence). No update or delete grants; admins read it through RLS. **Settings → Security log** verifies the chain on demand. | `src/domain/security/events.ts`, [security-events.md](security-events.md) |
+| Secrets in logs | Metadata is redacted before sealing (secret-looking keys, long strings, deep nesting). Failed logins store a truncated hash of the email, not the email. | `redact()` |
+| Scraping | `data.bulk_read` when one user reads more than `NEXORA_BULK_READ_THRESHOLD` records in 5 minutes. | `trackRead()` in `src/server/services/context.ts` |
+| Automation as an escalation path | Workflows are JSON validated by strict schemas: no code evaluation, allowlisted variables and fields only, no step that touches roles, permissions, keys or integrations. Only admins and managers edit them; every change is audited and emits `workflow.*` security events. | `src/domain/automation`, [automation-guide.md](automation-guide.md) |
+| Runaway automations | 20 steps, 30 runs per workflow per minute, 5 s step timeout, causation depth 3, no self-retrigger, idempotency key per workflow and event (`workflow.limit_exceeded`). | `src/server/automation/engine.ts` |
+| Unauthenticated scheduler calls | `/api/cron/scheduler` is disabled without `CRON_SECRET` (16+ characters), compares the bearer token in constant time and logs `cron.unauthorized`. | `src/app/api/cron/scheduler/route.ts` |
+
+### Service role
+
+In Supabase mode the server uses the service-role key (`SUPABASE_SERVICE_ROLE_KEY`, server-only, `src/server/supabase/service.ts`) for exactly three things:
+- automation runs, which need to see records outside the triggering user's RLS scope (for example, managers to notify)
+- appending to the security log, which must also work for anonymous events such as failed logins
+- sending member invites
+
+Every user-facing read and write still goes through the anon key and the user's session, so it remains subject to RLS. Service-role code paths are scoped to one organization by the `Tx` and never accept an organization id from the client.
 
 ## Headers
 
