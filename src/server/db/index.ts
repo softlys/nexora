@@ -4,6 +4,8 @@ import type { TableName } from "@/domain/entities";
 import { getDataMode } from "@/server/env";
 import { getDemoStore } from "@/server/repositories/demo";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { createSupabaseServiceClient } from "@/server/supabase/service";
+import { sealSecurityEvent, type SecurityEvent } from "@/domain/security/events";
 import { createMemoryTx } from "./memory-tx";
 import { UniqueViolation, type Db, type Row, type Tx, type Where } from "./types";
 
@@ -55,6 +57,25 @@ function supabaseTx(db: SupabaseClient, orgId: string): Tx {
       if (error) raise(table, error);
       return data as Row<T>;
     },
+    async appendSecurityEvent(draft) {
+      // Written with the service client: some events have no session (failed login, cron).
+      const service = createSupabaseServiceClient();
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { data: last, error: readError } = await service
+          .from("security_events")
+          .select("sequence, hash")
+          .eq("organization_id", orgId)
+          .order("sequence", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (readError) raise("security_events", readError);
+        const event = sealSecurityEvent({ ...draft, organization_id: orgId }, (last as Pick<SecurityEvent, "sequence" | "hash"> | null) ?? null);
+        const { error } = await service.from("security_events").insert(event);
+        if (!error) return event;
+        if (error.code !== "23505") raise("security_events", error);
+      }
+      throw new Error("security_events: could not append after 5 attempts");
+    },
     async nextOrderNumber(year) {
       const { data, error } = await db.rpc("next_order_number", { order_year: year });
       if (error) raise("orders", error);
@@ -78,6 +99,33 @@ const supabaseDb: Db = {
 
 export function getDb(): Db {
   return getDataMode() === "supabase" ? supabaseDb : demoDb;
+}
+
+/**
+ * Database access for the automation engine and scheduler, which act as a service
+ * principal rather than as the signed-in user. Demo mode uses the same store.
+ */
+const supabaseServiceDb: Db = {
+  async read(orgId, fn) {
+    return fn(supabaseTx(createSupabaseServiceClient(), orgId));
+  },
+  async write(orgId, fn) {
+    return fn(supabaseTx(createSupabaseServiceClient(), orgId));
+  },
+};
+
+export function getServiceDb(): Db {
+  return getDataMode() === "supabase" ? supabaseServiceDb : demoDb;
+}
+
+/** Every organization id, for system jobs (scheduler, cron) that run across tenants. */
+export async function listOrganizationIds(): Promise<string[]> {
+  if (getDataMode() === "supabase") {
+    const { data, error } = await createSupabaseServiceClient().from("organizations").select("id");
+    if (error) throw new Error(`organizations: ${error.message}`);
+    return (data ?? []).map((o) => o.id as string);
+  }
+  return (await getDemoStore().read()).organizations.map((o) => o.id);
 }
 
 export type { Db, Row, Tx, Where } from "./types";

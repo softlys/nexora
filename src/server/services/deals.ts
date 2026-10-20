@@ -7,7 +7,7 @@ import { daysInStage, planStageMove, StageMoveError, stageDurations, summarizeSt
 import { buildTimeline } from "@/domain/timeline";
 import { DomainError } from "@/server/repositories/types";
 import type { Tx } from "@/server/db/types";
-import { emit, emitSecurity, findVisible, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
+import { emit, emitSecurity, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { assertLinksVisible, byId, getOwned } from "./records";
 import { PermissionError } from "@/domain/permissions";
 
@@ -89,6 +89,7 @@ export async function listDeals(ctx: ServiceContext, query: ListQuery, filters: 
       },
       defaultSort: { key: "close", dir: "asc" },
     });
+    trackRead(ctx, "deal", page.rows.length);
     return { ...page, stages };
   });
 }

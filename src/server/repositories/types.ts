@@ -49,6 +49,8 @@ export interface Repositories {
     get(ctx: RepoContext, id: string): Promise<Profile | null>;
     updateOwn(ctx: RepoContext, patch: Pick<Profile, "full_name" | "title">): Promise<Profile>;
     changeRole(ctx: RepoContext, profileId: string, role: Role): Promise<Profile>;
+    setActive(ctx: RepoContext, profileId: string, active: boolean): Promise<Profile>;
+    invite(ctx: RepoContext, input: { email: string; full_name: string; role: Role }): Promise<Profile>;
   };
   pipelineStages: {
     list(ctx: RepoContext): Promise<PipelineStage[]>;

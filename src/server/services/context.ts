@@ -7,8 +7,9 @@
 import { randomUUID } from "node:crypto";
 import type { AuditLog, Profile } from "@/domain/entities";
 import { EventBus } from "@/domain/events/bus";
-import type { DomainEvent, EventInput } from "@/domain/events/types";
-import { can, isWithinScope, PermissionError, scopeFor, visibleOwnerIds, type Action, type Actor, type Resource } from "@/domain/permissions";
+import { isSecurityEvent, type DomainEvent, type EventInput } from "@/domain/events/types";
+import type { SecurityActor, SecurityEventDraft } from "@/domain/security/events";
+import { can, ownerInScope, PermissionError, scopeFor, visibleOwnerIds, type Action, type Actor, type Resource } from "@/domain/permissions";
 import type { RequestMeta } from "@/server/repositories/types";
 import { DomainError } from "@/server/repositories/types";
 import type { Db, Row, Tx, Where } from "@/server/db/types";
@@ -19,14 +20,21 @@ export type ServiceContext = {
   meta: RequestMeta;
   db: Db;
   now?: () => Date;
-  /** Set by the automation engine (phase 3) for events caused by a workflow. */
+  /** Set by the automation engine for events caused by a workflow. */
   causation?: { depth: number; chain: string[] };
+  /** "service" when the automation engine or scheduler acts (no user session). */
+  principal?: "user" | "service" | "anonymous";
   /**
    * Security events raised while a unit of work is open. They are written by
    * `flushSecurityEvents` after the operation finishes (even if it failed), because a
    * nested write inside the demo store's write queue would deadlock.
    */
   deferred: EventInput[];
+  /**
+   * Domain events that may trigger automations. Collected while the unit of work runs and
+   * dispatched only after it committed (see dispatchAutomations), never inside it.
+   */
+  pendingEvents?: DomainEvent[];
 };
 
 export const nowOf = (ctx: ServiceContext) => (ctx.now ? ctx.now() : new Date());
@@ -74,10 +82,54 @@ export function auditRowFromEvent(event: DomainEvent): AuditLog {
   };
 }
 
-// Phase 2: every domain and security event is recorded in audit_logs.
+export function securityDraftFromEvent(event: DomainEvent): SecurityEventDraft {
+  const p = { ...(event.payload as Record<string, unknown>) };
+  const actor: SecurityActor =
+    event.actor.id !== null
+      ? { type: "user", user_id: event.actor.id, role: event.actor.role }
+      : event.actor.role === "service"
+        ? { type: "service", name: "nexora" }
+        : { type: "anonymous" };
+  let target = (p.target as { type: string | null; id: string | null } | undefined) ?? null;
+  if (!target && event.type === "authz.denied") target = { type: p.resource as string, id: (p.target_id as string | null) ?? null };
+  if (!target && typeof p.entity === "string") target = { type: p.entity, id: (p.id as string) ?? null };
+  const outcome = p.outcome as SecurityEventDraft["outcome"];
+  const severity = p.severity as SecurityEventDraft["severity"];
+  delete p.target;
+  delete p.outcome;
+  delete p.severity;
+  if (event.causation.depth > 0) p.causation = event.causation;
+  return {
+    event_id: event.id,
+    organization_id: event.organization_id,
+    occurred_at: event.occurred_at,
+    action: event.type as SecurityEventDraft["action"],
+    outcome,
+    severity,
+    actor,
+    source: { ip: event.meta.ip, user_agent: event.meta.user_agent, request_id: event.meta.request_id },
+    target: target ?? undefined,
+    metadata: p,
+  };
+}
+
+// Domain events go to audit_logs; security events go to the hash-chained security_events log.
 if (!eventBus.has("audit-log")) {
   eventBus.subscribe("audit-log", async (event, { tx }) => {
+    if (isSecurityEvent(event.type)) return;
     await tx.insert("audit_logs", auditRowFromEvent(event));
+  });
+}
+const AUTOMATION_TRIGGER_TYPES = new Set(["record.created", "record.updated", "deal.stage_changed", "date.reached", "webhook.received"]);
+if (!eventBus.has("automation-queue")) {
+  eventBus.subscribe("automation-queue", (event, { ctx }) => {
+    if (ctx.pendingEvents && AUTOMATION_TRIGGER_TYPES.has(event.type)) ctx.pendingEvents.push(event);
+  });
+}
+if (!eventBus.has("security-log")) {
+  eventBus.subscribe("security-log", async (event, { tx }) => {
+    if (!isSecurityEvent(event.type)) return;
+    await tx.appendSecurityEvent(securityDraftFromEvent(event));
   });
 }
 
@@ -87,7 +139,12 @@ export function buildEvent(ctx: ServiceContext, input: EventInput): DomainEvent 
     type: input.type,
     occurred_at: nowOf(ctx).toISOString(),
     organization_id: ctx.actor.organization_id,
-    actor: { id: ctx.actor.id, role: ctx.actor.role },
+    actor:
+      ctx.principal === "service"
+        ? { id: null, role: "service" }
+        : ctx.principal === "anonymous"
+          ? { id: null, role: "anonymous" }
+          : { id: ctx.actor.id, role: ctx.actor.role },
     meta: ctx.meta,
     causation: ctx.causation ?? { depth: 0, chain: [] },
     payload: input.payload,
@@ -136,11 +193,8 @@ export async function findVisible<T extends TableName>(
   where?: Where<Row<T>>,
 ): Promise<Row<T>[]> {
   const rows = await tx.find(table, where);
-  const owners = visibleOwnerIds(ctx.actor, resource);
-  return owners === "all" ? rows : rows.filter((r) => {
-    const o = ownerOf(r);
-    return o !== null && owners.includes(o);
-  });
+  if (visibleOwnerIds(ctx.actor, resource) === "all") return rows;
+  return rows.filter((r) => ownerInScope(ctx.actor, "view", resource, ownerOf(r)));
 }
 
 /**
@@ -159,8 +213,7 @@ export async function getVisible<T extends TableName>(
 ): Promise<Row<T>> {
   const row = await tx.get(table, id);
   if (!row) throw new NotFoundError(label);
-  const scope = scopeFor(ctx.actor.role, "view", resource);
-  if (!scope || !isWithinScope(ctx.actor, scope, ownerOf(row))) {
+  if (!ownerInScope(ctx.actor, "view", resource, ownerOf(row))) {
     emitSecurity(ctx, { type: "authz.denied", payload: { action: "view", resource, target_id: id, reason: "not_visible" } });
     throw new NotFoundError(label);
   }
@@ -169,8 +222,8 @@ export async function getVisible<T extends TableName>(
 
 /** Throws 403 (PermissionError) and records authz.denied when the action is not allowed on a visible record. */
 export function requireCan(ctx: ServiceContext, action: Action, resource: Resource, ownerId?: string | null, targetId: string | null = null): void {
-  const record = ownerId === undefined ? undefined : { organization_id: ctx.actor.organization_id, owner_id: ownerId };
-  if (can(ctx.actor, action, resource, record)) return;
+  const allowed = ownerId === undefined ? can(ctx.actor, action, resource) : ownerInScope(ctx.actor, action, resource, ownerId);
+  if (allowed) return;
   emitSecurity(ctx, { type: "authz.denied", payload: { action, resource, target_id: targetId, reason: "not_permitted" } });
   throw new PermissionError(action, resource);
 }
@@ -192,7 +245,7 @@ export async function resolveOwner(
   const allowedToReassign = scope === "all" || scope === "team";
   const target = requested === null ? null : ((await tx.get("profiles", requested)) as Profile | null);
   const valid = requested === null || (target !== null && target.is_active && !target.archived_at);
-  if (!allowedToReassign || !valid || !scope || !isWithinScope(ctx.actor, scope, requested)) {
+  if (!allowedToReassign || !valid || !scope || !ownerInScope(ctx.actor, "update", resource, requested)) {
     emitSecurity(ctx, { type: "authz.denied", payload: { action: "reassign", resource, target_id: targetId, reason: "forbidden_field" } });
     throw new PermissionError("update", resource);
   }
@@ -201,4 +254,38 @@ export async function resolveOwner(
 
 export function newId(): string {
   return randomUUID();
+}
+
+// ---------------------------------------------------------------------------
+// Bulk read detection
+// ---------------------------------------------------------------------------
+
+const BULK_WINDOW_MS = 5 * 60_000;
+const bulkReads = globalThis as unknown as { __nexoraBulkReads?: Map<string, { start: number; count: number; flagged: boolean }> };
+
+export function bulkReadThreshold(): number {
+  const n = Number(process.env.NEXORA_BULK_READ_THRESHOLD);
+  return Number.isFinite(n) && n > 0 ? n : 300;
+}
+
+/**
+ * Counts records returned to a user. Crossing the threshold within five minutes emits one
+ * data.bulk_read event for that window (a signal for VIGIL's exfiltration rule).
+ */
+export function trackRead(ctx: ServiceContext, resource: string, records: number, now = Date.now()): void {
+  if (ctx.principal === "service" || records <= 0) return;
+  bulkReads.__nexoraBulkReads ??= new Map();
+  const windows = bulkReads.__nexoraBulkReads;
+  const key = ctx.actor.id;
+  let w = windows.get(key);
+  if (!w || now - w.start >= BULK_WINDOW_MS) {
+    w = { start: now, count: 0, flagged: false };
+    windows.set(key, w);
+  }
+  w.count += records;
+  const threshold = bulkReadThreshold();
+  if (!w.flagged && w.count > threshold) {
+    w.flagged = true;
+    emitSecurity(ctx, { type: "data.bulk_read", payload: { resource, records: w.count, threshold, window_seconds: BULK_WINDOW_MS / 1000 } });
+  }
 }

@@ -11,7 +11,8 @@ import type { Dataset } from "../../domain/entities";
 import { generateSeed, SEED_NUMBER } from "../../domain/seed/generate";
 import { daysBetween, shiftDataset } from "../../domain/seed/shift";
 
-export const STORE_VERSION = 1;
+/** Bump when the dataset shape changes; older files are replaced by a fresh seed. */
+export const STORE_VERSION = 2;
 
 export type StoreFile = {
   version: number;

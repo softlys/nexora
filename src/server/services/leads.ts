@@ -6,7 +6,7 @@ import { applyListQuery, type ListQuery } from "@/domain/list";
 import { buildTimeline } from "@/domain/timeline";
 import { UniqueViolation } from "@/server/db/types";
 import { DomainError } from "@/server/repositories/types";
-import { emit, findVisible, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
+import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { createDeal } from "./deals";
 import { byId, getOwned } from "./records";
 
@@ -26,7 +26,7 @@ export async function listLeads(ctx: ServiceContext, query: ListQuery, filters: 
           (!filters.owner || l.owner_id === filters.owner),
       )
       .map((l) => ({ ...l, owner_name: l.owner_id ? (profileById.get(l.owner_id)?.full_name ?? null) : null }));
-    return applyListQuery(filtered, query, {
+    const page = applyListQuery(filtered, query, {
       searchText: (l) => `${l.title} ${l.company_name} ${l.contact_name} ${l.email ?? ""}`,
       sorters: {
         title: (l) => l.title.toLowerCase(),
@@ -38,6 +38,8 @@ export async function listLeads(ctx: ServiceContext, query: ListQuery, filters: 
       },
       defaultSort: { key: "created", dir: "desc" },
     });
+    trackRead(ctx, "lead", page.rows.length);
+    return page;
   });
 }
 

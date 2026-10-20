@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import {
   changeRoleInput,
   pipelineStageInput,
@@ -11,19 +12,29 @@ import {
 import { assertCan } from "@/domain/permissions";
 import { getRepoContext } from "@/server/auth";
 import { runAction } from "@/server/action-result";
-import { getRepositories } from "@/server/repositories";
+import { getDataMode } from "@/server/env";
+import { DomainError, getRepositories } from "@/server/repositories";
+import { recordSecurity } from "@/server/security/record";
 
 export async function updateOrganizationAction(input: unknown) {
   return runAction(async () => {
     const { ctx } = await getRepoContext();
     assertCan(ctx.actor, "update", "organization");
     const parsed = updateOrganizationInput.parse(input);
+    const before = await getRepositories().organizations.current(ctx);
     await getRepositories().organizations.update(ctx, {
       name: parsed.name,
       currency: parsed.currency,
       locale: parsed.locale,
       settings: { order_conversion_mode: parsed.order_conversion_mode },
     });
+    const changed = [
+      before.name !== parsed.name && "name",
+      before.currency !== parsed.currency && "currency",
+      before.locale !== parsed.locale && "locale",
+      before.settings.order_conversion_mode !== parsed.order_conversion_mode && "order_conversion_mode",
+    ].filter(Boolean);
+    if (changed.length) await recordSecurity({ type: "settings.changed", payload: { target: { type: "organization", id: ctx.actor.organization_id }, fields: changed } });
     revalidatePath("/", "layout");
     return undefined;
   });
@@ -45,7 +56,11 @@ export async function changeRoleAction(input: unknown) {
     const { ctx } = await getRepoContext();
     assertCan(ctx.actor, "manage", "team");
     const parsed = changeRoleInput.parse(input);
+    const before = await getRepositories().profiles.get(ctx, parsed.profile_id);
     await getRepositories().profiles.changeRole(ctx, parsed.profile_id, parsed.role);
+    if (before && before.role !== parsed.role) {
+      await recordSecurity({ type: "role.changed", payload: { target: { type: "profile", id: parsed.profile_id }, from_role: before.role, to_role: parsed.role } });
+    }
     revalidatePath("/", "layout");
     return undefined;
   });
@@ -58,6 +73,10 @@ export async function savePipelineStageAction(input: unknown) {
     const { id, ...stage } = pipelineStageInput.parse(input);
     const repo = getRepositories().pipelineStages;
     const saved = id ? await repo.update(ctx, id, stage) : await repo.create(ctx, stage);
+    await recordSecurity({
+      type: "pipeline.stages_changed",
+      payload: { target: { type: "pipeline_stage", id: saved.id }, change: id ? "updated" : "created", name: stage.name, probability: stage.probability, is_won: stage.is_won, is_lost: stage.is_lost },
+    });
     revalidatePath("/settings/pipeline");
     return { id: saved.id };
   });
@@ -69,7 +88,42 @@ export async function reorderPipelineStagesAction(input: unknown) {
     assertCan(ctx.actor, "manage", "pipeline_stage");
     const parsed = reorderStagesInput.parse(input);
     await getRepositories().pipelineStages.reorder(ctx, parsed.ordered_ids);
+    await recordSecurity({ type: "pipeline.stages_changed", payload: { target: { type: "pipeline_stage", id: null }, change: "reordered", order: parsed.ordered_ids } });
     revalidatePath("/settings/pipeline");
+    return undefined;
+  });
+}
+
+const memberInput = z.object({ profile_id: z.uuid(), active: z.boolean() }).strict();
+
+/** Admin: disable or re-enable a team member. Disabled members cannot act; the last admin cannot be disabled. */
+export async function setMemberActiveAction(input: unknown) {
+  return runAction(async () => {
+    const { ctx } = await getRepoContext();
+    assertCan(ctx.actor, "manage", "team");
+    const parsed = memberInput.parse(input);
+    if (parsed.profile_id === ctx.actor.id && !parsed.active) throw new DomainError("You cannot disable your own account.");
+    const profile = await getRepositories().profiles.setActive(ctx, parsed.profile_id, parsed.active);
+    await recordSecurity({ type: parsed.active ? "user.enabled" : "user.disabled", payload: { target: { type: "profile", id: profile.id }, role: profile.role } });
+    revalidatePath("/", "layout");
+    return undefined;
+  });
+}
+
+const inviteInput = z
+  .object({ email: z.email().max(254), full_name: z.string().trim().min(1).max(120), role: z.enum(["admin", "manager", "sales_rep"]) })
+  .strict();
+
+/** Admin: invite a member by email (Supabase mode). Demo mode has no real accounts to invite. */
+export async function inviteMemberAction(input: unknown) {
+  return runAction(async () => {
+    const { ctx } = await getRepoContext();
+    assertCan(ctx.actor, "manage", "team");
+    const parsed = inviteInput.parse(input);
+    if (getDataMode() !== "supabase") throw new DomainError("Invitations send real emails, so they are available only in Supabase mode.");
+    const profile = await getRepositories().profiles.invite(ctx, parsed);
+    await recordSecurity({ type: "user.invited", payload: { target: { type: "profile", id: profile.id }, role: parsed.role } });
+    revalidatePath("/settings/team");
     return undefined;
   });
 }

@@ -4,7 +4,7 @@
  */
 import type { Profile, TableName } from "@/domain/entities";
 import type { RecordEntity } from "@/domain/events/types";
-import { isWithinScope, scopeFor, type Resource } from "@/domain/permissions";
+import { isWithinScope, ownerInScope, scopeFor, type Resource } from "@/domain/permissions";
 import type { Row, Tx } from "@/server/db/types";
 import { emit, getVisible, nowOf, requireCan, type ServiceContext } from "./context";
 
@@ -75,9 +75,7 @@ export function byId<T extends { id: string }>(rows: T[]): Map<string, T> {
 export async function visibleIds(tx: Tx, ctx: ServiceContext, table: OwnedTable): Promise<Set<string>> {
   const spec = OWNED[table];
   const rows = (await tx.find(table as TableName)) as unknown as Array<Record<string, unknown> & { id: string }>;
-  const scope = scopeFor(ctx.actor.role, "view", spec.resource);
-  if (!scope) return new Set();
-  return new Set(rows.filter((r) => isWithinScope(ctx.actor, scope, spec.owner(r))).map((r) => r.id));
+  return new Set(rows.filter((r) => ownerInScope(ctx.actor, "view", spec.resource, spec.owner(r))).map((r) => r.id));
 }
 
 /** Makes sure every linked record id is visible to the actor; otherwise NotFound (no existence leaks). */

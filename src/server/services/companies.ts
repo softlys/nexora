@@ -4,7 +4,7 @@ import type { z } from "zod";
 import type { companyInput, companyUpdateInput } from "@/domain/inputs";
 import { applyListQuery, type ListQuery } from "@/domain/list";
 import { buildTimeline } from "@/domain/timeline";
-import { emit, findVisible, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
+import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { getOwned, visibleIds } from "./records";
 
 export type CompanyFilters = {
@@ -44,6 +44,7 @@ export async function listCompanies(ctx: ServiceContext, query: ListQuery, filte
       },
       defaultSort: { key: "name", dir: "asc" },
     });
+    trackRead(ctx, "company", page.rows.length);
     return {
       ...page,
       rows: page.rows.map((c) => ({ ...c, open_deals: openDeals.get(c.id) ?? 0, contacts: contactCount.get(c.id) ?? 0 })),

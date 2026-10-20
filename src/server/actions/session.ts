@@ -11,6 +11,7 @@ import { getDataMode } from "@/server/env";
 import { DomainError, getRepositories } from "@/server/repositories";
 import { getDemoStore } from "@/server/repositories/demo";
 import { signValue } from "@/server/session-signing";
+import { recordSecurity } from "@/server/security/record";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 const switchInput = z.object({ profile_id: z.uuid() }).strict();
@@ -32,11 +33,9 @@ export async function switchDemoUserAction(input: unknown) {
       path: "/",
       maxAge: 60 * 60 * 24 * 30,
     });
-    await getRepositories().audit.record(ctx, {
-      action: "auth.demo_user_switched",
-      target_type: "profile",
-      target_id: target.id,
-      changes: { from: ctx.actor.id, to: target.id },
+    await recordSecurity({
+      type: "auth.demo_user_switched",
+      payload: { target: { type: "profile", id: target.id }, from_user_id: ctx.actor.id, to_user_id: target.id, to_role: target.role },
     });
     revalidatePath("/", "layout");
     return { role: target.role };
@@ -50,7 +49,8 @@ export async function resetDemoDataAction() {
     const { ctx } = await getRepoContext();
     assertCan(ctx.actor, "manage", "demo");
     await getDemoStore().reset();
-    await getRepositories().audit.record(ctx, { action: "demo.reset", target_type: "organization", target_id: ctx.actor.organization_id, changes: {} });
+    // Recorded after the reset so the event survives in the fresh dataset.
+    await recordSecurity({ type: "demo.reset", payload: { target: { type: "organization", id: ctx.actor.organization_id } } });
     revalidatePath("/", "layout");
     return undefined;
   });

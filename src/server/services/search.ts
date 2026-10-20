@@ -1,5 +1,5 @@
 import { MAX_SEARCH_LENGTH } from "@/domain/list";
-import { findVisible, type ServiceContext } from "./context";
+import { findVisible, trackRead, type ServiceContext } from "./context";
 
 export type SearchResult = { kind: "company" | "contact" | "deal" | "order"; id: string; title: string; subtitle: string; href: string };
 
@@ -37,7 +37,7 @@ export async function globalSearch(ctx: ServiceContext, rawQuery: string): Promi
       findVisible(tx, ctx, "orders", "order", (r) => r.owner_id, { archived_at: null }),
     ]);
     const companyName = new Map(companies.map((c) => [c.id, c.name]));
-    return [
+    const results: SearchResult[] = [
       ...top(companies, q, (c) => `${c.name} ${c.industry} ${c.city}`).map(
         (c): SearchResult => ({ kind: "company", id: c.id, title: c.name, subtitle: `${c.industry} · ${c.city}`, href: `/companies/${c.id}` }),
       ),
@@ -57,5 +57,7 @@ export async function globalSearch(ctx: ServiceContext, rawQuery: string): Promi
         (o): SearchResult => ({ kind: "order", id: o.id, title: o.order_number, subtitle: companyName.get(o.company_id) ?? "", href: `/orders/${o.id}` }),
       ),
     ];
+    trackRead(ctx, "search", results.length);
+    return results;
   });
 }

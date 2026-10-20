@@ -132,6 +132,25 @@ export function createDemoRepositories(): Repositories {
           return target;
         });
       },
+      async setActive(ctx, profileId, active) {
+        return store.mutate((data) => {
+          const profiles = inOrg(ctx, data.profiles);
+          const target = profiles.find((p) => p.id === profileId && !p.archived_at);
+          if (!target) throw new DomainError("Team member not found.", "not_found");
+          const activeAdmins = profiles.filter((p) => p.role === "admin" && p.is_active && !p.archived_at);
+          if (!active && target.role === "admin" && activeAdmins.length <= 1) throw new DomainError("The organization needs at least one active admin.", "conflict");
+          if (target.is_active === active) return target;
+          target.is_active = active;
+          target.updated_at = nowIso();
+          data.audit_logs.push(
+            auditRow(ctx, { action: active ? "profile.enabled" : "profile.disabled", target_type: "profile", target_id: target.id, changes: { is_active: { before: !active, after: active } } }),
+          );
+          return target;
+        });
+      },
+      async invite() {
+        throw new DomainError("Invitations are available only in Supabase mode.");
+      },
     },
 
     pipelineStages: {

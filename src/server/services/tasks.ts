@@ -5,7 +5,7 @@ import type { activityInput, commentInput, taskInput, taskUpdateInput } from "@/
 import { applyListQuery, type ListQuery } from "@/domain/list";
 import { isWithinScope, scopeFor } from "@/domain/permissions";
 import { DomainError } from "@/server/repositories/types";
-import { emit, emitSecurity, findVisible, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
+import { emit, emitSecurity, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { assertLinksVisible, byId, getOwned, type OwnedTable } from "./records";
 import { PermissionError } from "@/domain/permissions";
 
@@ -53,7 +53,7 @@ export async function listTasks(ctx: ServiceContext, query: ListQuery, filters: 
           (!filters.to || (t.due_at ?? "9999") <= `${filters.to}T23:59:59.999Z`),
       );
     const priorityRank = { urgent: 0, high: 1, medium: 2, low: 3 };
-    return applyListQuery(enriched, query, {
+    const page = applyListQuery(enriched, query, {
       searchText: (t) => `${t.title} ${t.description} ${t.related?.label ?? ""} ${t.assignee_name}`,
       sorters: {
         due: (t) => t.due_at,
@@ -64,6 +64,8 @@ export async function listTasks(ctx: ServiceContext, query: ListQuery, filters: 
       },
       defaultSort: { key: "due", dir: "asc" },
     });
+    trackRead(ctx, "task", page.rows.length);
+    return page;
   });
 }
 

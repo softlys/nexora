@@ -172,4 +172,14 @@ describe("seed data", () => {
     for (const c of seed.contacts) expect(c.email?.endsWith(".example")).toBe(true);
     for (const c of seed.companies) expect(c.website?.endsWith(".example")).toBe(true);
   });
+
+  it("seeds three enabled example automations with a realistic run history", () => {
+    expect(seed.automation_workflows).toHaveLength(3);
+    expect(seed.automation_workflows.every((w) => w.enabled)).toBe(true);
+    const statuses = new Set(seed.automation_executions.map((e) => e.status));
+    expect(statuses).toEqual(new Set(["success", "failed", "skipped"]));
+    const keys = seed.automation_executions.map((e) => e.idempotency_key);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const e of seed.automation_executions) expect(seed.automation_workflows.some((w) => w.id === e.workflow_id)).toBe(true);
+  });
 });

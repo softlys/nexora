@@ -11,6 +11,7 @@
  * are guaranteed by unique constraints instead. See PROGRESS.md.
  */
 import type { Dataset, TableName } from "@/domain/entities";
+import type { SecurityEvent, SecurityEventDraft } from "@/domain/security/events";
 
 export type Row<T extends TableName> = Dataset[T][number];
 
@@ -26,6 +27,12 @@ export interface Tx {
   remove(table: TableName, id: string): Promise<void>;
   /** Next order number for the year across the whole organization (not just visible orders). */
   nextOrderNumber(year: number): Promise<string>;
+  /**
+   * Appends to the organization's hash-chained security log. Sequence and prev_hash are
+   * assigned here so the chain stays consistent; concurrent appends are serialized
+   * (demo: write queue; Supabase: unique (organization_id, sequence) + retry).
+   */
+  appendSecurityEvent(draft: SecurityEventDraft): Promise<SecurityEvent>;
 }
 
 export interface Db {

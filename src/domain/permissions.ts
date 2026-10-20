@@ -146,6 +146,18 @@ export function isWithinScope(actor: Actor, scope: Scope, ownerId: string | null
 }
 
 /**
+ * Whether a record with this owner is within the actor's scope for an action. Unassigned
+ * leads (owner null) are visible to managers and admins so they can be routed; this matches
+ * the "managers read unassigned leads" RLS policy.
+ */
+export function ownerInScope(actor: Actor, action: Action, resource: Resource, ownerId: string | null): boolean {
+  const scope = scopeFor(actor.role, action, resource);
+  if (!scope) return false;
+  if (ownerId === null) return resource === "lead" && (scope === "team" || scope === "all");
+  return isWithinScope(actor, scope, ownerId);
+}
+
+/**
  * Owner ids whose records the actor may see for a resource, or "all".
  * Repositories use this to filter list queries.
  */

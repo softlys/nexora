@@ -9,7 +9,7 @@ import { applyStatusEffects, canTransition, isEditable } from "@/domain/rules/or
 import { buildTimeline } from "@/domain/timeline";
 import { UniqueViolation, type Tx } from "@/server/db/types";
 import { DomainError } from "@/server/repositories/types";
-import { emit, findVisible, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
+import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { assertLinksVisible, byId, getOwned } from "./records";
 
 const today = (ctx: ServiceContext) => nowOf(ctx).toISOString().slice(0, 10);
@@ -51,7 +51,7 @@ export async function listOrders(ctx: ServiceContext, query: ListQuery, filters:
           (!filters.owner || o.owner_id === filters.owner) &&
           (!filters.company || o.company_id === filters.company),
       );
-    return applyListQuery(enriched, query, {
+    const page = applyListQuery(enriched, query, {
       searchText: (o) => `${o.order_number} ${o.company_name} ${o.owner_name}`,
       sorters: {
         number: (o) => o.order_number,
@@ -63,6 +63,8 @@ export async function listOrders(ctx: ServiceContext, query: ListQuery, filters:
       },
       defaultSort: { key: "date", dir: "desc" },
     });
+    trackRead(ctx, "order", page.rows.length);
+    return page;
   });
 }
 

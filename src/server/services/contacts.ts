@@ -4,7 +4,7 @@ import { diffFields } from "@/domain/diff";
 import type { contactInput, contactUpdateInput } from "@/domain/inputs";
 import { applyListQuery, type ListQuery } from "@/domain/list";
 import { buildTimeline, lastInteraction } from "@/domain/timeline";
-import { emit, findVisible, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
+import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { assertLinksVisible, byId, getOwned, visibleIds } from "./records";
 
 export type ContactFilters = { owner?: string; company?: string };
@@ -29,7 +29,7 @@ export async function listContacts(ctx: ServiceContext, query: ListQuery, filter
         company_name: c.company_id ? (companyById.get(c.company_id)?.name ?? null) : null,
         last_interaction: lastInteraction(activities, c.id),
       }));
-    return applyListQuery(enriched, query, {
+    const page = applyListQuery(enriched, query, {
       searchText: (c) => `${c.first_name} ${c.last_name} ${c.email ?? ""} ${c.job_title} ${c.company_name ?? ""} ${c.tags.join(" ")}`,
       sorters: {
         name: (c) => `${c.last_name} ${c.first_name}`.toLowerCase(),
@@ -39,6 +39,8 @@ export async function listContacts(ctx: ServiceContext, query: ListQuery, filter
       },
       defaultSort: { key: "name", dir: "asc" },
     });
+    trackRead(ctx, "contact", page.rows.length);
+    return page;
   });
 }
 

@@ -39,7 +39,7 @@ const ownedBy = <T extends { owner_id: string | null }>(rows: T[], owner: string
 
 async function securityActions(ctx: ServiceContext) {
   await flushSecurityEvents(ctx);
-  return data().audit_logs.map((l) => l.action);
+  return data().security_events.map((e) => e.action);
 }
 
 describe("tenant isolation and IDOR", () => {
@@ -122,7 +122,7 @@ describe("mass assignment and protected fields", () => {
     const strip = ({ id, name, website, industry, size, country, city, address, phone, lifecycle_stage, notes }: typeof company) => ({ id, name, website, industry, size, country, city, address, phone, lifecycle_stage, notes });
     await updateCompany(manager, companyUpdateInput.parse({ ...strip(company), owner_id: DEMO_USER_IDS.repSofia }));
     expect(data().companies.find((c) => c.id === company.id)!.owner_id).toBe(DEMO_USER_IDS.repSofia);
-    expect(data().audit_logs.some((l) => l.action === "record.owner_changed" && l.target_id === company.id)).toBe(true);
+    expect(data().security_events.some((e) => e.action === "record.owner_changed" && e.target.id === company.id)).toBe(true);
     await expect(updateCompany(manager, companyUpdateInput.parse({ ...strip(company), owner_id: DEMO_USER_IDS.repEthan }))).rejects.toBeInstanceOf(PermissionError);
   });
 

@@ -4,6 +4,7 @@
  */
 import type { Dataset, TableName } from "@/domain/entities";
 import { nextOrderNumber } from "@/domain/rules/orders";
+import { sealSecurityEvent } from "@/domain/security/events";
 import { UNIQUE_KEYS, UniqueViolation, type Row, type Tx, type Where } from "./types";
 
 type AnyRow = Record<string, unknown> & { id: string };
@@ -66,6 +67,15 @@ export function createMemoryTx(data: Dataset, orgId: string, writable: boolean):
       checkUnique(table, next);
       Object.assign(target, next);
       return target as unknown as Row<T>;
+    },
+    async appendSecurityEvent(draft) {
+      guard();
+      if (draft.organization_id !== orgId) throw new Error("Cross-organization security event refused");
+      const chain = data.security_events.filter((e) => e.organization_id === orgId);
+      const last = chain.reduce<(typeof chain)[number] | null>((a, b) => (!a || b.sequence > a.sequence ? b : a), null);
+      const event = sealSecurityEvent(draft, last);
+      data.security_events.push(event);
+      return event;
     },
     async nextOrderNumber(year) {
       return nextOrderNumber(

@@ -9,11 +9,12 @@ import { getRateLimiter, RateLimitError, type RateLimitBucket } from "@/server/s
 import { getValidationLog } from "@/server/security/validation-log";
 import { emitSecurity, flushSecurityEvents, type ServiceContext } from "@/server/services/context";
 import type { ActionResult } from "./action-result";
+import { dispatchAutomations } from "./automation/runtime";
 
 /** Builds the service context from the session. Organization and actor never come from the client. */
 export async function getServiceContext(): Promise<ServiceContext> {
   const { ctx } = await getRepoContext();
-  return { actor: ctx.actor, meta: ctx.meta, db: getDb(), deferred: [] };
+  return { actor: ctx.actor, meta: ctx.meta, db: getDb(), deferred: [], pendingEvents: [] };
 }
 
 type Options<S extends z.ZodType> = {
@@ -61,7 +62,10 @@ export async function serviceAction<S extends z.ZodType, T>(
       return { ok: false, error: unknownKeys ? "The request contained fields that cannot be changed." : "Please fix the highlighted fields.", fieldErrors };
     }
 
-    return { ok: true, data: await body(ctx, parsed.data) };
+    const data = await body(ctx, parsed.data);
+    // Automations run after the change committed; they never fail the user's action.
+    await dispatchAutomations(ctx);
+    return { ok: true, data };
   } catch (error) {
     if (error instanceof PermissionError) return { ok: false, error: "You don't have permission to do that." };
     if (error instanceof DomainError) return { ok: false, error: error.message };

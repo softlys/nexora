@@ -4,6 +4,7 @@
  * Column names use snake_case so rows map 1:1 to PostgreSQL.
  */
 import { z } from "zod";
+import { securityEventSchema, type SecurityEvent } from "./security/events";
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -375,6 +376,9 @@ export const automationExecutionSchema = z.object({
   steps: z.array(z.record(z.string(), z.unknown())),
   causation_depth: z.number().int().min(0),
   retry_of: id.nullable(),
+  /** Set while a run waits on a delay step; the scheduler resumes it at this time. */
+  resume_at: timestamp.nullable(),
+  resume_step_id: z.string().max(64).nullable(),
   error: shortText(2000).nullable(),
   started_at: timestamp,
   finished_at: timestamp.nullable(),
@@ -476,6 +480,7 @@ export const TABLES = [
   "webhook_deliveries",
   "api_keys",
   "audit_logs",
+  "security_events",
 ] as const;
 export type TableName = (typeof TABLES)[number];
 
@@ -502,6 +507,7 @@ export type Dataset = {
   webhook_deliveries: WebhookDelivery[];
   api_keys: ApiKey[];
   audit_logs: AuditLog[];
+  security_events: SecurityEvent[];
 };
 
 export const entitySchemas: Record<TableName, z.ZodType> = {
@@ -527,7 +533,10 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   webhook_deliveries: webhookDeliverySchema,
   api_keys: apiKeySchema,
   audit_logs: auditLogSchema,
+  security_events: securityEventSchema,
 };
+
+export type { SecurityEvent };
 
 // ---------------------------------------------------------------------------
 // Input schemas for phase 1 mutations (strict: unknown keys are rejected)

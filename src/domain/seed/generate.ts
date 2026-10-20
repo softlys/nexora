@@ -32,6 +32,7 @@ import {
 } from "../entities";
 import { computeLineTotals, computeOrderTotals, roundMoney } from "../orders/totals";
 import { derivePaymentStatus } from "../orders/payment-status";
+import { seedAutomation } from "./automation";
 import { createRng, type Rng } from "./random";
 import {
   ACTIVITY_SUBJECTS,
@@ -794,7 +795,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     );
   }
 
-  return {
+  const dataset: Dataset = {
     organizations,
     profiles,
     companies,
@@ -817,5 +818,12 @@ export function generateSeed(now: Date = new Date()): Dataset {
     webhook_deliveries: [],
     api_keys: [],
     audit_logs: [],
+    security_events: [],
   };
+  // Example automations and their run history (separate PRNG stream; see seed/automation.ts).
+  const automation = seedAutomation(dataset, now, DEMO_USER_IDS.admin);
+  dataset.automation_workflows = automation.automation_workflows;
+  dataset.automation_executions = automation.automation_executions;
+  dataset.notifications = [...dataset.notifications, ...automation.notifications];
+  return dataset;
 }

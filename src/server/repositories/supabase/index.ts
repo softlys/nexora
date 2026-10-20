@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Notification, Organization, PipelineStage, Profile } from "@/domain/entities";
 import { visibleOwnerIds, type Resource } from "@/domain/permissions";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { createSupabaseServiceClient } from "@/server/supabase/service";
 import { DomainError, type AuditEntry, type RepoContext, type Repositories } from "../types";
 
 /**
@@ -119,6 +120,30 @@ export function createSupabaseRepositories(): Repositories {
         }
         await insertAudit(db, ctx, { action: "profile.role_changed", target_type: "profile", target_id: profileId, changes: { role: { after: role } } });
         return data as Profile;
+      },
+      async setActive(ctx, profileId, active) {
+        const db = await client();
+        // set_profile_active() checks admin rights, organization and the last-admin rule.
+        const { data, error } = await db.rpc("set_profile_active", { target_profile_id: profileId, active });
+        if (error) {
+          if (error.message.includes("last_admin")) throw new DomainError("The organization needs at least one active admin.", "conflict");
+          fail(error, "Team member not found.");
+        }
+        await insertAudit(db, ctx, { action: active ? "profile.enabled" : "profile.disabled", target_type: "profile", target_id: profileId, changes: { is_active: { after: active } } });
+        return data as Profile;
+      },
+      async invite(ctx, input) {
+        // Inviting creates an Auth user and sends an email, which needs the service role.
+        const service = createSupabaseServiceClient();
+        const { data, error } = await service.auth.admin.inviteUserByEmail(input.email, { data: { full_name: input.full_name } });
+        if (error || !data.user) throw new DomainError(error?.message.includes("already") ? "Someone with this email already has an account." : "The invitation could not be sent.");
+        const { data: profile, error: insertError } = await service
+          .from("profiles")
+          .insert({ id: data.user.id, organization_id: ctx.actor.organization_id, full_name: input.full_name, email: input.email, role: input.role, title: "" })
+          .select("*")
+          .single();
+        if (insertError) fail(insertError, "Could not create the profile.");
+        return profile as Profile;
       },
     },
 
