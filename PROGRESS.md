@@ -31,6 +31,7 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 ## QA fixes (2026-10-21)
 
 A manual QA pass found 23 issues. Fixed:
+- **`auth.login_succeeded` had an anonymous actor** (found in VIGIL QA): a successful sign-in is now recorded with the signed-in user as the actor. The Next.js dev indicator moved bottom-right, away from the sidebar.
 - **Task due date was lost** on create and edit: the form's custom resolver returned the parsed values without `due_date` and `due_time`. Regression e2e.
 - **Order save failed silently**: server errors now also show as a banner inside the form, and the toast moved to the top of the screen so it no longer covers the buttons. The message gives amounts ("The new total ($x) is lower than the payments already recorded ($y)"). Regression e2e.
 - **Future payment dates** are refused, on the server and in the date picker. This keeps order balances and "Outstanding receivables" in agreement.

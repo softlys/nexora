@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { Role } from "@/domain/entities";
 import { getDataMode } from "@/server/env";
 import { recordSystemSecurity } from "@/server/security/record";
 import { createSupabaseServerClient } from "@/server/supabase/server";
@@ -45,7 +46,8 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     // Same message for unknown email and wrong password, so accounts cannot be enumerated.
     return { error: "Email or password is incorrect." };
   }
-  await recordSystemSecurity(orgIds, "anonymous", {
+  const userId = data.user?.id ?? (profile?.id as string | undefined) ?? null;
+  await recordSystemSecurity(orgIds, profile && userId ? { user_id: userId, role: profile.role as Role } : "anonymous", {
     type: "auth.login_succeeded",
     payload: { target: { type: "account", id: data.user?.id ?? null }, account_key: account, user_id: data.user?.id ?? null },
   });
