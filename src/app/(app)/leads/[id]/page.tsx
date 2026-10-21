@@ -10,10 +10,15 @@ import { can } from "@/domain/permissions";
 import { countryName } from "@/lib/countries";
 import { formatDate, formatMoney } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
-import { loadPage, peopleFor } from "@/server/page-data";
+import { loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { companyOptions } from "@/server/services/companies";
 import { contactOptions } from "@/server/services/contacts";
 import { getLead } from "@/server/services/leads";
+
+export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
+  const { id } = await params;
+  return { title: (await recordTitle("leads", id)) ?? "Lead" };
+}
 
 export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   const { user } = await requirePermission("view", "lead");

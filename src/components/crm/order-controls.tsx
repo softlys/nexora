@@ -58,8 +58,9 @@ export function OrderStatusActions({ orderId, status }: { orderId: string; statu
             </Button>
           }
           title="Cancel this order?"
-          description="A cancelled order cannot be reopened. Recorded payments stay on the order."
+          description="A cancelled order cannot be reopened. Simulated payments already recorded stay on the order as history; NEXORA does not process refunds, so handle any refund outside the app."
           confirmLabel="Cancel order"
+          cancelLabel="Keep order"
           destructive
           onConfirm={() => change("cancelled")}
         />
@@ -118,7 +119,7 @@ export function RecordPaymentButton({ orderId, outstanding, currency }: { orderI
                 <Input id="pay-amount" inputMode="decimal" value={values.amount} onChange={(e) => setValues({ ...values, amount: e.target.value })} />
               </FormField>
               <FormField id="pay-date" label="Paid on">
-                <Input id="pay-date" type="date" value={values.paid_at} onChange={(e) => setValues({ ...values, paid_at: e.target.value })} />
+                <Input id="pay-date" type="date" max={new Date().toISOString().slice(0, 10)} value={values.paid_at} onChange={(e) => setValues({ ...values, paid_at: e.target.value })} />
               </FormField>
               <FormField id="pay-method" label="Method">
                 <Select value={values.method} onValueChange={(v) => setValues({ ...values, method: v })}>

@@ -67,3 +67,17 @@ describe("mutation input schemas are strict", () => {
     expect(pipelineStageInput.safeParse({ name: "Demo", probability: 10, is_won: true, is_lost: true }).success).toBe(false);
   });
 });
+
+describe("number inputs", () => {
+  it("accept amounts the way the app displays them and explain bad input", async () => {
+    const { parseNumberInput, leadInput } = await import("@/domain/inputs");
+    expect(parseNumberInput("10,600")).toBe(10600);
+    expect(parseNumberInput("$10,600.50")).toBe(10600.5);
+    expect(parseNumberInput(" 12.5 ")).toBe(12.5);
+    expect(Number.isNaN(parseNumberInput("1,23"))).toBe(true);
+    const base = { title: "t", company_name: "c", contact_name: "n", email: "", phone: "", country: "", source: "api", status: "new", qualification: "cold", next_action: "", next_action_at: "" };
+    expect(leadInput.safeParse({ ...base, estimated_value: "-100" }).error!.issues[0]!.message).toBe("Must be zero or more");
+    expect(leadInput.safeParse({ ...base, estimated_value: "abc" }).error!.issues[0]!.message).toContain("Enter a number");
+    expect(leadInput.parse({ ...base, estimated_value: "10,600" }).estimated_value).toBe(10600);
+  });
+});

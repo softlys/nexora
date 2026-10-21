@@ -11,8 +11,13 @@ import { can } from "@/domain/permissions";
 import { daysInStage } from "@/domain/rules/pipeline";
 import { formatDate, formatMoney } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
-import { dealFormOptions, loadPage, peopleFor } from "@/server/page-data";
+import { dealFormOptions, loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { getDeal } from "@/server/services/deals";
+
+export async function generateMetadata({ params }: PageProps<"/deals/[id]">) {
+  const { id } = await params;
+  return { title: (await recordTitle("deals", id)) ?? "Deal" };
+}
 
 export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
   const { user } = await requirePermission("view", "deal");
@@ -91,6 +96,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
               className="sm:grid-cols-1"
               items={[
                 ["Primary contact", contact ? <Link key="c" href={`/contacts/${contact.id}`} className="text-brand hover:underline">{contact.first_name} {contact.last_name}</Link> : null],
+                ...(deal.closed_at ? ([["Closed", formatDate(deal.closed_at)]] as Array<[string, string]>) : []),
                 ["Expected close", formatDate(deal.expected_close_date)],
                 ["Owner", people.names[deal.owner_id]],
                 ["Source", humanizeStatus(deal.source)],

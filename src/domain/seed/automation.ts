@@ -3,14 +3,22 @@
  * successful runs, a few skipped runs (conditions not met) and failed runs that can be retried.
  * Uses its own PRNG stream so adding it does not change the rest of the seed.
  */
-import type { AutomationExecution, AutomationWorkflow, Dataset, Notification } from "../entities";
+import type { Activity, AutomationExecution, AutomationWorkflow, Dataset, Notification, Task } from "../entities";
 import { EXAMPLE_WORKFLOWS } from "../automation/examples";
 import { addBusinessDays } from "../automation/logic";
 import { createRng } from "./random";
 
 const DAY = 86_400_000;
 
-export function seedAutomation(data: Dataset, now: Date, adminId: string): Pick<Dataset, "automation_workflows" | "automation_executions"> & { notifications: Notification[] } {
+/**
+ * Besides workflows and runs, returns the records those runs created (follow-up tasks and
+ * activities) and assigns owners to the leads they routed, so the run history matches the data.
+ */
+export function seedAutomation(
+  data: Dataset,
+  now: Date,
+  adminId: string,
+): Pick<Dataset, "automation_workflows" | "automation_executions"> & { notifications: Notification[]; tasks: Task[]; activities: Activity[] } {
   const rng = createRng(4242);
   const org = data.organizations[0]!.id;
   const created = new Date(now.getTime() - 60 * DAY).toISOString();
@@ -44,7 +52,10 @@ export function seedAutomation(data: Dataset, now: Date, adminId: string): Pick<
     steps: Array<Record<string, unknown>>,
     error: string | null = null,
   ) => {
-    const duration = rng.int(40, 900);
+    // A timed-out step ran for the full 5 s limit; the run's duration must say so.
+    const timedOut = error?.includes("timed out") ?? false;
+    const duration = timedOut ? 5000 + rng.int(5, 60) : rng.int(40, 900);
+    if (timedOut) for (const s of steps) if (s.status === "failed") s.duration_ms = 5000;
     executions.push({
       id: rng.uuid(),
       organization_id: org,
@@ -77,16 +88,62 @@ export function seedAutomation(data: Dataset, now: Date, adminId: string): Pick<
     duration_ms: rng.int(5, 220),
   });
 
-  // New lead: recent leads that already have an owner (assignment skipped) or got one.
-  const recentLeads = data.leads.filter((l) => l.status !== "converted" && Date.parse(l.created_at) > now.getTime() - 45 * DAY).slice(0, 8);
+  // New lead: every lead created since the workflow existed went through it. Unassigned ones
+  // were routed round robin among sales reps, and each got its follow-up task and activity.
+  const tasks: Task[] = [];
+  const activities: Activity[] = [];
+  const reps = data.profiles.filter((p) => p.role === "sales_rep" && p.is_active && !p.archived_at).sort((a, b) => a.full_name.localeCompare(b.full_name));
+  let next = 0;
+  const recentLeads = data.leads.filter((l) => l.status !== "converted" && l.created_at > created).sort((a, b) => a.created_at.localeCompare(b.created_at));
   for (const lead of recentLeads) {
     const at = lead.created_at;
     const due = addBusinessDays(new Date(at), 1).toISOString();
+    const wasUnassigned = lead.owner_id === null;
+    if (wasUnassigned && reps.length > 0) lead.owner_id = reps[next++ % reps.length]!.id;
+    const owner = data.profiles.find((p) => p.id === lead.owner_id);
+    const title = `Follow up with ${lead.contact_name} at ${lead.company_name}`;
+    const dueDone = due < nowIso && rng.next() < 0.6;
+    tasks.push({
+      id: rng.uuid(),
+      organization_id: org,
+      title,
+      description: "Created by the New lead automation.",
+      type: "follow_up",
+      assignee_id: lead.owner_id!,
+      created_by: null,
+      due_at: due,
+      priority: "high",
+      status: dueDone ? "done" : "todo",
+      completed_at: dueDone ? due : null,
+      company_id: null,
+      contact_id: null,
+      deal_id: null,
+      order_id: null,
+      created_at: at,
+      updated_at: at,
+      archived_at: null,
+    });
+    activities.push({
+      id: rng.uuid(),
+      organization_id: org,
+      type: "system",
+      subject: "Lead received and assigned",
+      body: `Source: ${lead.source}. Owner: ${owner?.full_name ?? "unassigned"}.`,
+      occurred_at: at,
+      actor_id: null,
+      company_id: null,
+      contact_id: null,
+      lead_id: lead.id,
+      deal_id: null,
+      order_id: null,
+      created_at: at,
+      updated_at: at,
+    });
     run(newLead, rng.uuid(), "record.created", { entity: "lead", id: lead.id }, at, "success", [
-      lead.owner_id
-        ? step("assign", "assign_owner", "Assign owner", "skipped", at, { reason: "Lead already has an owner", owner_id: lead.owner_id })
-        : step("assign", "assign_owner", "Assign owner", "success", at, { assigned_to: "Round robin", rule: "round_robin" }),
-      step("follow-up", "create_task", "Create follow-up task", "success", at, { title: `Follow up with ${lead.contact_name} at ${lead.company_name}`, due_at: due }),
+      wasUnassigned
+        ? step("assign", "assign_owner", "Assign owner", "success", at, { assigned_to: owner?.full_name, owner_id: lead.owner_id, rule: "round_robin" })
+        : step("assign", "assign_owner", "Assign owner", "skipped", at, { reason: "Lead already has an owner", owner_id: lead.owner_id }),
+      step("follow-up", "create_task", "Create follow-up task", "success", at, { title, due_at: due }),
       step("log", "create_activity", "Log activity", "success", at, { subject: "Lead received and assigned" }),
     ]);
   }
@@ -134,7 +191,7 @@ export function seedAutomation(data: Dataset, now: Date, adminId: string): Pick<
         recipient_id: task.assignee_id,
         type: "automation.date.reached",
         title: `Follow-up overdue: ${task.title}`,
-        body: `It was due ${task.due_at!.slice(0, 10)}.`,
+        body: `It was due ${new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(task.due_at!))}.`,
         link: `/tasks/${task.id}`,
         read_at: rng.chance(0.4) ? at : null,
         dedupe_key: `wf:${overdue.id}:${task.id}:${task.assignee_id}`,
@@ -148,5 +205,5 @@ export function seedAutomation(data: Dataset, now: Date, adminId: string): Pick<
     }
   }
 
-  return { automation_workflows: workflows, automation_executions: executions.sort((a, b) => a.started_at.localeCompare(b.started_at)), notifications };
+  return { automation_workflows: workflows, automation_executions: executions.sort((a, b) => a.started_at.localeCompare(b.started_at)), notifications, tasks, activities };
 }

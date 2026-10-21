@@ -202,7 +202,9 @@ describe("engine guarantees", () => {
       ],
     };
     await insertWorkflow(def);
-    const lead = data().leads.find((l) => l.owner_id === null)!;
+    // A lead with no owner, so the task step fails ("no owner") after the activity step succeeded.
+    const lead = data().leads[0]!;
+    await db.write(DEMO_ORG_ID, (tx) => tx.update("leads", lead.id, { owner_id: null }));
     const event = {
       id: randomUUID(), type: "record.created", occurred_at: NOW.toISOString(), organization_id: DEMO_ORG_ID,
       actor: { id: null, role: "service" }, meta, causation: { depth: 0, chain: [] }, payload: { entity: "lead", id: lead.id, after: {} },

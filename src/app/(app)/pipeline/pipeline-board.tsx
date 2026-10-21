@@ -239,7 +239,7 @@ function Column({
           <span data-testid="stage-total">{formatMoney(total, currency, "en-US", true)}</span>
           {!stage.is_won && !stage.is_lost && <span title="Weighted: amount × probability">wtd {formatMoney(weighted, currency, "en-US", true)}</span>}
         </div>
-        {avgDays !== undefined && !stage.is_won && !stage.is_lost && <div className="text-[11px] text-text-muted">Avg. {avgDays} days in stage</div>}
+        {avgDays !== undefined && !stage.is_won && !stage.is_lost && <div className="text-[11px] text-text-muted" title="Average days the deals in this column have been in this stage">Avg. {avgDays} days here</div>}
       </header>
       <div className="flex min-h-24 flex-1 flex-col gap-2 p-2">{children}</div>
     </section>
@@ -250,7 +250,8 @@ function CardBody({ deal, currency, overlay = false }: { deal: BoardDeal; curren
   const overdue = deal.expected_close_date && !deal.is_won && !deal.is_lost && deal.expected_close_date < new Date().toISOString().slice(0, 10);
   return (
     <div className={cn("rounded-md border border-border bg-surface p-2.5 text-left shadow-xs", overlay && "w-68 rotate-1 shadow-lg")}>
-      <div className="line-clamp-2 text-sm font-medium">{deal.name}</div>
+      {/* Leave room for the hover actions (quick edit, move, drag) so they never cover the name. */}
+      <div className={cn("line-clamp-2 text-sm font-medium", deal.can_edit && !overlay && "pr-20")}>{deal.name}</div>
       <div className="mt-0.5 truncate text-xs text-text-muted">{deal.company_name}</div>
       <div className="mt-2 flex items-center justify-between text-xs">
         <span className="font-medium tabular-nums">{formatMoney(deal.amount, deal.currency || currency)}</span>

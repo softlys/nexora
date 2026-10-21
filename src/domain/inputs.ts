@@ -27,8 +27,26 @@ const required = (max: number) => z.string().trim().min(1, "Required").max(max);
 const optionalId = z.preprocess(emptyToNull, z.uuid().nullable());
 const optionalDate = z.preprocess(emptyToNull, z.iso.date().nullable());
 const optionalDateTime = z.preprocess(emptyToNull, z.iso.datetime({ offset: true }).nullable());
-const amount = z.coerce.number().finite().min(0, "Must be zero or more").max(1_000_000_000);
-const percent = z.coerce.number().finite().min(0).max(100);
+/**
+ * Numbers as people type them: "10600", "10,600", "$10,600.50", " 12.5 ". Thousands separators
+ * are commas, as the app displays amounts. Anything else becomes a clear message, never "NaN".
+ */
+export function parseNumberInput(v: unknown): unknown {
+  if (typeof v !== "string") return v;
+  let s = v.trim().replace(/[\s$€£]/g, "").replace(/−/g, "-");
+  if (s === "") return undefined;
+  if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, "");
+  return /^-?(\d+\.?\d*|\.\d+)$/.test(s) ? Number(s) : Number.NaN;
+}
+const numberField = (opts: { min?: number; minMessage?: string; max: number; positive?: boolean }) => {
+  let n = z.number({ error: "Enter a number, for example 10600 or 10,600" }).refine(Number.isFinite, "Enter a number, for example 10600 or 10,600");
+  if (opts.positive) n = n.refine((x) => x > 0, "Must be more than 0");
+  if (opts.min !== undefined) n = n.refine((x) => x >= opts.min!, opts.minMessage ?? `Must be at least ${opts.min}`);
+  n = n.refine((x) => x <= opts.max, `Must be at most ${opts.max.toLocaleString("en-US")}`);
+  return z.preprocess(parseNumberInput, n);
+};
+const amount = numberField({ min: 0, minMessage: "Must be zero or more", max: 1_000_000_000 });
+const percent = numberField({ min: 0, minMessage: "Must be zero or more", max: 100 });
 const currency = z.string().regex(/^[A-Z]{3}$/);
 
 export const idInput = z.object({ id: z.uuid() }).strict();
@@ -158,7 +176,7 @@ export const orderItemInput = z
   .object({
     product_id: optionalId,
     description: required(255),
-    quantity: z.coerce.number().positive("Must be more than 0").max(1_000_000),
+    quantity: numberField({ positive: true, max: 1_000_000 }),
     unit_price: amount,
     discount_pct: percent,
     tax_rate: percent,
@@ -180,7 +198,7 @@ export const orderStatusInput = z.object({ id: z.uuid(), status: z.enum(ORDER_ST
 export const paymentInput = z
   .object({
     order_id: z.uuid(),
-    amount: z.coerce.number().positive("Must be more than 0").max(1_000_000_000),
+    amount: numberField({ positive: true, max: 1_000_000_000 }),
     paid_at: z.iso.date(),
     method: z.enum(PAYMENT_METHODS),
     reference: text(120),

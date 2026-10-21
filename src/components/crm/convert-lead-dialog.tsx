@@ -17,6 +17,18 @@ import { convertLeadAction } from "@/server/actions/crm";
 
 type Option = { value: string; label: string };
 
+const FIELD_LABELS: Record<string, string> = {
+  "company.name": "company name",
+  "company.industry": "industry",
+  "company.size": "employees",
+  "company.country": "country",
+  "company.company_id": "company",
+  "contact.contact_id": "contact",
+  "deal.name": "deal name",
+  "deal.amount": "amount",
+  "deal.expected_close_date": "expected close",
+};
+
 /** Converts a lead into a deal: create or link a company and contact, then the deal in the first stage. */
 export function ConvertLeadDialog({
   lead,
@@ -31,6 +43,8 @@ export function ConvertLeadDialog({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const fe = (path: string) => fieldErrors[path]?.[0];
   const matching = companies.find((c) => c.label.toLowerCase() === lead.company_name.toLowerCase());
   const [companyMode, setCompanyMode] = useState<"new" | "existing">(matching ? "existing" : "new");
   const [companyId, setCompanyId] = useState<string | null>(matching?.value ?? null);
@@ -42,6 +56,7 @@ export function ConvertLeadDialog({
   const submit = () =>
     startTransition(async () => {
       setError(null);
+      setFieldErrors({});
       const result = await convertLeadAction({
         lead_id: lead.id,
         company: companyMode === "existing" ? { mode: "existing", company_id: companyId } : { mode: "new", ...newCompany },
@@ -49,7 +64,10 @@ export function ConvertLeadDialog({
         deal: { name: deal.name, amount: deal.amount, expected_close_date: deal.close },
       });
       if (!result.ok) {
-        setError(result.fieldErrors ? `${result.error} (${Object.keys(result.fieldErrors).join(", ")})` : result.error);
+        // Field problems are shown next to each field, in plain words.
+        setFieldErrors(result.fieldErrors ?? {});
+        const labels = Object.keys(result.fieldErrors ?? {}).map((k) => FIELD_LABELS[k] ?? k);
+        setError(labels.length ? `Please check: ${labels.join(", ")}.` : result.error);
         return;
       }
       toast.success("Lead converted to a deal");
@@ -89,10 +107,10 @@ export function ConvertLeadDialog({
                 <Combobox options={companies} value={companyId} onChange={setCompanyId} placeholder="Choose company" />
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <FormField id="cv-name" label="Name" className="sm:col-span-2">
+                  <FormField id="cv-name" label="Name" className="sm:col-span-2" error={fe("company.name")}>
                     <Input id="cv-name" value={newCompany.name} onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })} />
                   </FormField>
-                  <FormField id="cv-industry" label="Industry">
+                  <FormField id="cv-industry" label="Industry (required)" error={fe("company.industry")}>
                     <Input id="cv-industry" value={newCompany.industry} onChange={(e) => setNewCompany({ ...newCompany, industry: e.target.value })} />
                   </FormField>
                   <FormField id="cv-size" label="Employees">
@@ -133,11 +151,11 @@ export function ConvertLeadDialog({
             </fieldset>
             <fieldset className="space-y-3">
               <legend className="text-sm font-medium">Deal</legend>
-              <FormField id="cv-deal" label="Deal name">
+              <FormField id="cv-deal" label="Deal name" error={fe("deal.name")}>
                 <Input id="cv-deal" value={deal.name} onChange={(e) => setDeal({ ...deal, name: e.target.value })} />
               </FormField>
               <div className="grid gap-3 sm:grid-cols-2">
-                <FormField id="cv-amount" label="Amount">
+                <FormField id="cv-amount" label="Amount" hint="For example 10600 or 10,600" error={fe("deal.amount")}>
                   <Input id="cv-amount" inputMode="decimal" value={deal.amount} onChange={(e) => setDeal({ ...deal, amount: e.target.value })} />
                 </FormField>
                 <FormField id="cv-close" label="Expected close">

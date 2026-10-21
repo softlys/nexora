@@ -16,6 +16,7 @@
  * (convertDealToOrder) without nesting writes.
  */
 import { randomUUID } from "node:crypto";
+import { formatDate } from "@/lib/format";
 import type { AutomationExecution, AutomationWorkflow, Profile } from "@/domain/entities";
 import type { DomainEvent } from "@/domain/events/types";
 import { addBusinessDays, evaluateConditions, nextStepId, renderTemplate, validateDefinition, type Vars } from "@/domain/automation/logic";
@@ -258,7 +259,10 @@ async function executeStep(deps: EngineDeps, svc: ServiceContext, state: RunStat
       ctx.vars["workflow.name"] = state.workflow.name;
       return ctx;
     });
-  const render = (template: string, vars: Vars) => renderTemplate(template, vars, allowed);
+  // Conditions compare raw ISO dates; text shown to people uses the app's date format.
+  const display = (vars: Vars): Vars =>
+    Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, typeof v === "string" && /(_at|_date)$/.test(k) && /^\d{4}-\d{2}-\d{2}/.test(v) ? formatDate(v) : v])) as Vars;
+  const render = (template: string, vars: Vars) => renderTemplate(template, display(vars), allowed);
 
   switch (step.type) {
     case "condition": {

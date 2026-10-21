@@ -89,6 +89,7 @@ export function ContactFormButton({
         {label ?? (contact ? "Edit" : "New contact")}
       </Button>
       <RecordSheet
+        error={formState.errors.root?.server?.message}
         open={open}
         onOpenChange={setOpen}
         title={contact ? `Edit ${contact.first_name} ${contact.last_name}` : "New contact"}

@@ -3,7 +3,7 @@ import type { AuditLog, Deal, DealStageHistory, PipelineStage } from "@/domain/e
 import { diffFields } from "@/domain/diff";
 import type { dealInput, dealQuickEditInput, dealUpdateInput, moveStageInput } from "@/domain/inputs";
 import { applyListQuery, type ListQuery } from "@/domain/list";
-import { daysInStage, planStageMove, StageMoveError, stageDurations, summarizeStages } from "@/domain/rules/pipeline";
+import { daysInStage, planStageMove, StageMoveError, summarizeStages } from "@/domain/rules/pipeline";
 import { buildTimeline } from "@/domain/timeline";
 import { DomainError } from "@/server/repositories/types";
 import type { Tx } from "@/server/db/types";
@@ -93,7 +93,7 @@ export async function listDeals(ctx: ServiceContext, query: ListQuery, filters: 
         company: (d) => d.company_name.toLowerCase(),
         amount: (d) => d.amount,
         stage: (d) => stages.findIndex((s) => s.id === d.stage_id),
-        close: (d) => d.expected_close_date,
+        close: (d) => d.closed_at?.slice(0, 10) ?? d.expected_close_date,
         owner: (d) => d.owner_name,
       },
       defaultSort: { key: "close", dir: "asc" },
@@ -109,17 +109,20 @@ export async function getPipelineBoard(ctx: ServiceContext, filters: DealFilters
     const { rows, stages } = await filteredDeals(tx, ctx, filters);
     const q = filters.q?.toLowerCase().trim();
     const deals = q ? rows.filter((d) => `${d.name} ${d.company_name} ${d.owner_name}`.toLowerCase().includes(q)) : rows;
-    const history = await tx.find("deal_stage_history");
-    const visibleDealIds = new Set((await findVisible(tx, ctx, "deals", "deal", (r) => r.owner_id)).map((d) => d.id));
-    return {
-      stages,
-      deals,
-      summary: summarizeStages(stages, deals),
-      durations: stageDurations(
-        history.filter((h) => visibleDealIds.has(h.deal_id)),
-        nowOf(ctx),
-      ),
-    };
+    // Average time the deals shown in each column have been in it: the same numbers as the
+    // cards, and it follows the filters and search.
+    const durations: Record<string, { visits: number; averageDays: number; medianDays: number }> = {};
+    for (const stage of stages) {
+      const days = deals.filter((d) => d.stage_id === stage.id).map((d) => d.days_in_stage).sort((a, b) => a - b);
+      if (days.length === 0) continue;
+      const mid = Math.floor(days.length / 2);
+      durations[stage.id] = {
+        visits: days.length,
+        averageDays: Math.round((days.reduce((a, b) => a + b, 0) / days.length) * 10) / 10,
+        medianDays: days.length % 2 ? days[mid]! : (days[mid - 1]! + days[mid]!) / 2,
+      };
+    }
+    return { stages, deals, summary: summarizeStages(stages, deals), durations };
   });
 }
 

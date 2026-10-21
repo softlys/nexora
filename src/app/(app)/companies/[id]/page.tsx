@@ -9,15 +9,25 @@ import { StatusBadge } from "@/components/patterns/status-badge";
 import { can } from "@/domain/permissions";
 import { countryName } from "@/lib/countries";
 import { formatDate, formatMoney } from "@/lib/format";
-import { loadPage, peopleFor } from "@/server/page-data";
+import { loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { requirePermission } from "@/server/guards";
 import { getCompany } from "@/server/services/companies";
+
+export async function generateMetadata({ params }: PageProps<"/companies/[id]">) {
+  const { id } = await params;
+  return { title: (await recordTitle("companies", id)) ?? "Company" };
+}
 
 export default async function CompanyPage({ params }: PageProps<"/companies/[id]">) {
   const { user } = await requirePermission("view", "company");
   const { id } = await params;
   const { data, people } = await loadPage(async (ctx) => ({ data: await getCompany(ctx, id), people: await peopleFor(ctx, "company") }));
   const { company, contacts, deals, orders, tasks, timeline, stages } = data;
+  // Open tasks first, soonest due first (no date last); then done and cancelled, newest first.
+  const nowIso = new Date().toISOString();
+  const isOpen = (t: (typeof tasks)[number]) => t.status === "todo" || t.status === "in_progress";
+  const openTasks = tasks.filter(isOpen).sort((a, b) => (a.due_at ?? "9999").localeCompare(b.due_at ?? "9999"));
+  const closedTasks = tasks.filter((t) => !isOpen(t)).sort((a, b) => (b.due_at ?? "").localeCompare(a.due_at ?? ""));
   const record = { organization_id: company.organization_id, owner_id: company.owner_id };
   const canEdit = can(user.actor, "update", "company", record);
   const stageName = new Map(stages.map((s) => [s.id, s]));
@@ -159,21 +169,29 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
           {
             id: "tasks",
             label: "Tasks",
-            count: tasks.filter((t) => t.status === "todo" || t.status === "in_progress").length,
+            count: openTasks.length,
             content: (
-              <Panel title="Tasks" actions={<Link href={`/tasks?company=${company.id}`} className="text-xs text-brand hover:underline">Open in Tasks</Link>}>
+              <Panel
+                title={`Tasks · ${openTasks.length} open${closedTasks.length ? `, ${closedTasks.length} done or cancelled` : ""}`}
+                actions={<Link href={`/tasks?company=${company.id}`} className="text-xs text-brand hover:underline">Open in Tasks</Link>}
+              >
                 <MiniList
-                  rows={tasks}
+                  rows={[...openTasks, ...closedTasks]}
                   empty="No tasks for this company."
-                  render={(t) => (
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                      <span>{t.title}</span>
-                      <span className="flex items-center gap-2 text-text-muted">
-                        {t.due_at && formatDate(t.due_at)}
-                        <StatusBadge status={t.status} />
-                      </span>
-                    </div>
-                  )}
+                  render={(t) => {
+                    const overdue = isOpen(t) && t.due_at !== null && t.due_at < nowIso;
+                    return (
+                      <div className={`flex flex-wrap items-center justify-between gap-2 text-sm ${isOpen(t) ? "" : "text-text-muted"}`}>
+                        <Link href={`/tasks/${t.id}`} className="hover:underline">
+                          {t.title}
+                        </Link>
+                        <span className="flex items-center gap-2 text-text-muted">
+                          {t.due_at && <span className={overdue ? "font-medium text-danger" : undefined}>{overdue ? `Overdue · ${formatDate(t.due_at)}` : formatDate(t.due_at)}</span>}
+                          <StatusBadge status={t.status} />
+                        </span>
+                      </div>
+                    );
+                  }}
                 />
               </Panel>
             ),

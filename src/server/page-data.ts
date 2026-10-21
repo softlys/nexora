@@ -1,7 +1,7 @@
 import "server-only";
 import { notFound } from "next/navigation";
 import { visibleSettingsSections } from "@/domain/navigation";
-import { can, type Resource } from "@/domain/permissions";
+import { can, ownerInScope, type Resource } from "@/domain/permissions";
 import { getServiceContext } from "@/server/service-action";
 import { findVisible, flushSecurityEvents, NotFoundError, type ServiceContext } from "@/server/services/context";
 import { activeProfiles, assignableOwners } from "@/server/services/records";
@@ -83,4 +83,29 @@ export async function taskFormOptions(ctx: ServiceContext) {
       orders: orders.map((o) => ({ value: o.id, label: o.order_number })).sort(byName),
     };
   });
+}
+
+type TitledTable = "companies" | "contacts" | "leads" | "deals" | "orders" | "tasks";
+const RESOURCE: Record<TitledTable, Resource> = { companies: "company", contacts: "contact", leads: "lead", deals: "deal", orders: "order", tasks: "task" };
+
+/**
+ * The record's name for the browser tab title, or null when it does not exist or is not visible.
+ * Read-only and silent: the page itself performs the real access check and logs denials.
+ */
+export async function recordTitle(table: TitledTable, id: string): Promise<string | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  try {
+    const ctx = await getServiceContext();
+    return await ctx.db.read(ctx.actor.organization_id, async (tx) => {
+      const row = (await tx.get(table, id)) as Record<string, unknown> | null;
+      if (!row) return null;
+      const owner = (table === "tasks" ? row.assignee_id : row.owner_id) as string | null;
+      if (!ownerInScope(ctx.actor, "view", RESOURCE[table], owner)) return null;
+      if (table === "contacts") return `${row.first_name} ${row.last_name}`;
+      if (table === "orders") return String(row.order_number);
+      return String(row.name ?? row.title);
+    });
+  } catch {
+    return null;
+  }
 }

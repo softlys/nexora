@@ -1,3 +1,5 @@
+import { countryName } from "@/lib/countries";
+import { LIFECYCLE_STAGES } from "@/domain/entities";
 import type { Company } from "@/domain/entities";
 import { diffFields } from "@/domain/diff";
 import type { z } from "zod";
@@ -38,8 +40,10 @@ export async function listCompanies(ctx: ServiceContext, query: ListQuery, filte
       sorters: {
         name: (c) => c.name.toLowerCase(),
         industry: (c) => c.industry,
-        country: (c) => c.country,
-        lifecycle: (c) => c.lifecycle_stage,
+        // The Location column shows country names, so sort by name, not ISO code.
+        country: (c) => `${countryName(c.country)} ${c.city}`.toLowerCase(),
+        // Lifecycle sorts in funnel order (prospect → customer → partner → churned), not A–Z.
+        lifecycle: (c) => LIFECYCLE_STAGES.indexOf(c.lifecycle_stage),
         created: (c) => c.created_at,
       },
       defaultSort: { key: "name", dir: "asc" },

@@ -47,7 +47,8 @@ function DataTable({ columns, rows }: { columns: string[]; rows: Array<Array<str
 
 const BUCKET_LABEL = (key: string, bucket: "day" | "week" | "month") => {
   const d = new Date(key.length === 7 ? `${key}-01T00:00:00Z` : `${key}T00:00:00Z`);
-  if (bucket === "month") return new Intl.DateTimeFormat("en-US", { month: "short", year: "2-digit", timeZone: "UTC" }).format(d);
+  // "Jan 2026", never "Jan 26" (which reads like a day).
+  if (bucket === "month") return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" }).format(d);
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(d);
 };
 
@@ -107,7 +108,8 @@ export function RevenueChart({
         className="cursor-pointer"
       >
         <CartesianGrid {...chartGrid} />
-        <XAxis dataKey="label" {...chartAxis} minTickGap={16} />
+        {/* Evenly spaced labels (every n-th bucket) instead of Recharts dropping random ones. */}
+        <XAxis dataKey="label" {...chartAxis} interval={rows.length > 10 ? Math.ceil(rows.length / 10) - 1 : 0} />
         <YAxis {...chartAxis} width={64} tickFormatter={formatter("money", currency, true)} />
         <Tooltip content={<ChartTooltip formatValue={fmt} />} cursor={{ stroke: "var(--nx-border-strong)" }} />
         <Legend iconType="plainline" wrapperStyle={{ fontSize: 12, color: "var(--nx-text-subtle)" }} />

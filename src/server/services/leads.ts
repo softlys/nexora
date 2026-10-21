@@ -1,3 +1,4 @@
+import { formatAmount } from "@/lib/format";
 import type { z } from "zod";
 import type { Company, Contact, Lead } from "@/domain/entities";
 import { diffFields } from "@/domain/diff";
@@ -204,7 +205,8 @@ export async function convertLead(ctx: ServiceContext, input: z.output<typeof co
         organization_id: ctx.actor.organization_id,
         type: "system",
         subject: "Lead converted to deal",
-        body: `${lead.title} became ${deal.name}.`,
+        // The deal usually keeps the lead's title; say what was created instead of "X became X".
+        body: deal.name === lead.title ? `Deal created for ${company.name} (${formatAmount(deal.amount, deal.currency)}).` : `Deal "${deal.name}" created for ${company.name} (${formatAmount(deal.amount, deal.currency)}).`,
         occurred_at: at,
         actor_id: ctx.actor.id,
         company_id: company.id,

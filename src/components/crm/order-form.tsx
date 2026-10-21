@@ -120,6 +120,7 @@ export function OrderFormButton({
         {order ? "Edit" : "New order"}
       </Button>
       <RecordSheet
+        error={formState.errors.root?.server?.message}
         wide
         open={open}
         onOpenChange={setOpen}

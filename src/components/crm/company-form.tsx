@@ -85,6 +85,7 @@ export function CompanyFormButton({
         {company ? "Edit" : "New company"}
       </Button>
       <RecordSheet
+        error={formState.errors.root?.server?.message}
         open={open}
         onOpenChange={setOpen}
         title={company ? `Edit ${company.name}` : "New company"}

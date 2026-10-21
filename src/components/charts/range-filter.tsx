@@ -14,6 +14,7 @@ export function RangeFilter({ preset, from, to }: { preset: RangePreset; from: s
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [custom, setCustom] = useState({ from, to });
+  const invalid = !custom.from || !custom.to || custom.to < custom.from;
 
   const go = (patch: Record<string, string | null>) => {
     const sp = new URLSearchParams(params.toString());
@@ -43,17 +44,24 @@ export function RangeFilter({ preset, from, to }: { preset: RangePreset; from: s
       </Select>
       {preset === "custom" ? (
         <form
-          className="flex items-center gap-2"
+          noValidate
+          className="flex flex-wrap items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
+            if (invalid) return;
             go({ range: "custom", from: custom.from, to: custom.to });
           }}
         >
           <Input type="date" aria-label="From" value={custom.from} max={custom.to} onChange={(e) => setCustom({ ...custom, from: e.target.value })} className="w-38" />
           <Input type="date" aria-label="To" value={custom.to} min={custom.from} onChange={(e) => setCustom({ ...custom, to: e.target.value })} className="w-38" />
-          <Button type="submit" size="sm" variant="outline">
+          <Button type="submit" size="sm" variant="outline" disabled={invalid}>
             Apply
           </Button>
+          {invalid && (
+            <span role="alert" className="text-xs text-danger">
+              {!custom.from || !custom.to ? "Choose both dates." : "The end date is before the start date."}
+            </span>
+          )}
         </form>
       ) : (
         <span className="text-xs text-text-muted tabular-nums">

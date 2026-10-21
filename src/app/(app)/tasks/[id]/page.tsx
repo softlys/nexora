@@ -10,8 +10,13 @@ import { can } from "@/domain/permissions";
 import { buildTimeline } from "@/domain/timeline";
 import { formatDate } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
-import { loadPage, peopleFor, taskFormOptions } from "@/server/page-data";
+import { loadPage, peopleFor, taskFormOptions, recordTitle } from "@/server/page-data";
 import { isOverdue, getTask } from "@/server/services/tasks";
+
+export async function generateMetadata({ params }: PageProps<"/tasks/[id]">) {
+  const { id } = await params;
+  return { title: (await recordTitle("tasks", id)) ?? "Task" };
+}
 
 export default async function TaskPage({ params }: PageProps<"/tasks/[id]">) {
   const { user } = await requirePermission("view", "task");

@@ -8,9 +8,14 @@ import { StatusBadge } from "@/components/patterns/status-badge";
 import { can } from "@/domain/permissions";
 import { formatDate, formatMoney, formatRelative } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
-import { loadPage, peopleFor } from "@/server/page-data";
+import { loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { companyOptions } from "@/server/services/companies";
 import { getContact } from "@/server/services/contacts";
+
+export async function generateMetadata({ params }: PageProps<"/contacts/[id]">) {
+  const { id } = await params;
+  return { title: (await recordTitle("contacts", id)) ?? "Contact" };
+}
 
 export default async function ContactPage({ params }: PageProps<"/contacts/[id]">) {
   const { user } = await requirePermission("view", "contact");

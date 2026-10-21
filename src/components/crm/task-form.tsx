@@ -75,10 +75,18 @@ export function TaskFormButton({
     : { title: "", description: "", type: "follow_up", assignee_id: options.currentUserId, due_date: "", due_time: "", priority: "medium", status: "todo", company_id: null, deal_id: null, order_id: null, contact_id: null, ...preset };
 
   const base = zodResolver(taskInput) as unknown as Resolver<Record<string, unknown>>;
+  // Validate the combined due_at, but hand the form its own fields back: returning the parsed
+  // values would drop due_date/due_time and silently clear the due date on submit.
   const resolver: Resolver<Values> = async (values, ctx, opts) => {
     const { due_date, due_time, ...rest } = values;
     const result = await base({ ...rest, due_at: toDue(due_date, due_time) }, ctx, opts as never);
-    return result as unknown as Awaited<ReturnType<Resolver<Values>>>;
+    const errors = { ...result.errors } as Record<string, unknown>;
+    if (errors.due_at) {
+      errors.due_date = errors.due_at;
+      delete errors.due_at;
+    }
+    if (Object.keys(errors).length > 0) return { values: {}, errors } as unknown as Awaited<ReturnType<Resolver<Values>>>;
+    return { values, errors: {} };
   };
   const { control, handleSubmit, formState, setError, reset } = useForm<Values>({ resolver, defaultValues: defaults });
 
@@ -105,7 +113,7 @@ export function TaskFormButton({
         {task ? <Pencil aria-hidden /> : <Plus aria-hidden />}
         {label ?? (task ? "Edit" : "New task")}
       </Button>
-      <RecordSheet open={open} onOpenChange={setOpen} title={task ? "Edit task" : "New task"} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={task ? "Save changes" : "Create task"}>
+      <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={task ? "Edit task" : "New task"} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={task ? "Save changes" : "Create task"}>
         <TextField control={control} name="title" label="Title" />
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField control={control} name="type" label="Type" options={TASK_TYPES.map((t) => ({ value: t, label: humanizeStatus(t) }))} />

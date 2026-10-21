@@ -826,5 +826,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
   dataset.automation_workflows = automation.automation_workflows;
   dataset.automation_executions = automation.automation_executions;
   dataset.notifications = [...dataset.notifications, ...automation.notifications];
+  dataset.tasks = [...dataset.tasks, ...automation.tasks];
+  dataset.activities = [...dataset.activities, ...automation.activities];
   return dataset;
 }

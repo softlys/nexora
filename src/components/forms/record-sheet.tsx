@@ -2,11 +2,11 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-const DISCARD_MESSAGE = "You have unsaved changes. Discard them?";
 
 /**
  * Open state for a create form that can be opened from the quick-create menu (?new=1).
@@ -43,8 +43,10 @@ export function useUnsavedChangesWarning(dirty: boolean) {
 }
 
 /**
- * Side sheet hosting a create/edit form. Closing a dirty form asks for confirmation,
- * and leaving the page with unsaved changes triggers the browser warning.
+ * Side sheet hosting a create/edit form. Closing a dirty form (Cancel, ×, Escape, outside
+ * click) asks for confirmation in an in-app dialog, and leaving the page with unsaved changes
+ * triggers the browser warning. Server errors show as a banner above the buttons, so they are
+ * visible even when a toast is missed.
  */
 export function RecordSheet({
   open,
@@ -57,6 +59,7 @@ export function RecordSheet({
   onSubmit,
   children,
   wide = false,
+  error,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -68,10 +71,16 @@ export function RecordSheet({
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   children: ReactNode;
   wide?: boolean;
+  /** Error from the server for the whole form (shown above the buttons). */
+  error?: string;
 }) {
   useUnsavedChangesWarning(open && dirty);
+  const [confirming, setConfirming] = useState(false);
   const requestClose = (next: boolean) => {
-    if (!next && dirty && !submitting && !window.confirm(DISCARD_MESSAGE)) return;
+    if (!next && dirty && !submitting) {
+      setConfirming(true);
+      return;
+    }
     onOpenChange(next);
   };
   return (
@@ -83,6 +92,11 @@ export function RecordSheet({
             {description ? <SheetDescription>{description}</SheetDescription> : <SheetDescription className="sr-only">{title}</SheetDescription>}
           </SheetHeader>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">{children}</div>
+          {error && (
+            <p role="alert" className="mx-5 mb-3 rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger" data-testid="form-error">
+              {error}
+            </p>
+          )}
           <SheetFooter className="flex-row justify-end gap-2 border-t border-border px-5 py-3">
             <Button type="button" variant="outline" onClick={() => requestClose(false)}>
               Cancel
@@ -93,6 +107,26 @@ export function RecordSheet({
           </SheetFooter>
         </form>
       </SheetContent>
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>Your edits in this form will be lost.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setConfirming(false);
+                onOpenChange(false);
+              }}
+            >
+              Discard changes
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

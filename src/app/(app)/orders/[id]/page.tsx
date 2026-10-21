@@ -10,9 +10,14 @@ import { can } from "@/domain/permissions";
 import { isEditable } from "@/domain/rules/orders";
 import { formatAmount, formatDate } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
-import { loadPage, peopleFor } from "@/server/page-data";
+import { loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { companyOptions } from "@/server/services/companies";
 import { getOrder, productOptions } from "@/server/services/orders";
+
+export async function generateMetadata({ params }: PageProps<"/orders/[id]">) {
+  const { id } = await params;
+  return { title: (await recordTitle("orders", id)) ?? "Order" };
+}
 
 export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
   const { user } = await requirePermission("view", "order");

@@ -1,3 +1,4 @@
+import { formatAmount } from "@/lib/format";
 import type { z } from "zod";
 import type { Order, OrderItem, Payment } from "@/domain/entities";
 import { diffFields } from "@/domain/diff";
@@ -200,7 +201,9 @@ export async function updateOrder(ctx: ServiceContext, input: z.output<typeof or
     const payments = await tx.find("payments", { order_id: current.id });
     const totals = computeOrderTotals(input.items);
     const collected = payments.reduce((s, p) => s + p.amount, 0);
-    if (roundMoney(collected) > totals.total) throw new DomainError("The new total is lower than the payments already recorded.");
+    if (roundMoney(collected) > totals.total) {
+      throw new DomainError(`The new total (${formatAmount(totals.total, input.currency)}) is lower than the payments already recorded (${formatAmount(roundMoney(collected), current.currency)}).`);
+    }
 
     const at = nowOf(ctx).toISOString();
     for (const old of await tx.find("order_items", { order_id: current.id })) await tx.remove("order_items", old.id);
@@ -257,7 +260,9 @@ export async function recordPayment(ctx: ServiceContext, input: z.output<typeof 
     const payments = await tx.find("payments", { order_id: order.id });
     const collected = roundMoney(payments.reduce((s, p) => s + p.amount, 0));
     const outstanding = roundMoney(order.total - collected);
-    if (roundMoney(input.amount) > outstanding) throw new DomainError(`The payment exceeds the outstanding amount (${outstanding.toFixed(2)}).`);
+    if (roundMoney(input.amount) > outstanding) throw new DomainError(`The payment exceeds the outstanding amount (${formatAmount(outstanding, order.currency)}).`);
+    // Payments are recorded when money arrives; a future date would distort receivables.
+    if (input.paid_at > today(ctx)) throw new DomainError("The payment date cannot be in the future.");
     const at = nowOf(ctx).toISOString();
     const payment: Payment = {
       id: newId(),

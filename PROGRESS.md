@@ -28,6 +28,41 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## QA fixes (2026-10-21)
+
+A manual QA pass found 23 issues. Fixed:
+- **Task due date was lost** on create and edit: the form's custom resolver returned the parsed values without `due_date` and `due_time`. Regression e2e.
+- **Order save failed silently**: server errors now also show as a banner inside the form, and the toast moved to the top of the screen so it no longer covers the buttons. The message gives amounts ("The new total ($x) is lower than the payments already recorded ($y)"). Regression e2e.
+- **Future payment dates** are refused, on the server and in the date picker. This keeps order balances and "Outstanding receivables" in agreement.
+- **Won and lost deals show when they closed** (`closed_at`) on the deal page and in the list. Open deals show their expected date, marked "exp.".
+- **Pipeline "Avg. days here"** is now the average of the deals shown in each column, so it matches the cards and follows filters and search.
+- **Sorting.** Companies sort by country name (not ISO code) and by lifecycle order.
+- **New lead automation.**
+  - The lead form offers "Unassigned (route automatically)" and uses it by default, so admins and managers no longer become owners by accident.
+  - The demo seed now applies what its run history says: routed leads have owners, follow-up tasks and activities. Regression unit test.
+- **Number input.** Number fields accept "10,600" and "$10,600.50"; bad input says "Enter a number…" instead of "received NaN". "Api" is shown as "API".
+- **Lead conversion** errors use plain field names inline; Industry is marked required.
+- **Custom period**: an end date before the start date shows a message and disables Apply.
+- **Company Tasks tab**: open tasks first, by due date; overdue tasks highlighted; the count is labelled "open".
+- **Pipeline cards** keep room for the hover actions, so they never cover the deal name.
+- **Browser tab titles** show the record name on company, contact, lead, deal, order and task pages.
+- **HTTP status codes**: missing records answer **404** and forbidden pages **403** (the shared loading boundary that forced 200 was removed).
+- **Conversion activity** no longer says "X became X".
+- **Dates and money in text**:
+  - automation texts and seeded notifications use the app's date format
+  - "-$0.00" no longer appears
+  - money in errors has cents
+- **Seeded timed-out runs** last 5 s, matching their error.
+- **Order cancel dialog** has "Keep order" / "Cancel order" buttons and explains that payments stay and refunds are handled outside the app.
+- **Escape with unsaved changes** asks in an in-app dialog (Keep editing / Discard changes) instead of the browser `confirm`.
+- **Charts**: evenly spaced axis labels; months read "Jan 2026", not "Jan 26".
+
+Not reproduced: missing accessible names. The Industry and Website inputs have linked labels, and the × buttons are named "Close"; checked in the DOM.
+
+Verified: lint, typecheck, 214 unit tests and 21 e2e tests (production build).
+
+---
+
 ## Phase 4: Integrations, API, UI kit, release (2026-10-20)
 
 ### Done

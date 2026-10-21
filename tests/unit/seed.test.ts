@@ -27,11 +27,28 @@ describe("seed data", () => {
     expect(seed.deals).toHaveLength(60);
     expect(seed.products).toHaveLength(20);
     expect(seed.orders).toHaveLength(40);
-    expect(seed.tasks).toHaveLength(80);
+    // 80 planned tasks plus the follow-ups the seeded New lead automation created.
+    const automated = seed.tasks.filter((t) => t.description === "Created by the New lead automation.");
+    expect(automated.length).toBeGreaterThan(0);
+    expect(seed.tasks.length - automated.length).toBe(80);
     for (const c of seed.companies) {
       const n = seed.contacts.filter((x) => x.company_id === c.id).length;
       expect(n).toBeGreaterThanOrEqual(2);
       expect(n).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it("matches the New lead automation history: every routed lead has an owner, a follow-up task and an activity", () => {
+    const seed = generateSeed(NOW);
+    const newLead = seed.automation_workflows.find((w) => w.name.startsWith("New lead"))!;
+    const runs = seed.automation_executions.filter((e) => e.workflow_id === newLead.id && e.status === "success");
+    expect(runs.length).toBeGreaterThan(0);
+    for (const run of runs) {
+      const leadId = ((run.trigger_payload.event as { payload: { id: string } }).payload ?? { id: "" }).id;
+      const lead = seed.leads.find((l) => l.id === leadId)!;
+      expect(lead.owner_id).not.toBeNull();
+      expect(seed.tasks.some((t) => t.title === `Follow up with ${lead.contact_name} at ${lead.company_name}` && t.assignee_id === lead.owner_id)).toBe(true);
+      expect(seed.activities.some((a) => a.lead_id === lead.id && a.subject === "Lead received and assigned")).toBe(true);
     }
   });
 

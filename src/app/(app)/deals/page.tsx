@@ -80,7 +80,24 @@ export default async function DealsPage({ searchParams }: PageProps<"/deals">) {
           { id: "stage", header: "Stage", sort: "stage", cell: (d) => <StatusBadge label={d.stage_name} tone={d.is_won ? "success" : d.is_lost ? "neutral" : "accent"} /> },
           { id: "amount", header: "Amount", sort: "amount", align: "right", cell: (d) => formatMoney(d.amount, d.currency) },
           { id: "probability", header: "Prob.", align: "right", hideBelow: "lg", cell: (d) => `${d.probability}%` },
-          { id: "close", header: "Close date", sort: "close", hideBelow: "md", cell: (d) => <span className="text-text-subtle">{formatDate(d.expected_close_date)}</span> },
+          {
+            id: "close",
+            header: "Close date",
+            sort: "close",
+            hideBelow: "md",
+            // Closed deals show when they actually closed; open deals their expected date.
+            cell: (d) =>
+              d.closed_at ? (
+                <span className="text-text-subtle" title="Closed">
+                  {formatDate(d.closed_at)}
+                </span>
+              ) : (
+                <span className="text-text-subtle" title="Expected">
+                  {formatDate(d.expected_close_date)}
+                  {d.expected_close_date && <span className="ml-1 text-xs text-text-muted">exp.</span>}
+                </span>
+              ),
+          },
           { id: "owner", header: "Owner", sort: "owner", hideBelow: "md", cell: (d) => <span className="text-text-subtle">{d.owner_name}</span> },
           {
             id: "preview",

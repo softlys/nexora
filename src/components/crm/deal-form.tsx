@@ -110,7 +110,7 @@ export function DealFormButton({
           {deal ? "Edit" : "New deal"}
         </Button>
       )}
-      <RecordSheet open={open} onOpenChange={setOpen} title={deal ? `Edit ${deal.name}` : "New deal"} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={deal ? "Save changes" : "Create deal"}>
+      <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={deal ? `Edit ${deal.name}` : "New deal"} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={deal ? "Save changes" : "Create deal"}>
         <TextField control={control} name="name" label="Deal name" />
         <ComboboxField control={control} name="company_id" label="Company" options={options.companies} placeholder="Choose company" />
         <ComboboxField
