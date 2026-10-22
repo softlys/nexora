@@ -41,6 +41,7 @@ import { summarizeStages } from "@/domain/rules/pipeline";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { convertDealToOrderAction, moveDealStageAction, quickEditDealAction } from "@/server/actions/crm";
+import { InitialsAvatar } from "@/components/patterns/initials-avatar";
 
 export type BoardDeal = DrawerDeal & { can_edit: boolean };
 
@@ -223,7 +224,7 @@ function Column({
       ref={setNodeRef}
       aria-label={`${stage.name}, ${count} deals`}
       data-testid={`stage-column-${stage.name}`}
-      className={cn("flex w-72 shrink-0 flex-col rounded-lg border border-border bg-surface-subtle transition-colors", isOver && "border-brand bg-brand-subtle/40")}
+      className={cn("flex w-72 shrink-0 flex-col rounded-xl border border-border bg-surface-muted/60 transition-colors", isOver && "border-brand bg-brand-subtle/40")}
     >
       <header className="space-y-0.5 border-b border-border px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
@@ -249,15 +250,16 @@ function Column({
 function CardBody({ deal, currency, overlay = false }: { deal: BoardDeal; currency: string; overlay?: boolean }) {
   const overdue = deal.expected_close_date && !deal.is_won && !deal.is_lost && deal.expected_close_date < new Date().toISOString().slice(0, 10);
   return (
-    <div className={cn("rounded-md border border-border bg-surface p-2.5 text-left shadow-xs", overlay && "w-68 rotate-1 shadow-lg")}>
+    <div className={cn("rounded-lg border border-border bg-surface p-3 text-left shadow-xs transition-shadow hover:shadow-md", overlay && "w-68 rotate-1 shadow-lg")}>
       {/* Leave room for the hover actions (quick edit, move, drag) so they never cover the name. */}
-      <div className={cn("line-clamp-2 text-sm font-medium", deal.can_edit && !overlay && "pr-20")}>{deal.name}</div>
+      <div className={cn("line-clamp-2 text-sm font-semibold", deal.can_edit && !overlay && "pr-20")}>{deal.name}</div>
       <div className="mt-0.5 truncate text-xs text-text-muted">{deal.company_name}</div>
-      <div className="mt-2 flex items-center justify-between text-xs">
-        <span className="font-medium tabular-nums">{formatMoney(deal.amount, deal.currency || currency)}</span>
-        <span className="text-text-muted">{deal.owner_name}</span>
+      <div className="mt-2 text-base font-semibold tracking-tight tabular-nums">{formatMoney(deal.amount, deal.currency || currency)}</div>
+      <div className="mt-2 flex items-center gap-2 text-xs text-text-subtle">
+        <InitialsAvatar name={deal.owner_name} className="size-6 text-[10px]" />
+        <span className="truncate">{deal.owner_name}</span>
       </div>
-      <div className="mt-1.5 flex items-center justify-between text-[11px] text-text-muted">
+      <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-[11px] text-text-muted">
         <span className={cn("inline-flex items-center gap-1", overdue && "text-danger")}>
           <CalendarDays className="size-3" aria-hidden />
           {formatDate(deal.expected_close_date)}

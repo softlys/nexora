@@ -39,24 +39,24 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
         {/* Desktop sidebar */}
         <aside
           className={cn(
-            "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-150 lg:flex",
-            collapsed ? "w-14" : "w-60",
+            "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-150 lg:flex",
+            collapsed ? "w-16" : "w-64",
           )}
           data-testid="sidebar"
         >
-          <div className={cn("flex h-14 items-center border-b border-border", collapsed ? "justify-center px-2" : "px-4")}>
+          <div className={cn("flex h-16 items-center", collapsed ? "justify-center px-2" : "px-5")}>
             <Brand orgName={data.organization.name} collapsed={collapsed} />
           </div>
-          <div className={cn("flex-1 overflow-y-auto py-3", collapsed ? "px-2" : "px-3")}>
+          <div className={cn("flex-1 overflow-y-auto py-2", collapsed ? "px-2" : "px-3")}>
             <SidebarNav groups={data.navGroups} collapsed={collapsed} />
           </div>
-          <div className={cn("border-t border-border p-2", collapsed && "flex justify-center")}>
+          <div className={cn("border-t border-sidebar-border p-2", collapsed && "flex justify-center")}>
             <Button
               variant="ghost"
               size={collapsed ? "icon" : "sm"}
               onClick={toggleCollapsed}
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className={cn(!collapsed && "w-full justify-start text-text-muted")}
+              className={cn("text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground", !collapsed && "w-full justify-start")}
             >
               {collapsed ? <PanelLeftOpen aria-hidden /> : <PanelLeftClose aria-hidden />}
               {!collapsed && "Collapse"}
@@ -66,8 +66,8 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
 
         {/* Mobile drawer */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="w-72 bg-sidebar p-0">
-            <SheetHeader className="border-b border-border px-4 py-3">
+          <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
+            <SheetHeader className="border-b border-sidebar-border px-4 py-3">
               <SheetTitle asChild>
                 <div>
                   <Brand orgName={data.organization.name} />
@@ -82,7 +82,7 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
         </Sheet>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-4">
+          <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-surface/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:px-6">
             <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>
               <Menu aria-hidden />
             </Button>
@@ -103,7 +103,7 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
               Demo mode: fictional data stored on this server. Payments are simulated. Switch users from the menu in the top right.
             </div>
           )}
-          <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+          <main id="main" className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-8">
             {children}
           </main>
         </div>

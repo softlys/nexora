@@ -60,4 +60,13 @@ test.describe("QA regressions", () => {
     await link.click();
     await expect(page).toHaveTitle(new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} · NEXORA$`));
   });
+
+  test("a workflow shows its map: trigger first, then its steps", async ({ page }) => {
+    await page.goto("/automation");
+    await page.locator('main a[href^="/automation/"]').first().click();
+    const nodes = page.getByTestId("workflow-node");
+    await expect(nodes.first()).toBeVisible();
+    expect(await nodes.count()).toBeGreaterThan(1);
+    await expect(page.getByRole("heading", { name: "Nodes library" })).toBeVisible();
+  });
 });

@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { daysBetween, shiftDataset, shiftValue } from "@/domain/seed/shift";
 import { generateSeed } from "@/domain/seed/generate";
+import { verifySecurityLogChain } from "@/domain/security/events";
+import { createMemoryTx } from "@/server/db/memory-tx";
 import { createSeededStore, DemoStore, reanchor, writeStoreFile } from "@/server/demo/file-store";
 
 const dir = mkdtempSync(join(tmpdir(), "nexora-store-"));
@@ -25,6 +27,21 @@ describe("date shifting keeps the demo relative to today", () => {
     expect(Date.parse(moved.created_at) - Date.parse(task.created_at)).toBe(10 * 86_400_000);
     expect(moved.title).toBe(task.title);
     expect(shifted.orders[0]!.order_number).toBe(seed.orders[0]!.order_number);
+  });
+
+  it("never moves the security log, so its hash chain stays valid across days", () => {
+    const store = createSeededStore(new Date("2026-10-19T08:00:00Z"));
+    const org = store.data.organizations[0]!.id;
+    const tx = createMemoryTx(store.data, org, true);
+    const actor = { type: "service" as const, name: "scheduler" };
+    const source = { ip: null, user_agent: null, request_id: "test" };
+    for (let i = 0; i < 3; i++) {
+      void tx.appendSecurityEvent({ event_id: crypto.randomUUID(), organization_id: org, occurred_at: "2026-10-19T09:00:00.000Z", action: "system.heartbeat", actor, source, metadata: { component: "scheduler" } });
+    }
+    expect(verifySecurityLogChain(store.data.security_events).ok).toBe(true);
+    expect(reanchor(store, new Date("2026-10-25T09:00:00Z"))).toBe(true);
+    expect(store.data.security_events[0]!.occurred_at).toBe("2026-10-19T09:00:00.000Z");
+    expect(verifySecurityLogChain(store.data.security_events).ok).toBe(true);
   });
 
   it("re-anchors only when a day has passed", () => {

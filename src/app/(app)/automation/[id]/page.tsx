@@ -9,6 +9,7 @@ import { getWorkflow } from "@/server/automation/workflows";
 import { requirePermission } from "@/server/guards";
 import { loadPage } from "@/server/page-data";
 import { findVisible, type ServiceContext } from "@/server/services/context";
+import { WorkflowCanvas } from "@/components/crm/workflow-canvas";
 import { RunHistory } from "./run-history";
 import { WorkflowEditor } from "./workflow-editor";
 
@@ -41,14 +42,14 @@ export default async function WorkflowPage({ params, searchParams }: PageProps<"
   const { user } = await requirePermission("view", "automation");
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const filters = { status: enumFilter(sp, "status", EXECUTION_STATUSES), mode: enumFilter(sp, "mode", ["live", "test"] as const) };
-  const { data, reps, testRecords } = await loadPage(async (ctx) => {
+  const { data, reps, testRecords, definition } = await loadPage(async (ctx) => {
     const data = await getWorkflow(ctx, id, filters);
     const parsed = validateDefinition(data.workflow.definition);
     const entity = parsed.ok ? parsed.definition.trigger.entity : "lead";
     const reps = await ctx.db.read(ctx.actor.organization_id, async (tx) =>
       (await tx.find("profiles")).filter((p) => p.role === "sales_rep" && p.is_active && !p.archived_at).map((p) => ({ value: p.id, label: p.full_name })),
     );
-    return { data, reps, testRecords: await testRecordOptions(ctx, entity) };
+    return { data, reps, testRecords: await testRecordOptions(ctx, entity), definition: parsed.ok ? parsed.definition : null };
   });
   const { workflow, stats, executions } = data;
 
@@ -73,6 +74,7 @@ export default async function WorkflowPage({ params, searchParams }: PageProps<"
           </div>
         ))}
       </dl>
+      {definition && <WorkflowCanvas definition={definition} />}
       <WorkflowEditor
         key={`${workflow.id}-${workflow.version}`}
         workflow={{ id: workflow.id, name: workflow.name, description: workflow.description, enabled: workflow.enabled, version: workflow.version, definition: workflow.definition }}

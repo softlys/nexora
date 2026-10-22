@@ -28,6 +28,18 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Redesign from reference mockups (2026-10-22)
+
+- **Tokens** (`tokens/tokens.json` → `npm run tokens:build`): violet primary (#6a45f5 / #7c5cff), dark navy sidebar in both themes (`--nx-sidebar-*`), soft gray page background with white cards, radii 8/12/16 px.
+- **Shell**: dark sidebar with a filled violet active item, taller header, wider content area.
+- **KPI cards**: colored icon tile, optional sparkline (trend of the same metric), larger value. Used on the overview.
+- **Pipeline cards**: bold amount, owner avatar (initials, stable color per person), footer with close date and days in stage.
+- **Recent activity**: avatars with initials.
+- **Security log**: "Chain integrity" checklist (schema, sequence, link, hash, tamper) with PASS/FAIL/NOT REACHED from the server verification, and "Chain links" showing the newest entries with their hashes.
+- **Automation Studio**: a read-only workflow map (trigger → steps, condition branches) next to the editor, with a nodes library.
+
+**Bug found while building the integrity view:** the demo store re-anchors dates every new day, and it also shifted `security_events.occurred_at`, which broke every hash in the chain (VIGIL then reported rewritten history). The security log is now excluded from the shift (`UNSHIFTED_TABLES` in `src/domain/seed/shift.ts`), with a regression test.
+
 ## Stage 1 hardening (2026-10-22)
 
 From the platform audit (audit-output/AUDIT_REPORT.md, section F):

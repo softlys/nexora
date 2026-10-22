@@ -27,7 +27,7 @@ export default async function SecurityLogPage({ searchParams }: PageProps<"/sett
       description="Append-only and hash-chained: each event includes the hash of the previous one, so a modified or deleted event breaks verification. Secrets, passwords and full request bodies are never logged. The companion SIEM reads it through GET /api/v1/security-events with a SIEM key."
     >
       <div className="space-y-4">
-        <ChainStatus initial={chain} />
+        <ChainStatus initial={chain} recent={log.events.slice(0, 3).map((e) => ({ sequence: e.sequence, hash: e.hash, prev_hash: e.prev_hash }))} />
         <ListToolbar
           searchPlaceholder="Search action, target, IP…"
           showArchivedToggle={false}

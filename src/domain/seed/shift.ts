@@ -29,10 +29,21 @@ export function daysBetween(aIso: string, bIso: string): number {
   return Math.round((b - a) / DAY);
 }
 
+/**
+ * Tables that are history, not demo scenery: their timestamps are part of what was recorded.
+ * The security log is hash-chained; moving its dates would break every hash (and the companion
+ * SIEM would report rewritten history every day).
+ */
+const UNSHIFTED_TABLES = new Set(["security_events"]);
+
 export function shiftDataset(data: Dataset, days: number): Dataset {
   if (days === 0) return data;
   const out = {} as Record<string, unknown[]>;
   for (const [table, rows] of Object.entries(data)) {
+    if (UNSHIFTED_TABLES.has(table)) {
+      out[table] = rows as unknown[];
+      continue;
+    }
     out[table] = (rows as Record<string, unknown>[]).map((row) => {
       const copy: Record<string, unknown> = { ...row };
       for (const [key, value] of Object.entries(copy)) {

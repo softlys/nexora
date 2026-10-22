@@ -1,7 +1,9 @@
+import { AlertTriangle, BadgeDollarSign, Briefcase, CalendarClock, Percent, Wallet } from "lucide-react";
 import Link from "next/link";
 import { BarsChart, RevenueChart } from "@/components/charts/charts";
 import { RangeFilter } from "@/components/charts/range-filter";
 import { Panel } from "@/components/crm/detail";
+import { InitialsAvatar } from "@/components/patterns/initials-avatar";
 import { KpiCard } from "@/components/patterns/kpi-card";
 import { PageHeader } from "@/components/patterns/page-header";
 import { humanizeStatus, StatusBadge } from "@/components/patterns/status-badge";
@@ -36,23 +38,36 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
       />
 
       <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <KpiCard label="Won deal value" value={formatMoney(k.wonDealValue.value ?? 0, currency)} delta={{ value: k.wonDealValue.change, label: vs }} href={`/deals?status=won&${range}`} />
-        <KpiCard label="Open pipeline" value={formatMoney(k.openPipeline.value ?? 0, currency)} delta={{ value: k.openPipeline.change, label: vs }} href="/pipeline" hint="At period end" />
-        <KpiCard label="Active deals" value={formatNumber(k.activeDeals.value ?? 0)} delta={{ value: k.activeDeals.change, label: vs }} href="/deals?status=open" />
+        <KpiCard
+          label="Won deal value"
+          icon={BadgeDollarSign}
+          tone="brand"
+          spark={dash.revenue.map((r) => r.won)}
+          value={formatMoney(k.wonDealValue.value ?? 0, currency)}
+          delta={{ value: k.wonDealValue.change, label: vs }}
+          href={`/deals?status=won&${range}`}
+        />
+        <KpiCard label="Open pipeline" icon={Briefcase} tone="info" value={formatMoney(k.openPipeline.value ?? 0, currency)} delta={{ value: k.openPipeline.change, label: vs }} href="/pipeline" hint="At period end" />
+        <KpiCard label="Active deals" icon={CalendarClock} tone="brand" value={formatNumber(k.activeDeals.value ?? 0)} delta={{ value: k.activeDeals.change, label: vs }} href="/deals?status=open" />
         <KpiCard
           label="Conversion rate"
+          icon={Percent}
+          tone="success"
           value={k.conversionRate.value === null ? "—" : formatPercent(k.conversionRate.value)}
           delta={k.conversionRate.value === null ? { value: null, emptyLabel: "No deals closed" } : { value: k.conversionRate.change, label: vs }}
           href={`/deals?status=closed&${range}`}
         />
         <KpiCard
           label="Outstanding receivables"
+          icon={Wallet}
+          tone="warning"
+          spark={dash.revenue.map((r) => r.collected)}
           value={formatMoney(k.outstandingReceivables.value ?? 0, currency)}
           delta={{ value: k.outstandingReceivables.change, positiveIsGood: false, label: vs }}
           href="/orders?receivable=1"
           hint="At period end"
         />
-        <KpiCard label="Overdue tasks" value={formatNumber(k.overdueTasks.value ?? 0)} delta={{ value: k.overdueTasks.change, positiveIsGood: false, label: vs }} href="/tasks?status=overdue" />
+        <KpiCard label="Overdue tasks" icon={AlertTriangle} tone="danger" value={formatNumber(k.overdueTasks.value ?? 0)} delta={{ value: k.overdueTasks.change, positiveIsGood: false, label: vs }} href="/tasks?status=overdue" />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-5">
@@ -80,8 +95,9 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           ) : (
             <ul className="divide-y divide-border text-sm">
               {dash.recentActivities.map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-3 py-2">
-                  <span className="min-w-0">
+                <li key={a.id} className="flex items-center gap-3 py-2.5">
+                  <InitialsAvatar name={a.actor} />
+                  <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{a.subject}</span>
                     {a.related ? (
                       <Link href={a.related.href} className="block truncate text-xs text-brand hover:underline">
@@ -91,8 +107,9 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
                       <span className="text-xs text-text-muted">{humanizeStatus(a.type)}</span>
                     )}
                   </span>
-                  <span className="shrink-0 text-xs text-text-muted">
-                    {a.actor} · {formatRelative(a.at)}
+                  <span className="shrink-0 text-right text-xs text-text-muted">
+                    <span className="block text-text-subtle">{a.actor}</span>
+                    {formatRelative(a.at)}
                   </span>
                 </li>
               ))}
