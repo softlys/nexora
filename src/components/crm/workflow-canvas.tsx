@@ -1,4 +1,4 @@
-import { Bell, GitBranch, ListTodo, Mail, MessageSquare, PackageCheck, PencilLine, Timer, UserCheck, Webhook, Zap, type LucideIcon } from "lucide-react";
+import { Bell, GitBranch, ListTodo, Mail, MessageSquare, PackageCheck, PencilLine, Send, Timer, UserCheck, Webhook, Zap, type LucideIcon } from "lucide-react";
 import { humanizeStatus } from "@/components/patterns/status-badge";
 import type { Step, StepType, WorkflowDefinition } from "@/domain/automation/schema";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ const NODE: Record<StepType | "trigger", { icon: LucideIcon; tone: string; label
   create_notification: { icon: Bell, tone: "bg-success-bg text-success", label: "Notify", hint: "In-app notification" },
   convert_deal_to_order: { icon: PackageCheck, tone: "bg-success-bg text-success", label: "Create order", hint: "From a won deal" },
   send_email: { icon: Mail, tone: "bg-success-bg text-success", label: "Send email", hint: "Owner or assignee" },
+  send_telegram: { icon: Send, tone: "bg-info-bg text-info", label: "Send to Telegram", hint: "Team chat via the bot" },
   send_webhook: { icon: Webhook, tone: "bg-success-bg text-success", label: "Send webhook", hint: "Signed, to integrations" },
   delay: { icon: Timer, tone: "bg-surface-muted text-text-subtle", label: "Delay", hint: "Waits, then resumes" },
 };
@@ -30,6 +31,8 @@ function detail(step: Step): string {
       return `Wait ${step.hours} h`;
     case "send_webhook":
       return step.event_type;
+    case "send_telegram":
+      return step.text;
     case "send_email":
     case "create_activity":
       return step.subject;

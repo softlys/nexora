@@ -40,6 +40,7 @@ NEXORA runs anywhere Next.js 16 runs. The recommended setup is **Vercel** (app a
 | `NEXORA_ENCRYPTION_KEY` | Supabase mode | At least 32 characters. Encrypts integration signing secrets (AES-256-GCM). Rotating it makes stored secrets unreadable; rotate the integration secrets after changing it |
 | `NEXORA_SESSION_SECRET` | demo mode on servers | At least 32 characters; signs the demo-user cookie |
 | `CRON_SECRET` | for the scheduler | At least 16 characters. Without it `/api/cron/scheduler` returns 503 |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | optional | Team notifications from the Send to Telegram workflow step. Without them the step is logged as skipped |
 | `RESEND_API_KEY`, `NEXORA_EMAIL_FROM` | optional | Email for the Send email step. Without them, email steps are logged as skipped |
 | `NEXORA_ALLOWED_ORIGINS` | optional | Extra origins allowed to call server actions (comma-separated hosts) |
 | `NEXORA_BULK_READ_THRESHOLD` | optional | Records per user per 5 minutes before `data.bulk_read` (default 300) |

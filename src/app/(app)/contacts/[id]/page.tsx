@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { ContactFormButton } from "@/components/crm/contact-form";
 import { DetailHeader, Facts, MiniList, Panel } from "@/components/crm/detail";
+import { MessengerLinks } from "@/components/crm/messenger-links";
 import { RecordActions } from "@/components/crm/record-actions";
 import { Timeline } from "@/components/crm/timeline";
 import { StatusBadge } from "@/components/patterns/status-badge";
@@ -76,6 +77,9 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
                 ["Tags", contact.tags.length ? contact.tags.join(", ") : null],
               ]}
             />
+          </Panel>
+          <Panel title="Messengers">
+            <MessengerLinks messengers={contact.messengers} emptyText="No messengers saved. Add Telegram, WhatsApp or Instagram with Edit." />
           </Panel>
           <Panel title="Deals">
             <MiniList

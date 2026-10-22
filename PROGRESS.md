@@ -28,6 +28,24 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Countries, messengers and Telegram (2026-10-24)
+
+- **All countries.** Country pickers offer all 249 ISO 3166-1 countries (Russia, Kazakhstan, the UAE and so on; before, 34). Validation everywhere — forms, lead conversion, the public API, automation country maps and the entities — accepts only real codes ("XX" is rejected).
+- **Messengers on contacts.** Telegram, WhatsApp, Viber, Instagram, Facebook/Messenger, VK, LinkedIn and WeChat fields:
+  - validated and normalized (handles, profile links or international phone numbers);
+  - stored as `contacts.messengers` (migration `20261024000001_contact_messengers.sql`);
+  - shown on the contact as "Write" links (t.me, wa.me, viber://, …) and as marks in the contacts list;
+  - searchable, and included in `GET /api/v1/contacts`.
+  Existing demo stores are upgraded in place (`upgradeDataset`), without a reset.
+- **Telegram bot.**
+  - Integrations → Telegram explains the setup with @BotFather; the bot token and chat id are server environment variables, never in the browser or the database.
+  - A test message button for admins.
+  - A new **Send to Telegram** workflow step: plain text with placeholders; skipped, never "sent", without a bot.
+- **Messengers and social** page: what works natively (contact links, the Telegram bot) and how to automate WhatsApp, Instagram, Facebook, Viber, VK and WeChat through Make/n8n with each platform's official API. Nothing is claimed as connected.
+- Demo data shifted into the future by an older release is repaired on load.
+
+Verified: 252 unit tests, 26 e2e tests, lint and typecheck pass.
+
 ## Full testing pass (2026-10-22)
 
 Automated, black-box (46 probes) and manual testing of both apps; report in the companion audit folder (TEST_REPORT.md). Fixed here, with tests:

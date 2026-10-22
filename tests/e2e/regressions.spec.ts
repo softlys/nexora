@@ -86,5 +86,39 @@ test.describe("QA regressions", () => {
     await expect(dialog.getByRole("checkbox", { name: "leads:write" })).toBeChecked();
     await expect(dialog.getByRole("checkbox", { name: "records:read" })).not.toBeChecked();
   });
+
+  test("contacts keep messenger handles and show chat links", async ({ page }) => {
+    await page.goto("/contacts");
+    await page.locator('main a[href^="/contacts/"]').first().click();
+    await page.getByRole("button", { name: "Edit" }).first().click();
+    const sheet = page.getByRole("dialog");
+    await sheet.getByLabel("Telegram").fill("@qa_contact_tg");
+    await sheet.getByLabel("WhatsApp").fill("+7 (999) 123-45-67");
+    await sheet.getByLabel("Instagram").fill("not a handle!!");
+    await sheet.getByRole("button", { name: "Save changes" }).click();
+    await expect(sheet.getByText(/Not a valid Instagram value/)).toBeVisible();
+    await sheet.getByLabel("Instagram").fill("");
+    await sheet.getByRole("button", { name: "Save changes" }).click();
+    const links = page.getByTestId("messenger-links");
+    await expect(links).toContainText("@qa_contact_tg");
+    await expect(links.getByRole("link", { name: "Write on Telegram" })).toHaveAttribute("href", "https://t.me/qa_contact_tg");
+    await expect(links.getByRole("link", { name: "Write on WhatsApp" })).toHaveAttribute("href", "https://wa.me/79991234567");
+  });
+
+  test("every country can be chosen, Russia included", async ({ page }) => {
+    await page.goto("/companies?new=1");
+    const sheet = page.getByRole("dialog");
+    await sheet.getByRole("combobox", { name: "Country" }).click();
+    await page.getByPlaceholder("Search…", { exact: true }).fill("Russ");
+    await expect(page.getByRole("option", { name: "Russia" })).toBeVisible();
+  });
+
+  test("integrations list Telegram and messenger channels", async ({ page }) => {
+    await page.goto("/integrations");
+    await expect(page.getByTestId("integration-card-telegram")).toContainText("Not configured");
+    await page.getByTestId("integration-card-messengers").click();
+    await expect(page.getByRole("heading", { level: 1, name: "Messengers and social" })).toBeVisible();
+    for (const c of ["whatsapp", "instagram", "viber", "vk", "facebook", "wechat"]) await expect(page.getByTestId(`messenger-guide-${c}`)).toBeVisible();
+  });
 });
 

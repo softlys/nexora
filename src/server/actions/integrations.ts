@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { telegramSender } from "@/server/integrations/telegram";
 import { emailSender } from "@/server/automation/runtime";
 import { getServiceDb } from "@/server/db";
 import { WEBHOOK_PROVIDERS, type WebhookDeps } from "@/server/integrations/webhooks";
 import { apiKeyInput, createApiKey, revokeApiKey, revokeInput } from "@/server/services/api-keys";
 import type { ServiceContext } from "@/server/services/context";
-import { disconnectIntegration, integrationInput, redeliverDelivery, rotateSecret, saveIntegration, testEmail, testIntegration } from "@/server/services/integrations";
+import { disconnectIntegration, integrationInput, redeliverDelivery, rotateSecret, saveIntegration, testEmail, testIntegration, testTelegram } from "@/server/services/integrations";
 import { serviceAction } from "@/server/service-action";
 
 const providerInput = z.object({ provider: z.enum(WEBHOOK_PROVIDERS) }).strict();
@@ -69,6 +70,13 @@ export async function testEmailAction(input: unknown) {
     const result = await testEmail(ctx, (m) => sender.send(m), data.to);
     refresh();
     return result;
+  });
+}
+
+export async function testTelegramAction(input: unknown) {
+  return serviceAction({ name: "testTelegram", schema: z.object({}).strict() }, input, async (ctx) => {
+    const sender = telegramSender();
+    return testTelegram(ctx, sender.configured ? (text) => sender.send(text) : null);
   });
 }
 

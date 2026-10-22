@@ -4,6 +4,8 @@
  * accepted from clients; they are set by the services that own them. owner_id is
  * accepted only where reassignment makes sense, and the service checks who may change it.
  */
+import { messengersInput } from "@/lib/messengers";
+import { isCountryCode } from "@/lib/countries";
 import { z } from "zod";
 import {
   ACTIVITY_TYPES,
@@ -68,7 +70,7 @@ export const companyFields = {
   website,
   industry: required(80),
   size: z.enum(COMPANY_SIZES),
-  country: z.string().regex(/^[A-Z]{2}$/, "Use a 2-letter country code"),
+  country: z.string().refine(isCountryCode, "Choose a country from the list"),
   city: text(120),
   address: text(255),
   phone,
@@ -89,6 +91,7 @@ export const contactFields = {
   phone,
   job_title: text(120),
   tags: z.array(z.string().trim().min(1).max(32)).max(10),
+  messengers: messengersInput.default({}),
   owner_id: z.uuid().optional(),
 };
 export const contactInput = z.object(contactFields).strict();
@@ -102,7 +105,7 @@ export const leadFields = {
   contact_name: required(160),
   email,
   phone,
-  country: z.preprocess(emptyToNull, z.string().regex(/^[A-Z]{2}$/).nullable()),
+  country: z.preprocess(emptyToNull, z.string().refine(isCountryCode, "Choose a country from the list").nullable()),
   source: z.enum(LEAD_SOURCES),
   status: z.enum(["new", "contacted", "qualified", "unqualified"]),
   qualification: z.enum(LEAD_QUALIFICATIONS),
@@ -125,7 +128,7 @@ export const convertLeadInput = z
           name: required(160),
           industry: required(80),
           size: z.enum(COMPANY_SIZES),
-          country: z.string().regex(/^[A-Z]{2}$/),
+          country: z.string().refine(isCountryCode, "Choose a country from the list"),
         })
         .strict(),
     ]),

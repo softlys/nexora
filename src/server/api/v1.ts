@@ -65,7 +65,7 @@ export const listContactsRoute = apiRoute(endpoint("GET", "/contacts"), async ({
   const rows = page.rows as Contact[];
   return {
     body: {
-      data: rows.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, email: c.email, phone: c.phone, job_title: c.job_title, company_id: c.company_id, owner_id: c.owner_id, created_at: c.created_at })),
+      data: rows.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, email: c.email, phone: c.phone, job_title: c.job_title, messengers: c.messengers ?? {}, company_id: c.company_id, owner_id: c.owner_id, created_at: c.created_at })),
       meta: pageMeta(page),
     },
   };

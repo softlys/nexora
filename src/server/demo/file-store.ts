@@ -8,8 +8,8 @@
 import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { Dataset } from "../../domain/entities";
-import { generateSeed, SEED_NUMBER } from "../../domain/seed/generate";
-import { daysBetween, shiftDataset } from "../../domain/seed/shift";
+import { generateSeed, SEED_NUMBER, seedMessengers } from "../../domain/seed/generate";
+import { capPastTimestamps, daysBetween, shiftDataset } from "../../domain/seed/shift";
 
 /** Bump when the dataset shape changes; older files are replaced by a fresh seed. */
 export const STORE_VERSION = 3;
@@ -27,6 +27,21 @@ export function createSeededStore(now: Date = new Date()): StoreFile {
 }
 
 /** Moves all dates forward if the store was anchored on an earlier day. Returns true when shifted. */
+/**
+ * Fills fields added after a demo store was created, in place, without resetting the demo
+ * (which would also drop API keys created in it). Returns true when something changed.
+ */
+export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
+  let changed = capPastTimestamps(data, now) > 0;
+  data.contacts.forEach((c, i) => {
+    if ((c as Partial<typeof c>).messengers !== undefined) return;
+    const dial = c.phone?.match(/^\+\d{1,3}/)?.[0] ?? "+1";
+    c.messengers = seedMessengers(i, c.first_name, c.last_name, dial);
+    changed = true;
+  });
+  return changed;
+}
+
 export function reanchor(store: StoreFile, now: Date = new Date()): boolean {
   const days = daysBetween(store.anchored_at, now.toISOString());
   if (days <= 0) return false;
@@ -94,7 +109,8 @@ export class DemoStore {
       if (existing) {
         this.store = existing;
         this.lastMtime = mtime;
-        if (reanchor(this.store)) await this.persist(this.store);
+        const upgraded = upgradeDataset(this.store.data);
+        if (reanchor(this.store) || upgraded) await this.persist(this.store);
       } else {
         this.store = createSeededStore();
         await this.persist(this.store);

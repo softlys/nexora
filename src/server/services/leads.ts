@@ -167,6 +167,7 @@ export async function convertLead(ctx: ServiceContext, input: z.output<typeof co
           job_title: "",
           owner_id: owner,
           tags: [],
+          messengers: {},
           created_at: at,
           updated_at: at,
           archived_at: null,

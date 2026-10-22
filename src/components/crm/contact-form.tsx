@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import type { Contact } from "@/domain/entities";
 import { contactFields } from "@/domain/inputs";
 import { applyServerErrors } from "@/lib/forms";
+import { MESSENGER_CHANNELS, MESSENGERS, type MessengerChannel } from "@/lib/messengers";
 import { createContactAction, updateContactAction } from "@/server/actions/crm";
 
 type Values = {
@@ -22,8 +23,12 @@ type Values = {
   phone: string;
   job_title: string;
   tags: string;
+  messengers: Record<MessengerChannel, string>;
   owner_id?: string;
 };
+
+const messengerDefaults = (m?: Contact["messengers"]) =>
+  Object.fromEntries(MESSENGER_CHANNELS.map((c) => [c, m?.[c] ? (c === "telegram" && !m[c]!.startsWith("+") ? `@${m[c]}` : m[c]!) : ""])) as Record<MessengerChannel, string>;
 
 /** Client-side mirror of the server schema; tags are typed as a comma-separated list. */
 const formSchema = z.object({ ...contactFields, tags: z.string().max(400) });
@@ -57,9 +62,10 @@ export function ContactFormButton({
         phone: contact.phone ?? "",
         job_title: contact.job_title,
         tags: contact.tags.join(", "),
+        messengers: messengerDefaults(contact.messengers),
         ...(owners.length > 0 && { owner_id: contact.owner_id }),
       }
-    : { company_id: defaultCompanyId ?? null, first_name: "", last_name: "", email: "", phone: "", job_title: "", tags: "" };
+    : { company_id: defaultCompanyId ?? null, first_name: "", last_name: "", email: "", phone: "", job_title: "", tags: "", messengers: messengerDefaults() };
   const { control, handleSubmit, formState, setError, reset } = useForm<Values>({
     resolver: zodResolver(formSchema) as unknown as Resolver<Values>,
     defaultValues: defaults,
@@ -108,6 +114,15 @@ export function ContactFormButton({
           <TextField control={control} name="email" label="Email" type="email" inputMode="email" autoComplete="email" />
           <TextField control={control} name="phone" label="Phone" type="tel" inputMode="tel" autoComplete="tel" />
         </div>
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-medium">Messengers and social</legend>
+          <p className="text-xs text-text-muted">Saved handles become one-click &quot;write&quot; links on the contact. Phone numbers in international format, e.g. +7 999 123-45-67.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {MESSENGER_CHANNELS.map((c) => (
+              <TextField key={c} control={control} name={`messengers.${c}`} label={MESSENGERS[c].label} placeholder={MESSENGERS[c].placeholder} autoComplete="off" />
+            ))}
+          </div>
+        </fieldset>
         <TextField control={control} name="tags" label="Tags" hint="Comma-separated, up to 10. For example: decision-maker, technical" />
         {owners.length > 0 && <SelectField control={control} name="owner_id" label="Owner" options={owners} />}
       </RecordSheet>

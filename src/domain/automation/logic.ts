@@ -93,6 +93,9 @@ export function validateDefinition(input: unknown): { ok: true; definition: Work
         checkTemplate(i, "subject", s.subject);
         checkTemplate(i, "body", s.body);
         break;
+      case "send_telegram":
+        checkTemplate(i, "text", s.text);
+        break;
       default:
         break;
     }

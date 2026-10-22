@@ -65,3 +65,25 @@ export function shiftDataset(data: Dataset, days: number, now: Date = new Date()
   }
   return out as unknown as Dataset;
 }
+
+/**
+ * Caps timestamps of things that already happened at "now" (same rule as the shift). Repairs data
+ * shifted by an older release that moved them into the future. Returns how many values changed.
+ */
+export function capPastTimestamps(data: Dataset, now: Date = new Date()): number {
+  const nowIso = now.toISOString();
+  let changed = 0;
+  for (const [table, rows] of Object.entries(data)) {
+    if (UNSHIFTED_TABLES.has(table)) continue;
+    for (const row of rows as Record<string, unknown>[]) {
+      for (const [key, value] of Object.entries(row)) {
+        if (typeof value === "string" && key.endsWith("_at") && !FUTURE_OK.has(key) && ISO_TIMESTAMP.test(value) && value > nowIso) {
+          row[key] = nowIso;
+          changed++;
+        }
+      }
+    }
+  }
+  return changed;
+}
+

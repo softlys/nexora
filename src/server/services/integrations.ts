@@ -346,3 +346,15 @@ export async function testEmail(ctx: ServiceContext, send: (message: { to: strin
   });
   return { ok, error };
 }
+
+/** Sends a real test message to the configured Telegram chat. Admins only; nothing is stored. */
+export async function testTelegram(ctx: ServiceContext, send: ((text: string) => Promise<{ message_id: number }>) | null): Promise<{ ok: boolean; error: string | null }> {
+  requireCan(ctx, "manage", "integration");
+  if (!send) throw new DomainError("Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID on the server to enable Telegram.");
+  try {
+    await send(`NEXORA test message. "Send to Telegram" workflow steps will post to this chat. Sent by ${ctx.actor.role} at ${nowOf(ctx).toISOString()}.`);
+    return { ok: true, error: null };
+  } catch (e) {
+    return { ok: false, error: (e instanceof Error ? e.message : String(e)).slice(0, 300) };
+  }
+}

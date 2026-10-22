@@ -11,6 +11,7 @@ import { requirePermission } from "@/server/guards";
 import { loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { companyOptions } from "@/server/services/companies";
 import { listContacts } from "@/server/services/contacts";
+import { MessengerMarks } from "@/components/crm/messenger-links";
 
 export const metadata = { title: "Contacts" };
 
@@ -64,6 +65,7 @@ export default async function ContactsPage({ searchParams }: PageProps<"/contact
           },
           { id: "company", header: "Company", sort: "company", cell: (c) => <span className="text-text-subtle">{c.company_name ?? "—"}</span> },
           { id: "email", header: "Email", hideBelow: "md", cell: (c) => <span className="text-text-subtle">{c.email ?? "—"}</span> },
+          { id: "messengers", header: "Messengers", hideBelow: "lg", cell: (c) => <MessengerMarks messengers={c.messengers} /> },
           {
             id: "tags",
             header: "Tags",

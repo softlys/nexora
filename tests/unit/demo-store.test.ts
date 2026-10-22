@@ -6,7 +6,7 @@ import { daysBetween, shiftDataset, shiftValue } from "@/domain/seed/shift";
 import { generateSeed } from "@/domain/seed/generate";
 import { verifySecurityLogChain } from "@/domain/security/events";
 import { createMemoryTx } from "@/server/db/memory-tx";
-import { createSeededStore, DemoStore, reanchor, writeStoreFile } from "@/server/demo/file-store";
+import { createSeededStore, DemoStore, reanchor, upgradeDataset, writeStoreFile } from "@/server/demo/file-store";
 
 const dir = mkdtempSync(join(tmpdir(), "nexora-store-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -125,5 +125,18 @@ describe("DemoStore", () => {
     await new Promise((r) => setTimeout(r, 20));
     await writeStoreFile(path, external);
     expect((await store.read()).companies[0]!.name).toBe("Changed outside");
+  });
+});
+
+describe("store upgrades", () => {
+  it("adds messengers to contacts saved before the field existed, without touching other data", () => {
+    const store = createSeededStore(new Date("2026-10-19T08:00:00Z"));
+    for (const c of store.data.contacts) delete (c as { messengers?: unknown }).messengers;
+    const companies = store.data.companies.length;
+    expect(upgradeDataset(store.data)).toBe(true);
+    expect(store.data.contacts.every((c) => typeof c.messengers === "object")).toBe(true);
+    expect(store.data.contacts.some((c) => c.messengers.telegram)).toBe(true);
+    expect(store.data.companies.length).toBe(companies);
+    expect(upgradeDataset(store.data)).toBe(false);
   });
 });

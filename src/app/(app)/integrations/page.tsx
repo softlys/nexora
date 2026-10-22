@@ -8,6 +8,8 @@ import { formatRelative } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
 import { loadPage } from "@/server/page-data";
 import { listIntegrations } from "@/server/services/integrations";
+import { telegramConfig } from "@/server/integrations/telegram";
+import { MessengerMark } from "@/components/crm/messenger-links";
 
 export const metadata = { title: "Integrations" };
 
@@ -22,13 +24,15 @@ export default async function IntegrationsPage() {
   const { user } = await requirePermission("view", "integration");
   const data = await loadPage((ctx) => listIntegrations(ctx));
   const isAdmin = can(user.actor, "manage", "integration");
+  const telegram = telegramConfig();
+  const telegramStatus = { configured: Boolean(telegram.token && telegram.chat && !telegram.problem), chat: telegram.chat, problem: telegram.problem };
   const overlaps = data.webhooks.flatMap((w) => w.overlaps.map((o) => ({ ...o, provider: w.provider })));
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Integrations"
-        description="Outbound webhooks signed with HMAC-SHA256, the public API and email. Nothing is shown as connected until a real test succeeded."
+        description="Outbound webhooks signed with HMAC-SHA256, the public API, email, a Telegram bot and customer messengers. Nothing is shown as connected until a real test succeeded."
         actions={
           <>
             <Link href="/integrations/api" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-sm hover:bg-muted">
@@ -93,6 +97,40 @@ export default async function IntegrationsPage() {
           </div>
           <p className="text-sm text-text-muted">{DESCRIPTIONS.email}</p>
           <p className="mt-auto text-xs text-text-muted">{data.email.provider ? `Resend, from ${data.email.from}` : "Without it, Send email steps are logged as skipped."}</p>
+        </Link>
+        <Link
+          href="/integrations/telegram"
+          className="group flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-xs transition-colors hover:border-border-strong hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
+          data-testid="integration-card-telegram"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <MessengerMark channel="telegram" className="size-8 text-xs" />
+              <h2 className="font-medium">Telegram bot</h2>
+            </div>
+            <StatusBadge status={telegramStatus.configured ? "configured" : telegramStatus.problem ? "error" : "not_configured"} label={telegramStatus.configured ? "Configured" : telegramStatus.problem ? "Misconfigured" : "Not configured"} dot />
+          </div>
+          <p className="text-sm text-text-muted">Team notifications in a Telegram chat: new leads, won deals, overdue tasks. Used by the Send to Telegram workflow step.</p>
+          <p className="mt-auto text-xs text-text-muted">{telegramStatus.configured ? `Posts to ${telegramStatus.chat}` : "Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID."}</p>
+        </Link>
+        <Link
+          href="/integrations/messengers"
+          className="group flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-xs transition-colors hover:border-border-strong hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
+          data-testid="integration-card-messengers"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex -space-x-1.5">
+                {(["whatsapp", "instagram", "viber", "vk"] as const).map((c) => (
+                  <MessengerMark key={c} channel={c} className="size-7 text-[10px] ring-2 ring-surface" />
+                ))}
+              </span>
+              <h2 className="font-medium">Messengers and social</h2>
+            </div>
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-text-muted">Contacts + Make / n8n</span>
+          </div>
+          <p className="text-sm text-text-muted">WhatsApp, Instagram, Viber, Facebook, VK, WeChat: chat links on every contact, and automated customer messaging through Make or n8n.</p>
+          <p className="mt-auto text-xs text-text-muted">Handles are stored on contacts; platform credentials stay in your scenario.</p>
         </Link>
       </section>
 

@@ -62,6 +62,7 @@ Variables available to conditions and templates are listed per entity in `VARIAB
 | `create_notification` | Notifies the record owner, assignee, managers and/or admins. | `once_per_record` deduplicates per workflow, record and recipient. |
 | `convert_deal_to_order` | Creates the order for a won deal. | Uses the same service as the "Create order" button, so a deal never gets a second order. A rerun returns the existing order. |
 | `send_email` | Emails the record owner or assignee. | Sent through Resend when `RESEND_API_KEY` and `NEXORA_EMAIL_FROM` are set. Otherwise the step is recorded as **skipped (email not configured)**, never as sent. |
+| `send_telegram` | Posts a plain-text message (placeholders filled in) to the team's Telegram chat. | Sent by the bot set with `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` (Integrations → Telegram). Otherwise recorded as **skipped (Telegram not configured)**. |
 | `send_webhook` | Sends a signed event to every enabled integration subscribed to `workflow.webhook`. | The envelope type is the step's `event_type`; the event id is stable per workflow, triggering event and step, so a retried run resends the same id. No subscriber → skipped; every delivery failed → failed (the scheduler retries them). |
 | `delay` | Pauses the run for 1–720 hours. | The run is stored as `waiting` with `resume_at`, and the scheduler resumes it from the next step. |
 

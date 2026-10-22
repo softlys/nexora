@@ -30,7 +30,7 @@ export async function listContacts(ctx: ServiceContext, query: ListQuery, filter
         last_interaction: lastInteraction(activities, c.id),
       }));
     const page = applyListQuery(enriched, query, {
-      searchText: (c) => `${c.first_name} ${c.last_name} ${c.email ?? ""} ${c.job_title} ${c.company_name ?? ""} ${c.tags.join(" ")}`,
+      searchText: (c) => `${c.first_name} ${c.last_name} ${c.email ?? ""} ${c.job_title} ${c.company_name ?? ""} ${c.tags.join(" ")} ${Object.values(c.messengers ?? {}).join(" ")}`,
       sorters: {
         name: (c) => `${c.last_name} ${c.first_name}`.toLowerCase(),
         company: (c) => c.company_name?.toLowerCase() ?? null,

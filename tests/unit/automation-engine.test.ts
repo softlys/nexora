@@ -259,4 +259,24 @@ describe("engine guarantees", () => {
     expect(run!.status).toBe("skipped");
     expect((run!.steps as Array<{ output: { reason: string } }>)[0]!.output.reason).toContain("No email provider");
   });
+
+  it("sends to Telegram with the record filled in, or skips when no bot is configured", async () => {
+    await insertWorkflow({ trigger: { type: "record.created", entity: "lead" }, steps: [{ id: "tg", type: "send_telegram", text: "New lead: {{lead.title}}" }] });
+    const lead = data().leads.find((l) => l.owner_id)!;
+    const event = () =>
+      ({
+        id: randomUUID(), type: "record.created", occurred_at: NOW.toISOString(), organization_id: DEMO_ORG_ID,
+        actor: { id: null, role: "service" }, meta, causation: { depth: 0, chain: [] }, payload: { entity: "lead", id: lead.id, after: {} },
+      }) as DomainEvent;
+
+    const [skipped] = await handleEvent(deps, event());
+    expect(skipped!.status).toBe("skipped");
+    expect((skipped!.steps as Array<{ output: { reason: string } }>)[0]!.output.reason).toContain("Telegram is not configured");
+
+    const sent: string[] = [];
+    const [run] = await handleEvent({ ...deps, telegram: { configured: true, chat: "-1001", send: async (text) => (sent.push(text), { message_id: 7 }) } }, event());
+    expect(run!.status).toBe("success");
+    expect(sent).toEqual([`New lead: ${lead.title}`]);
+  });
 });
+

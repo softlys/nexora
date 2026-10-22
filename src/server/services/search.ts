@@ -43,7 +43,7 @@ export async function globalSearch(ctx: ServiceContext, rawQuery: string): Promi
       ...top(companies, q, (c) => `${c.name} ${c.industry} ${c.city}`).map(
         (c): SearchResult => ({ kind: "company", id: c.id, title: c.name, subtitle: `${c.industry} · ${c.city}`, href: `/companies/${c.id}` }),
       ),
-      ...top(contacts, q, (c) => `${c.first_name} ${c.last_name} ${c.email ?? ""}`).map(
+      ...top(contacts, q, (c) => `${c.first_name} ${c.last_name} ${c.email ?? ""} ${Object.values(c.messengers ?? {}).join(" ")}`).map(
         (c): SearchResult => ({
           kind: "contact",
           id: c.id,

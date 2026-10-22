@@ -3,6 +3,7 @@
  * and stored in automation_workflows.definition. There is no eval, no Function() and no
  * user script anywhere in the engine; templates resolve allowlisted variables only.
  */
+import { isCountryCode } from "@/lib/countries";
 import { z } from "zod";
 
 export const LIMITS = {
@@ -101,7 +102,7 @@ export const stepSchema = z.discriminatedUnion("type", [
       type: z.literal("assign_owner"),
       rule: z.enum(["round_robin", "by_country"]),
       only_if_unassigned: z.boolean().default(true),
-      country_map: z.record(z.string().regex(/^[A-Z]{2}$/), z.uuid()).default({}),
+      country_map: z.record(z.string().refine(isCountryCode, "Unknown country code"), z.uuid()).default({}),
     })
     .strict(),
   z
@@ -132,13 +133,15 @@ export const stepSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("convert_deal_to_order") }).strict(),
   z.object({ ...base, type: z.literal("send_email"), to: z.enum(["record_owner", "assignee"]), subject: text(200).min(1), body: text(2000).default("") }).strict(),
   z.object({ ...base, type: z.literal("send_webhook"), event_type: z.string().regex(/^[a-z0-9_.-]{1,64}$/) }).strict(),
+  // Team notification to the configured Telegram chat (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID), plain text.
+  z.object({ ...base, type: z.literal("send_telegram"), text: text(3500).min(1) }).strict(),
   z
     .object({ ...base, type: z.literal("delay"), hours: z.number().int().min(1).max(LIMITS.maxDelayHours) })
     .strict(),
 ]);
 export type Step = z.infer<typeof stepSchema>;
 export type StepType = Step["type"];
-export const STEP_TYPES: StepType[] = ["condition", "assign_owner", "create_task", "update_record", "create_activity", "create_notification", "convert_deal_to_order", "send_email", "send_webhook", "delay"];
+export const STEP_TYPES: StepType[] = ["condition", "assign_owner", "create_task", "update_record", "create_activity", "create_notification", "convert_deal_to_order", "send_email", "send_telegram", "send_webhook", "delay"];
 
 export const definitionSchema = z
   .object({
@@ -157,6 +160,7 @@ export const STEP_LABELS: Record<StepType, string> = {
   create_notification: "Notify",
   convert_deal_to_order: "Create order from deal",
   send_email: "Send email",
+  send_telegram: "Send to Telegram",
   send_webhook: "Send webhook",
   delay: "Wait",
 };

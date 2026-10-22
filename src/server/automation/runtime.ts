@@ -4,6 +4,7 @@ import { getServiceDb } from "@/server/db";
 import type { RequestMeta } from "@/server/repositories/types";
 import type { ServiceContext } from "@/server/services/context";
 import { dispatchDomainEvent, sendWorkflowWebhook, type WebhookDeps } from "@/server/integrations/webhooks";
+import { telegramSender } from "@/server/integrations/telegram";
 import { handleEvent, type EmailSender, type EngineDeps, type WebhookSender } from "./engine";
 
 /**
@@ -62,6 +63,7 @@ export function engineDeps(meta: RequestMeta): EngineDeps {
     db,
     meta,
     email: emailSender(),
+    telegram: telegramSender(),
     webhooks: webhookSender(webhookDeps),
     // Outbound webhooks for every handled event, including events caused by workflow runs.
     // Sent after the response so a slow receiver never delays the user's action.

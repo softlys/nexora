@@ -15,6 +15,7 @@
  * Each step runs in its own unit of work so a step may call other services
  * (convertDealToOrder) without nesting writes.
  */
+import type { TelegramSender } from "@/server/integrations/telegram";
 import { randomUUID } from "node:crypto";
 import { formatDate } from "@/lib/format";
 import type { AutomationExecution, AutomationWorkflow, Profile } from "@/domain/entities";
@@ -45,6 +46,7 @@ export type EngineDeps = {
   meta: RequestMeta;
   now?: () => Date;
   email?: EmailSender;
+  telegram?: TelegramSender;
   webhooks?: WebhookSender;
   /** Called for every event the engine handles, including events its runs caused (outbound webhooks). */
   onEvent?: (event: DomainEvent) => Promise<void>;
@@ -447,6 +449,15 @@ async function executeStep(deps: EngineDeps, svc: ServiceContext, state: RunStat
       if (test) return { status: "success", output: { would_email: profile.full_name } };
       const result = await deps.email.send({ to: profile.email, subject: render(step.subject, vars), text: render(step.body, vars) });
       return { status: "success", output: { provider_id: result.id } };
+    }
+
+    case "send_telegram": {
+      if (!deps.telegram?.configured) return { status: "skipped", output: { reason: "Telegram is not configured (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID), so nothing was sent" } };
+      const { vars } = await load();
+      const text = render(step.text, vars);
+      if (test) return { status: "success", output: { would_send: text.slice(0, 200) } };
+      const result = await deps.telegram.send(text);
+      return { status: "success", output: { message_id: result.message_id } };
     }
 
     case "send_webhook": {

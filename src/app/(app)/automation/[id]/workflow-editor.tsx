@@ -48,6 +48,7 @@ const STEP_DEFAULTS: Record<StepType, Json> = {
   create_notification: { recipients: ["record_owner"], title: "Update", body: "", link: "record", once_per_record: true },
   convert_deal_to_order: {},
   send_email: { to: "record_owner", subject: "Update", body: "" },
+  send_telegram: { text: "New lead: {{lead.title}} ({{lead.company_name}})" },
   send_webhook: { event_type: "custom.event" },
   delay: { hours: 24 },
 };
@@ -706,10 +707,17 @@ function StepPanel({
         </>
       )}
 
+      {step.type === "send_telegram" && (
+        <>
+          {text("text", "Message", true)}
+          <p className="text-xs text-text-muted">Plain text to the team chat set in Integrations → Telegram. Placeholders like {"{{lead.title}}"} are filled in. Without a configured bot the step is logged as skipped.</p>
+        </>
+      )}
+
       {step.type === "send_webhook" && (
         <>
           {text("event_type", "Event type")}
-          <p className="text-xs text-text-muted">Delivered through the integrations module (phase 4). Until then the step is logged as skipped.</p>
+          <p className="text-xs text-text-muted">Delivered as workflow.webhook to every enabled integration that subscribes to it (Make, n8n, generic webhook).</p>
         </>
       )}
 

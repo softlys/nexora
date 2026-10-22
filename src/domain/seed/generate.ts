@@ -238,6 +238,8 @@ export function generateSeed(now: Date = new Date()): Dataset {
         job_title: k === 0 ? rng.pick(JOB_TITLES.slice(0, 6)) : rng.pick(JOB_TITLES),
         owner_id: company.owner_id,
         tags: rng.shuffle(CONTACT_TAGS).slice(0, rng.int(0, 2)),
+        // Derived without the RNG so the rest of the seed stays the same.
+        messengers: seedMessengers(contacts.length, first, last, COMPANY_FIXTURES[ci]!.dial),
         created_at: created,
         updated_at: created,
         archived_at: null,
@@ -829,4 +831,16 @@ export function generateSeed(now: Date = new Date()): Dataset {
   dataset.tasks = [...dataset.tasks, ...automation.tasks];
   dataset.activities = [...dataset.activities, ...automation.activities];
   return dataset;
+}
+
+/** A realistic mix: some contacts use Telegram, some WhatsApp, a few Instagram or LinkedIn, some none. */
+export function seedMessengers(index: number, first: string, last: string, dial: string): Contact["messengers"] {
+  const handle = `${first}_${last}`.toLowerCase().replace(/[^a-z_]/g, "");
+  const phone = `${dial}555${String(200 + index).padStart(4, "0")}`.replace(/[^0-9+]/g, "");
+  const m: Contact["messengers"] = {};
+  if (index % 3 === 0) m.telegram = handle;
+  if (index % 4 === 1) m.whatsapp = phone;
+  if (index % 5 === 2) m.linkedin = `${first}-${last}`.toLowerCase().replace(/[^a-z-]/g, "");
+  if (index % 7 === 3) m.instagram = handle;
+  return m;
 }

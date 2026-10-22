@@ -3,6 +3,7 @@
  * Route handlers validate with these schemas and the OpenAPI document is generated from
  * them (src/domain/api/openapi.ts), so the two cannot drift apart.
  */
+import { isCountryCode } from "@/lib/countries";
 import { z } from "zod";
 import { LEAD_SOURCES } from "../entities";
 import { SECURITY_ACTION_NAMES } from "../security/events";
@@ -63,7 +64,7 @@ export const leadSubmission = z
     contact_name: z.string().trim().min(1).max(160),
     email: z.email().max(254).optional(),
     phone: z.string().trim().max(40).optional(),
-    country: z.string().regex(/^[A-Z]{2}$/).optional().describe("ISO 3166-1 alpha-2, used by owner assignment."),
+    country: z.string().refine(isCountryCode, "Unknown ISO 3166-1 alpha-2 country code").optional().describe("ISO 3166-1 alpha-2, used by owner assignment."),
     source: z.enum(LEAD_SOURCES).default("api"),
     estimated_value: z.number().min(0).max(1_000_000_000).default(0),
     message: z.string().trim().max(2000).optional().describe("Free text from the form; stored as the next action note."),
@@ -109,7 +110,7 @@ export const companyResource = z
   .object({ id: z.uuid(), name: z.string(), industry: z.string(), country: z.string(), city: z.string(), website: z.string().nullable(), lifecycle_stage: z.string(), owner_id: z.uuid().nullable(), open_deals: z.number().int(), contacts: z.number().int(), created_at: iso })
   .meta({ id: "Company" });
 export const contactResource = z
-  .object({ id: z.uuid(), first_name: z.string(), last_name: z.string(), email: z.string().nullable(), phone: z.string().nullable(), job_title: z.string(), company_id: z.uuid().nullable(), owner_id: z.uuid().nullable(), created_at: iso })
+  .object({ id: z.uuid(), first_name: z.string(), last_name: z.string(), email: z.string().nullable(), phone: z.string().nullable(), job_title: z.string(), messengers: z.record(z.string(), z.string()).describe("Telegram, WhatsApp, Viber, Instagram, Facebook, VK, LinkedIn, WeChat handles"), company_id: z.uuid().nullable(), owner_id: z.uuid().nullable(), created_at: iso })
   .meta({ id: "Contact" });
 export const dealResource = z
   .object({ id: z.uuid(), name: z.string(), company_id: z.uuid(), amount: money, currency: z.string(), stage_id: z.uuid(), stage: z.string().nullable(), probability: z.number(), expected_close_date: z.string().nullable(), owner_id: z.uuid().nullable(), closed_at: z.string().nullable(), created_at: iso })

@@ -3,6 +3,8 @@
  * These mirror supabase/migrations and are shared by the demo and Supabase adapters.
  * Column names use snake_case so rows map 1:1 to PostgreSQL.
  */
+import { messengersSchema } from "@/lib/messengers";
+import { isCountryCode } from "@/lib/countries";
 import { z } from "zod";
 import { securityEventSchema, type SecurityEvent } from "./security/events";
 
@@ -15,7 +17,7 @@ export const timestamp = z.iso.datetime({ offset: true });
 export const dateOnly = z.iso.date();
 export const money = z.number().finite().min(0).max(1_000_000_000);
 export const currencyCode = z.string().regex(/^[A-Z]{3}$/, "Use a 3-letter ISO currency code");
-export const countryCode = z.string().regex(/^[A-Z]{2}$/, "Use a 2-letter ISO country code");
+export const countryCode = z.string().refine(isCountryCode, "Choose a country from the list (ISO 3166-1 code)");
 const shortText = (max: number) => z.string().trim().max(max);
 const requiredText = (max: number) => z.string().trim().min(1, "Required").max(max);
 
@@ -137,6 +139,8 @@ export const contactSchema = z.object({
   job_title: shortText(120),
   owner_id: id,
   tags: z.array(z.string().trim().min(1).max(32)).max(10),
+  /** Telegram, WhatsApp, Instagram… handles (src/lib/messengers.ts). Older stored rows may lack it. */
+  messengers: messengersSchema.default({}),
 });
 export type Contact = z.infer<typeof contactSchema>;
 
