@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Handshake, Loader2, Moon, Package, Search, Settings, Sun, Users } from "lucide-react";
+import { Building2, Handshake, ListTodo, Loader2, Moon, Package, Search, Settings, Sun, Target, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
@@ -23,8 +23,8 @@ import { useShell } from "./shell-context";
 
 export const OPEN_COMMAND_PALETTE_EVENT = "nexora:open-command-palette";
 
-const RESULT_ICON = { company: Building2, contact: Users, deal: Handshake, order: Package } as const;
-const RESULT_GROUP = { company: "Companies", contact: "Contacts", deal: "Deals", order: "Orders" } as const;
+const RESULT_ICON = { company: Building2, contact: Users, lead: Target, deal: Handshake, order: Package, task: ListTodo } as const;
+const RESULT_GROUP = { company: "Companies", contact: "Contacts", lead: "Leads", deal: "Deals", order: "Orders", task: "Open tasks" } as const;
 
 /**
  * Cmd/Ctrl+K palette: page navigation plus record search. Search runs on the server and
@@ -94,7 +94,7 @@ export function CommandPalette() {
   const navMatches = navGroups.map((g) => ({ ...g, items: g.items.filter((i) => matches(`${i.label} ${(i.keywords ?? []).join(" ")}`)) })).filter((g) => g.items.length > 0);
   const settingsMatches = settingsSections.filter((s) => matches(`settings ${s.label}`));
   const shownResults = searching ? results : [];
-  const groups = (["company", "contact", "deal", "order"] as const).map((kind) => ({ kind, items: shownResults.filter((r) => r.kind === kind) })).filter((g) => g.items.length > 0);
+  const groups = (["company", "contact", "lead", "deal", "order", "task"] as const).map((kind) => ({ kind, items: shownResults.filter((r) => r.kind === kind) })).filter((g) => g.items.length > 0);
 
   return (
     <CommandDialog

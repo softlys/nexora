@@ -44,6 +44,21 @@ describe("date shifting keeps the demo relative to today", () => {
     expect(verifySecurityLogChain(store.data.security_events).ok).toBe(true);
   });
 
+  it("never moves things that already happened into the future", () => {
+    const store = createSeededStore(new Date("2026-10-19T08:00:00Z"));
+    const key = store.data.api_keys[0];
+    const task = store.data.tasks[0]!;
+    // Something used late yesterday, and a task due later today.
+    if (key) key.last_used_at = "2026-10-19T22:30:00.000Z";
+    task.due_at = "2026-10-19T23:00:00.000Z";
+    const now = new Date("2026-10-20T09:00:00Z");
+    expect(reanchor(store, now)).toBe(true);
+    if (key) expect(Date.parse(store.data.api_keys[0]!.last_used_at!)).toBeLessThanOrEqual(now.getTime());
+    for (const c of store.data.companies) expect(Date.parse(c.created_at)).toBeLessThanOrEqual(now.getTime());
+    // Plans keep their relative position: due 14 h ahead after the one-day shift.
+    expect(store.data.tasks[0]!.due_at).toBe("2026-10-20T23:00:00.000Z");
+  });
+
   it("re-anchors only when a day has passed", () => {
     const store = createSeededStore(new Date("2026-10-19T08:00:00Z"));
     expect(reanchor(store, new Date("2026-10-19T22:00:00Z"))).toBe(false);

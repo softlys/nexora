@@ -28,6 +28,16 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Full testing pass (2026-10-22)
+
+Automated, black-box (46 probes) and manual testing of both apps; report in the companion audit folder (TEST_REPORT.md). Fixed here, with tests:
+- the daily demo date shift no longer moves things that already happened into the future (it showed "last used in 9 hours");
+- the Create API key dialog starts from the default scopes every time (it kept the previous key's scopes);
+- global search also finds leads and open tasks, within the actor's scope;
+- deployment docs: run behind a reverse proxy (without one, clients can choose their own X-Forwarded-For).
+
+Verified: 241 unit tests, 23 e2e tests, lint and typecheck pass; CI green.
+
 ## Redesign from reference mockups (2026-10-22)
 
 - **Tokens** (`tokens/tokens.json` → `npm run tokens:build`): violet primary (#6a45f5 / #7c5cff), dark navy sidebar in both themes (`--nx-sidebar-*`), soft gray page background with white cards, radii 8/12/16 px.

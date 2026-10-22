@@ -90,6 +90,14 @@ describe("tenant isolation and IDOR", () => {
     expect(data().deals.find((x) => x.id === sofiasDeal.id)!.name).toBe(sofiasDeal.name);
   });
 
+  it("finds leads and open tasks in global search, within the actor's scope", async () => {
+    const lead = data().leads.find((l) => l.owner_id === DEMO_USER_IDS.repSofia && !l.archived_at)!;
+    expect((await globalSearch(admin, lead.title)).some((r) => r.kind === "lead" && r.id === lead.id)).toBe(true);
+    expect((await globalSearch(daniel, lead.title)).some((r) => r.id === lead.id)).toBe(false);
+    const task = data().tasks.find((t) => t.assignee_id === DEMO_USER_IDS.admin && t.status !== "done" && t.status !== "cancelled");
+    if (task) expect((await globalSearch(admin, task.title)).some((r) => r.kind === "task" && r.id === task.id)).toBe(true);
+  });
+
   it("only shows visible records in global search", async () => {
     const sofiasCompany = ownedBy(data().companies, DEMO_USER_IDS.repSofia);
     const results = await globalSearch(daniel, sofiasCompany.name.slice(0, 8));

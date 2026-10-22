@@ -73,6 +73,8 @@ Without a cron, nothing time-based happens on its own, and the companion SIEM se
 
 ## Production notes
 
+- **Run behind a reverse proxy or a platform that sets the client address** (Vercel, nginx, Caddy, a load balancer). Next.js does not see the TCP peer address, so client IPs come from `X-Forwarded-For` as far as `NEXORA_TRUSTED_PROXY_HOPS` proxies vouch for them. Exposed directly, any client can choose its own IP: per-IP limits can be bypassed and the security log records whatever IP the client sent. Per-key and per-user limits are not affected.
+
 - **Rate limits and the bulk-read detector are shared** in Supabase mode: counters live in PostgreSQL (`public.hit_counter`), so every serverless instance sees the same totals. Demo mode keeps them in memory.
 - **Multi-step writes** in Supabase mode run with an undo journal: if a later step fails, earlier inserts, updates and deletes of the same operation are reverted. Security events are kept, since they record the attempt.
 - **Webhooks** are sent after the response (Next.js `after`), and retries run from the scheduler. A crash between the commit and the send can drop an attempt; a durable queue would close that gap (see the roadmap).

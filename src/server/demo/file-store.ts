@@ -30,7 +30,7 @@ export function createSeededStore(now: Date = new Date()): StoreFile {
 export function reanchor(store: StoreFile, now: Date = new Date()): boolean {
   const days = daysBetween(store.anchored_at, now.toISOString());
   if (days <= 0) return false;
-  store.data = shiftDataset(store.data, days);
+  store.data = shiftDataset(store.data, days, now);
   store.anchored_at = now.toISOString();
   return true;
 }

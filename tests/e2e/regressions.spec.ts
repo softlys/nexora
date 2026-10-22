@@ -69,4 +69,22 @@ test.describe("QA regressions", () => {
     expect(await nodes.count()).toBeGreaterThan(1);
     await expect(page.getByRole("heading", { name: "Nodes library" })).toBeVisible();
   });
+
+  test("the create API key dialog starts from the defaults every time", async ({ page }) => {
+    await page.goto("/settings/api-keys");
+    await page.getByRole("button", { name: "Create API key" }).click();
+    let dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Name").fill(`Reset check ${stamp}`);
+    await dialog.getByRole("checkbox", { name: "leads:write" }).click();
+    await dialog.getByRole("checkbox", { name: "records:read" }).click();
+    await dialog.getByRole("button", { name: "Create key" }).click();
+    await page.getByRole("button", { name: "I saved it" }).click();
+
+    await page.getByRole("button", { name: "Create API key" }).click();
+    dialog = page.getByRole("dialog");
+    await expect(dialog.getByLabel("Name")).toHaveValue("");
+    await expect(dialog.getByRole("checkbox", { name: "leads:write" })).toBeChecked();
+    await expect(dialog.getByRole("checkbox", { name: "records:read" })).not.toBeChecked();
+  });
 });
+

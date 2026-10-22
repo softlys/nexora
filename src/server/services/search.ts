@@ -1,7 +1,7 @@
 import { MAX_SEARCH_LENGTH } from "@/domain/list";
 import { findVisible, trackRead, type ServiceContext } from "./context";
 
-export type SearchResult = { kind: "company" | "contact" | "deal" | "order"; id: string; title: string; subtitle: string; href: string };
+export type SearchResult = { kind: "company" | "contact" | "lead" | "deal" | "order" | "task"; id: string; title: string; subtitle: string; href: string };
 
 const PER_GROUP = 6;
 
@@ -22,7 +22,7 @@ function top<T>(rows: T[], q: string, text: (r: T) => string): T[] {
 }
 
 /**
- * Global search over companies, contacts, deals and orders the actor may see.
+ * Global search over companies, contacts, leads, deals, orders and tasks the actor may see.
  * Visibility is applied on the server before matching, so results never reveal
  * records outside the actor's scope. Input is length-limited and matched literally.
  */
@@ -30,11 +30,13 @@ export async function globalSearch(ctx: ServiceContext, rawQuery: string): Promi
   const q = rawQuery.trim().toLowerCase().slice(0, MAX_SEARCH_LENGTH);
   if (!q) return [];
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
-    const [companies, contacts, deals, orders] = await Promise.all([
+    const [companies, contacts, leads, deals, orders, tasks] = await Promise.all([
       findVisible(tx, ctx, "companies", "company", (r) => r.owner_id, { archived_at: null }),
       findVisible(tx, ctx, "contacts", "contact", (r) => r.owner_id, { archived_at: null }),
+      findVisible(tx, ctx, "leads", "lead", (r) => r.owner_id),
       findVisible(tx, ctx, "deals", "deal", (r) => r.owner_id, { archived_at: null }),
       findVisible(tx, ctx, "orders", "order", (r) => r.owner_id, { archived_at: null }),
+      findVisible(tx, ctx, "tasks", "task", (r) => r.assignee_id),
     ]);
     const companyName = new Map(companies.map((c) => [c.id, c.name]));
     const results: SearchResult[] = [
@@ -50,12 +52,22 @@ export async function globalSearch(ctx: ServiceContext, rawQuery: string): Promi
           href: `/contacts/${c.id}`,
         }),
       ),
+      ...top(
+        leads.filter((l) => !l.archived_at),
+        q,
+        (l) => `${l.title} ${l.company_name} ${l.contact_name}`,
+      ).map((l): SearchResult => ({ kind: "lead", id: l.id, title: l.title, subtitle: [l.company_name, l.contact_name].filter(Boolean).join(" · "), href: `/leads/${l.id}` })),
       ...top(deals, q, (d) => `${d.name}`).map(
         (d): SearchResult => ({ kind: "deal", id: d.id, title: d.name, subtitle: companyName.get(d.company_id) ?? "", href: `/deals/${d.id}` }),
       ),
       ...top(orders, q, (o) => `${o.order_number} ${companyName.get(o.company_id) ?? ""}`).map(
         (o): SearchResult => ({ kind: "order", id: o.id, title: o.order_number, subtitle: companyName.get(o.company_id) ?? "", href: `/orders/${o.id}` }),
       ),
+      ...top(
+        tasks.filter((t) => t.status !== "done" && t.status !== "cancelled"),
+        q,
+        (t) => t.title,
+      ).map((t): SearchResult => ({ kind: "task", id: t.id, title: t.title, subtitle: t.due_at ? `Due ${t.due_at.slice(0, 10)}` : "Open task", href: `/tasks/${t.id}` })),
     ];
     await trackRead(ctx, "search", results.length);
     return results;

@@ -36,8 +36,16 @@ export function daysBetween(aIso: string, bIso: string): number {
  */
 const UNSHIFTED_TABLES = new Set(["security_events"]);
 
-export function shiftDataset(data: Dataset, days: number): Dataset {
+/**
+ * Timestamps that may legitimately lie in the future (plans and schedules). Every other `*_at`
+ * records something that already happened (created, used, paid…), so after the shift it is capped
+ * at "now": moving yesterday 14:45 forward one day must not produce "last used in 9 hours".
+ */
+const FUTURE_OK = new Set(["due_at", "resume_at", "next_attempt_at", "expires_at", "remind_at", "scheduled_at", "window_ends_at"]);
+
+export function shiftDataset(data: Dataset, days: number, now: Date = new Date()): Dataset {
   if (days === 0) return data;
+  const nowIso = now.toISOString();
   const out = {} as Record<string, unknown[]>;
   for (const [table, rows] of Object.entries(data)) {
     if (UNSHIFTED_TABLES.has(table)) {
@@ -47,7 +55,10 @@ export function shiftDataset(data: Dataset, days: number): Dataset {
     out[table] = (rows as Record<string, unknown>[]).map((row) => {
       const copy: Record<string, unknown> = { ...row };
       for (const [key, value] of Object.entries(copy)) {
-        if (typeof value === "string" && isDateField(key)) copy[key] = shiftValue(value, days);
+        if (typeof value === "string" && isDateField(key)) {
+          const moved = shiftValue(value, days);
+          copy[key] = key.endsWith("_at") && !FUTURE_OK.has(key) && ISO_TIMESTAMP.test(moved) && moved > nowIso ? nowIso : moved;
+        }
       }
       return copy;
     });

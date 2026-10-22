@@ -30,6 +30,15 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
   const [revealed, setRevealed] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // Every new key starts from the defaults, not from the previous key's choices.
+  const openNew = () => {
+    setName("");
+    setKind("integration");
+    setScopes(["leads:write"]);
+    setError(null);
+    setOpen(true);
+  };
+
   const changeKind = (k: ApiKeyKind) => {
     setKind(k);
     setScopes([SCOPES_BY_KIND[k][0]!]);
@@ -62,7 +71,7 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}>
+        <Button onClick={openNew}>
           <Plus aria-hidden />
           Create API key
         </Button>
