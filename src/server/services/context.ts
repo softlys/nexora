@@ -14,6 +14,8 @@ import type { RequestMeta } from "@/server/repositories/types";
 import { DomainError } from "@/server/repositories/types";
 import type { Db, Row, Tx, Where } from "@/server/db/types";
 import type { TableName } from "@/domain/entities";
+import type { Counter } from "@/server/security/rate-limit";
+import { supabaseCounter } from "@/server/security/shared-counter";
 
 export type ServiceContext = {
   actor: Actor;
@@ -274,10 +276,20 @@ export function bulkReadThreshold(): number {
 
 /**
  * Counts records returned to a user. Crossing the threshold within five minutes emits one
- * data.bulk_read event for that window (a signal for VIGIL's exfiltration rule).
+ * data.bulk_read event for that window (a signal for VIGIL's exfiltration rule). In Supabase mode
+ * the count is shared by every server instance (public.hit_counter).
  */
-export function trackRead(ctx: ServiceContext, resource: string, records: number, now = Date.now()): void {
+export async function trackRead(ctx: ServiceContext, resource: string, records: number, now = Date.now(), counter: Counter | null = supabaseCounter()): Promise<void> {
   if (ctx.principal === "service" || records <= 0) return;
+  const threshold = bulkReadThreshold();
+  if (counter) {
+    const total = await counter(`bulk:${ctx.actor.id}`, BULK_WINDOW_MS / 1000, records);
+    // Flag once per window: on the request that crossed the threshold.
+    if (total > threshold && total - records <= threshold) {
+      emitSecurity(ctx, { type: "data.bulk_read", payload: { resource, records: total, threshold, window_seconds: BULK_WINDOW_MS / 1000 } });
+    }
+    return;
+  }
   bulkReads.__nexoraBulkReads ??= new Map();
   const windows = bulkReads.__nexoraBulkReads;
   const key = ctx.actor.id;
@@ -287,7 +299,6 @@ export function trackRead(ctx: ServiceContext, resource: string, records: number
     windows.set(key, w);
   }
   w.count += records;
-  const threshold = bulkReadThreshold();
   if (!w.flagged && w.count > threshold) {
     w.flagged = true;
     emitSecurity(ctx, { type: "data.bulk_read", payload: { resource, records: w.count, threshold, window_seconds: BULK_WINDOW_MS / 1000 } });

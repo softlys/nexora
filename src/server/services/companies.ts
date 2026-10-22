@@ -48,7 +48,7 @@ export async function listCompanies(ctx: ServiceContext, query: ListQuery, filte
       },
       defaultSort: { key: "name", dir: "asc" },
     });
-    trackRead(ctx, "company", page.rows.length);
+    await trackRead(ctx, "company", page.rows.length);
     return {
       ...page,
       rows: page.rows.map((c) => ({ ...c, open_deals: openDeals.get(c.id) ?? 0, contacts: contactCount.get(c.id) ?? 0 })),

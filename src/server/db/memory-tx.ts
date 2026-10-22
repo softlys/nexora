@@ -83,6 +83,11 @@ export function createMemoryTx(data: Dataset, orgId: string, writable: boolean):
       data.security_events.push(event);
       return event;
     },
+    async securityEventsAfter(after, limit) {
+      const chain = data.security_events.filter((e) => e.organization_id === orgId);
+      const rowsAfter = chain.filter((e) => e.sequence > after).sort((a, b) => a.sequence - b.sequence);
+      return { rows: rowsAfter.slice(0, limit), lastSequence: chain.reduce((m, e) => Math.max(m, e.sequence), 0) };
+    },
     async nextOrderNumber(year) {
       return nextOrderNumber(
         rows("orders").filter((r) => belongs("orders", r, orgId)).map((r) => r.order_number as string),

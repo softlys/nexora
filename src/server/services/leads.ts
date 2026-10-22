@@ -39,7 +39,7 @@ export async function listLeads(ctx: ServiceContext, query: ListQuery, filters: 
       },
       defaultSort: { key: "created", dir: "desc" },
     });
-    trackRead(ctx, "lead", page.rows.length);
+    await trackRead(ctx, "lead", page.rows.length);
     return page;
   });
 }

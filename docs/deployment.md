@@ -33,7 +33,8 @@ NEXORA runs anywhere Next.js 16 runs. The recommended setup is **Vercel** (app a
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `NEXORA_DATA_MODE` | yes on servers | `supabase` for real deployments |
+| `NEXORA_DATA_MODE` | yes on servers | `supabase` for real deployments. Required when `NODE_ENV=production`: without it NEXORA refuses to serve, instead of falling back to the demo |
+| `NEXORA_TRUSTED_PROXY_HOPS` | optional | Proxies that append to `X-Forwarded-For` (default 1). The client IP for rate limits and the security log is taken that many entries from the right |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase mode | Public; access is limited by RLS |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase mode | Server only. Used for automation runs, the security log, invites, API key lookup and webhook deliveries |
 | `NEXORA_ENCRYPTION_KEY` | Supabase mode | At least 32 characters. Encrypts integration signing secrets (AES-256-GCM). Rotating it makes stored secrets unreadable; rotate the integration secrets after changing it |
@@ -72,7 +73,8 @@ Without a cron, nothing time-based happens on its own, and the companion SIEM se
 
 ## Production notes
 
-- **Rate limits and the bulk-read detector are in memory**, per server instance. Several instances each count separately. For a multi-instance deployment, back `src/server/security/rate-limit.ts` with a shared store such as Upstash Redis.
+- **Rate limits and the bulk-read detector are shared** in Supabase mode: counters live in PostgreSQL (`public.hit_counter`), so every serverless instance sees the same totals. Demo mode keeps them in memory.
+- **Multi-step writes** in Supabase mode run with an undo journal: if a later step fails, earlier inserts, updates and deletes of the same operation are reverted. Security events are kept, since they record the attempt.
 - **Webhooks** are sent after the response (Next.js `after`), and retries run from the scheduler. A crash between the commit and the send can drop an attempt; a durable queue would close that gap (see the roadmap).
 - **Outbound webhook URLs** must be https in production and resolve to public addresses. Private, loopback, link-local and cloud metadata ranges are refused at configuration time and again at connection time.
 - **Security headers** (`nosniff`, `DENY` framing, strict referrer, permissions policy) are set in `next.config.ts`.

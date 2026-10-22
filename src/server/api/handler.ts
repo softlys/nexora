@@ -11,7 +11,9 @@ import { findApiKeyByHash, findApiKeysByPrefix, getServiceDb } from "@/server/db
 import { UniqueViolation } from "@/server/db/types";
 import type { RequestMeta } from "@/server/repositories/types";
 import { DomainError } from "@/server/repositories/types";
-import { getRateLimiter } from "@/server/security/rate-limit";
+import { hitRateLimit } from "@/server/security/rate-limit";
+import { clientIp } from "@/server/security/client-ip";
+import { supabaseCounter } from "@/server/security/shared-counter";
 import { getValidationLog } from "@/server/security/validation-log";
 import { emit, emitSecurity, flushSecurityEvents, NotFoundError, type ServiceContext } from "@/server/services/context";
 
@@ -61,10 +63,9 @@ function errorResponse(error: ApiError, requestId: string): Response {
 }
 
 export function requestMetaOf(request: Request): RequestMeta {
-  const forwarded = request.headers.get("x-forwarded-for");
   const incoming = request.headers.get("x-request-id");
   return {
-    ip: forwarded ? forwarded.split(",")[0]!.trim() : request.headers.get("x-real-ip"),
+    ip: clientIp(request.headers.get("x-forwarded-for"), request.headers.get("x-real-ip")),
     user_agent: request.headers.get("user-agent")?.slice(0, 512) ?? null,
     request_id: incoming && /^[A-Za-z0-9._-]{8,64}$/.test(incoming) ? incoming : randomUUID(),
   };
@@ -91,14 +92,14 @@ function toActor(profile: Profile, all: Profile[]): Actor {
 async function authenticate(request: Request, endpoint: Endpoint, meta: RequestMeta): Promise<{ key: ApiKey; ctx: ServiceContext }> {
   const header = request.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
-  const fail = (message: string) => {
-    const limit = getRateLimiter().hit(meta.ip ?? "unknown", "api_auth");
+  const fail = async (message: string) => {
+    const limit = await hitRateLimit(meta.ip ?? "unknown", "api_auth", supabaseCounter());
     if (!limit.allowed) return new ApiError(429, "rate_limited", "Too many failed authentication attempts. Try again in a minute.", undefined, { "Retry-After": String(limit.rule.windowSeconds) });
     return new ApiError(401, "unauthorized", message, undefined, { "WWW-Authenticate": 'Bearer realm="nexora"' });
   };
-  if (!token) throw fail("Missing API key. Send Authorization: Bearer <key>.");
+  if (!token) throw await fail("Missing API key. Send Authorization: Bearer <key>.");
   const parsed = parseApiKey(token);
-  if (!parsed) throw fail("The API key is not valid.");
+  if (!parsed) throw await fail("The API key is not valid.");
 
   const key = await findApiKeyByHash(hashApiKey(token));
   if (!key) {
@@ -108,12 +109,12 @@ async function authenticate(request: Request, endpoint: Endpoint, meta: RequestM
       await recordApiSecurity(orgId, meta, { type: "api.auth_failed", payload: { target: { type: "api_key", id: candidates.find((c) => c.organization_id === orgId)!.id }, reason: "wrong_secret", prefix: parsed.prefix, path: endpoint.path } });
     }
     if (candidates.length === 0) console.warn(`[api] authentication failed for unknown key prefix ${parsed.prefix} request_id=${meta.request_id}`);
-    throw fail("The API key is not valid.");
+    throw await fail("The API key is not valid.");
   }
   const keyMeta = { ...meta, api_key_id: key.id };
   if (key.revoked_at) {
     await recordApiSecurity(key.organization_id, keyMeta, { type: "api_key.used_after_revoke", payload: { target: { type: "api_key", id: key.id }, prefix: key.prefix, revoked_at: key.revoked_at, path: endpoint.path } });
-    throw fail("This API key was revoked.");
+    throw await fail("This API key was revoked.");
   }
 
   const db = getServiceDb();
@@ -121,7 +122,7 @@ async function authenticate(request: Request, endpoint: Endpoint, meta: RequestM
   const owner = profiles.find((p) => p.id === key.created_by);
   if (!owner || !owner.is_active || owner.archived_at) {
     await recordApiSecurity(key.organization_id, keyMeta, { type: "api.auth_failed", payload: { target: { type: "api_key", id: key.id }, reason: "owner_inactive", prefix: key.prefix, path: endpoint.path } });
-    throw fail("The user who created this API key is no longer active.");
+    throw await fail("The user who created this API key is no longer active.");
   }
   const ctx: ServiceContext = { actor: toActor(owner, profiles), meta: keyMeta, db, deferred: [], pendingEvents: [] };
 
@@ -131,7 +132,7 @@ async function authenticate(request: Request, endpoint: Endpoint, meta: RequestM
     throw new ApiError(403, "insufficient_scope", `This key lacks the ${endpoint.scope} scope.`);
   }
 
-  const limit = getRateLimiter().hit(key.id, "api");
+  const limit = await hitRateLimit(key.id, "api", supabaseCounter());
   if (!limit.allowed) {
     if (limit.firstBlocked) {
       emitSecurity(ctx, { type: "rate_limit.exceeded", payload: { bucket: "api", limit: limit.rule.limit, window_seconds: limit.rule.windowSeconds } });

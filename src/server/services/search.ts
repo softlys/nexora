@@ -57,7 +57,7 @@ export async function globalSearch(ctx: ServiceContext, rawQuery: string): Promi
         (o): SearchResult => ({ kind: "order", id: o.id, title: o.order_number, subtitle: companyName.get(o.company_id) ?? "", href: `/orders/${o.id}` }),
       ),
     ];
-    trackRead(ctx, "search", results.length);
+    await trackRead(ctx, "search", results.length);
     return results;
   });
 }

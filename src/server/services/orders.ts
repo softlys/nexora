@@ -72,7 +72,7 @@ export async function listOrders(ctx: ServiceContext, query: ListQuery, filters:
       },
       defaultSort: { key: "date", dir: "desc" },
     });
-    trackRead(ctx, "order", page.rows.length);
+    await trackRead(ctx, "order", page.rows.length);
     return page;
   });
 }

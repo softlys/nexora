@@ -139,15 +139,14 @@ export const testEvent = apiRoute(endpoint("POST", "/test-event"), async ({ key,
 export const securityEvents = apiRoute(endpoint("GET", "/security-events"), async ({ ctx, query }) => {
   requireCan(ctx, "view", "audit_log");
   const q = query as z.output<typeof securityEventsQuery>;
-  const all = await ctx.db.read(ctx.actor.organization_id, (tx) => tx.find("security_events"));
   const after = q.after ?? q.after_sequence;
-  const sorted = all.filter((e) => e.sequence > after).sort((a, b) => a.sequence - b.sequence);
-  const pageRows = sorted.slice(0, q.limit);
-  const last = all.reduce((m, e) => Math.max(m, e.sequence), 0);
+  // The cursor runs in the database: the log can grow far beyond what one read returns.
+  const { rows, lastSequence } = await ctx.db.read(ctx.actor.organization_id, (tx) => tx.securityEventsAfter(after, q.limit));
+  const next = rows.length ? rows[rows.length - 1]!.sequence : after;
   return {
     body: {
-      data: pageRows,
-      meta: { next_after_sequence: pageRows.length ? pageRows[pageRows.length - 1]!.sequence : after, has_more: sorted.length > pageRows.length, last_sequence: last },
+      data: rows,
+      meta: { next_after_sequence: next, has_more: next < lastSequence, last_sequence: lastSequence },
     },
   };
 });

@@ -1,7 +1,8 @@
 /**
- * Fixed-window, in-memory rate limiter keyed per user and bucket.
- * Good enough for a single server process; a multi-instance deployment needs a
- * shared store (Redis, Upstash, a database table). Documented in docs/security.md.
+ * Fixed-window rate limiter keyed per user and bucket.
+ * - `RateLimiter` keeps counters in memory (demo mode, one process, and unit tests).
+ * - `hitRateLimit()` is what the app calls: in Supabase mode the counters live in PostgreSQL
+ *   (public.hit_counter), so every server instance shares them; otherwise it uses the memory limiter.
  */
 
 export type RateLimitRule = { limit: number; windowSeconds: number };
@@ -51,6 +52,19 @@ export function getRateLimiter(): RateLimiter {
   // Recreated when the rules change (dev hot reload keeps globalThis across module versions).
   if (globalLimiter.__nexoraRateLimiter?.rules !== RATE_LIMITS) globalLimiter.__nexoraRateLimiter = new RateLimiter();
   return globalLimiter.__nexoraRateLimiter;
+}
+
+export type RateLimitResult = { allowed: boolean; remaining: number; rule: RateLimitRule; firstBlocked: boolean };
+
+/** A shared fixed-window counter: adds `amount` and returns the total in the current window. */
+export type Counter = (id: string, windowSeconds: number, amount: number) => Promise<number>;
+
+/** Records a hit in the shared counter when there is one (Supabase mode), else in memory. */
+export async function hitRateLimit(key: string, bucket: RateLimitBucket, counter: Counter | null): Promise<RateLimitResult> {
+  if (!counter) return getRateLimiter().hit(key, bucket);
+  const rule = RATE_LIMITS[bucket];
+  const count = await counter(`rl:${bucket}:${key}`, rule.windowSeconds, 1);
+  return { allowed: count <= rule.limit, remaining: Math.max(0, rule.limit - count), rule, firstBlocked: count === rule.limit + 1 };
 }
 
 export class RateLimitError extends Error {

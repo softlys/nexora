@@ -98,7 +98,7 @@ export async function listDeals(ctx: ServiceContext, query: ListQuery, filters: 
       },
       defaultSort: { key: "close", dir: "asc" },
     });
-    trackRead(ctx, "deal", page.rows.length);
+    await trackRead(ctx, "deal", page.rows.length);
     return { ...page, stages };
   });
 }

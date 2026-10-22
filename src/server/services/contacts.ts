@@ -39,7 +39,7 @@ export async function listContacts(ctx: ServiceContext, query: ListQuery, filter
       },
       defaultSort: { key: "name", dir: "asc" },
     });
-    trackRead(ctx, "contact", page.rows.length);
+    await trackRead(ctx, "contact", page.rows.length);
     return page;
   });
 }

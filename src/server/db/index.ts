@@ -19,8 +19,15 @@ const demoDb: Db = {
   },
 };
 
-function supabaseTx(db: SupabaseClient, orgId: string): Tx {
+/**
+ * PostgREST returns at most `max_rows` rows per request (1000 on Supabase by default), silently.
+ * Reads therefore page through the table in a stable order until a short page comes back.
+ */
+export const SUPABASE_PAGE_SIZE = 1000;
+
+export function supabaseTx(db: SupabaseClient, orgId: string): Tx {
   const scope = (table: TableName) => (table === "organizations" ? "id" : "organization_id");
+  const orderKey = (table: TableName) => (table === "security_events" ? "sequence" : "id");
   const raise = (table: TableName, error: { code?: string; message: string }): never => {
     if (error.code === "23505") throw new UniqueViolation(table, error.message);
     throw new Error(`${table}: ${error.message}`);
@@ -28,16 +35,21 @@ function supabaseTx(db: SupabaseClient, orgId: string): Tx {
   return {
     orgId,
     async find<T extends TableName>(table: T, where?: Where<Row<T>>) {
-      let q = db.from(table).select("*").eq(scope(table), orgId);
-      for (const [key, value] of Object.entries((where ?? {}) as Record<string, unknown>)) {
-        if (value === undefined) continue;
-        if (value === null) q = q.is(key, null);
-        else if (Array.isArray(value)) q = q.in(key, value);
-        else q = q.eq(key, value as string);
+      const all: Row<T>[] = [];
+      for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+        let q = db.from(table).select("*").eq(scope(table), orgId);
+        for (const [key, value] of Object.entries((where ?? {}) as Record<string, unknown>)) {
+          if (value === undefined) continue;
+          if (value === null) q = q.is(key, null);
+          else if (Array.isArray(value)) q = q.in(key, value);
+          else q = q.eq(key, value as string);
+        }
+        const { data, error } = await q.order(orderKey(table), { ascending: true }).range(from, from + SUPABASE_PAGE_SIZE - 1);
+        if (error) raise(table, error);
+        const page = (data ?? []) as Row<T>[];
+        all.push(...page);
+        if (page.length < SUPABASE_PAGE_SIZE) return all;
       }
-      const { data, error } = await q;
-      if (error) raise(table, error);
-      return (data ?? []) as Row<T>[];
     },
     async get<T extends TableName>(table: T, id: string) {
       const { data, error } = await db.from(table).select("*").eq(scope(table), orgId).eq("id", id).maybeSingle();
@@ -45,6 +57,9 @@ function supabaseTx(db: SupabaseClient, orgId: string): Tx {
       return (data as Row<T> | null) ?? null;
     },
     async insert<T extends TableName>(table: T, row: Row<T>) {
+      // The service client bypasses RLS, so the organization boundary is enforced here too (as in the demo adapter).
+      const owner = table === "organizations" ? (row as { id?: string }).id : (row as { organization_id?: string }).organization_id;
+      if (owner !== orgId) throw new Error("Cross-organization insert refused");
       const { data, error } = await db.from(table).insert(row as never).select("*").single();
       if (error) raise(table, error);
       return data as Row<T>;
@@ -76,6 +91,13 @@ function supabaseTx(db: SupabaseClient, orgId: string): Tx {
       }
       throw new Error("security_events: could not append after 5 attempts");
     },
+    async securityEventsAfter(after, limit) {
+      const page = await db.from("security_events").select("*").eq("organization_id", orgId).gt("sequence", after).order("sequence", { ascending: true }).limit(limit);
+      if (page.error) raise("security_events", page.error);
+      const last = await db.from("security_events").select("sequence").eq("organization_id", orgId).order("sequence", { ascending: false }).limit(1).maybeSingle();
+      if (last.error) raise("security_events", last.error);
+      return { rows: (page.data ?? []) as SecurityEvent[], lastSequence: (last.data as { sequence: number } | null)?.sequence ?? 0 };
+    },
     async nextOrderNumber(year) {
       const { data, error } = await db.rpc("next_order_number", { order_year: year });
       if (error) raise("orders", error);
@@ -88,12 +110,74 @@ function supabaseTx(db: SupabaseClient, orgId: string): Tx {
   };
 }
 
+/**
+ * PostgREST has no multi-statement transactions, so a write callback runs with an undo journal:
+ * every insert, update and delete it makes is recorded, and if the callback throws, the changes are
+ * reverted in reverse order (with the service client, scoped to the same organization). This turns
+ * "a company without its deal" after a failure into "nothing happened". Security events are not
+ * reverted: they record what was attempted. Single-statement invariants stay on unique constraints.
+ */
+export function journaledTx(tx: Tx, undo: Tx): { tx: Tx; rollback: () => Promise<string[]> } {
+  const steps: Array<() => Promise<void>> = [];
+  const journaled: Tx = {
+    ...tx,
+    orgId: tx.orgId,
+    find: (table, where) => tx.find(table, where),
+    get: (table, id) => tx.get(table, id),
+    async insert(table, row) {
+      const created = await tx.insert(table, row);
+      steps.push(() => undo.remove(table, (created as { id: string }).id));
+      return created;
+    },
+    async update(table, id, patch) {
+      const before = await tx.get(table, id);
+      const updated = await tx.update(table, id, patch);
+      if (before) {
+        const restore = Object.fromEntries(Object.keys(patch).map((k) => [k, (before as Record<string, unknown>)[k]]));
+        steps.push(async () => void (await undo.update(table, id, restore as never)));
+      }
+      return updated;
+    },
+    async remove(table, id) {
+      const before = await tx.get(table, id);
+      await tx.remove(table, id);
+      if (before) steps.push(async () => void (await undo.insert(table, before as never)));
+    },
+    nextOrderNumber: (year) => tx.nextOrderNumber(year),
+    appendSecurityEvent: (draft) => tx.appendSecurityEvent(draft),
+    securityEventsAfter: (after, limit) => tx.securityEventsAfter(after, limit),
+  };
+  const rollback = async () => {
+    const failures: string[] = [];
+    for (const step of steps.reverse()) {
+      try {
+        await step();
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+    return failures;
+  };
+  return { tx: journaled, rollback };
+}
+
+async function journaledWrite<R>(client: SupabaseClient, orgId: string, fn: (tx: Tx) => Promise<R>): Promise<R> {
+  const { tx, rollback } = journaledTx(supabaseTx(client, orgId), supabaseTx(createSupabaseServiceClient(), orgId));
+  try {
+    return await fn(tx);
+  } catch (error) {
+    const failures = await rollback();
+    if (failures.length) console.error("[db] rollback incomplete; manual check needed", { orgId, failures });
+    throw error;
+  }
+}
+
 const supabaseDb: Db = {
   async read(orgId, fn) {
     return fn(supabaseTx(await createSupabaseServerClient(), orgId));
   },
   async write(orgId, fn) {
-    return fn(supabaseTx(await createSupabaseServerClient(), orgId));
+    return journaledWrite(await createSupabaseServerClient(), orgId, fn);
   },
 };
 
@@ -110,7 +194,7 @@ const supabaseServiceDb: Db = {
     return fn(supabaseTx(createSupabaseServiceClient(), orgId));
   },
   async write(orgId, fn) {
-    return fn(supabaseTx(createSupabaseServiceClient(), orgId));
+    return journaledWrite(createSupabaseServiceClient(), orgId, fn);
   },
 };
 

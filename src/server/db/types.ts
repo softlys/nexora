@@ -6,9 +6,10 @@
  * the services through src/domain/permissions.ts; in Supabase mode RLS enforces it again.
  *
  * Atomicity: the demo adapter runs a write callback against a copy of the dataset and
- * commits only if it succeeds. The Supabase adapter issues the statements one by one;
- * critical invariants (one order per deal, one conversion per lead, notification dedupe)
- * are guaranteed by unique constraints instead. See PROGRESS.md.
+ * commits only if it succeeds. The Supabase adapter issues the statements one by one and keeps
+ * an undo journal: if the callback throws, its inserts, updates and deletes are reverted
+ * (journaledTx in ./index.ts). Critical invariants (one order per deal, one conversion per lead,
+ * notification dedupe) are also guaranteed by unique constraints.
  */
 import type { Dataset, TableName } from "@/domain/entities";
 import type { SecurityEvent, SecurityEventDraft } from "@/domain/security/events";
@@ -33,6 +34,11 @@ export interface Tx {
    * (demo: write queue; Supabase: unique (organization_id, sequence) + retry).
    */
   appendSecurityEvent(draft: SecurityEventDraft): Promise<SecurityEvent>;
+  /**
+   * A page of the security log after a sequence number, oldest first, read with the cursor in the
+   * database (not by loading the whole log), plus the newest sequence number.
+   */
+  securityEventsAfter(after: number, limit: number): Promise<{ rows: SecurityEvent[]; lastSequence: number }>;
 }
 
 export interface Db {

@@ -28,6 +28,22 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Stage 1 hardening (2026-10-22)
+
+From the platform audit (audit-output/AUDIT_REPORT.md, section F):
+- **NX-001** `NEXORA_DATA_MODE` is required when `NODE_ENV=production`; a forgotten variable no longer serves the demo (no sign-in, admin by default). `next build` is exempt.
+- **NX-002** Supabase reads page through tables in a stable order (PostgREST returns at most `max_rows` rows per request); `/api/v1/security-events` uses a database cursor (`Tx.securityEventsAfter`).
+- **NX-003** Migration `20261023000001_platform_hardening.sql`: signed-in users can no longer append to `security_events` through the REST API.
+- **NX-004** The Supabase adapter refuses inserts into another organization (the service client bypasses RLS).
+- **NX-005** Multi-step writes in Supabase mode run with an undo journal (`journaledTx`): a failure reverts the operation's inserts, updates and deletes.
+- **NX-006** `tests/unit/tenant-isolation.test.ts`: two organizations in one database; no role sees or changes a row of the other in any table.
+- **NX-007** Rate limits and the bulk-read detector use a PostgreSQL counter in Supabase mode (`public.hit_counter`, migration `20261023000002_shared_rate_limits.sql`).
+- **INT-001** Client IPs honor `NEXORA_TRUSTED_PROXY_HOPS` (default 1) instead of trusting the first `X-Forwarded-For` entry.
+- **OPS-001** GitHub Actions CI: lint, typecheck, unit tests, production-dependency audit, then build and e2e.
+- **OPS-005** The shadcn CLI moved to devDependencies; `npm audit --omit=dev` reports 0 vulnerabilities.
+
+Verified: 238 unit tests, 21 e2e tests, lint and typecheck pass.
+
 ## QA fixes (2026-10-21)
 
 A manual QA pass found 23 issues. Fixed:

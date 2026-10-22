@@ -64,7 +64,7 @@ export async function listTasks(ctx: ServiceContext, query: ListQuery, filters: 
       },
       defaultSort: { key: "due", dir: "asc" },
     });
-    trackRead(ctx, "task", page.rows.length);
+    await trackRead(ctx, "task", page.rows.length);
     return page;
   });
 }

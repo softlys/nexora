@@ -7,6 +7,7 @@ import type { Profile } from "@/domain/entities";
 import { DEMO_ORG_ID, DEMO_USER_IDS } from "@/domain/seed/generate";
 import type { Actor } from "@/domain/permissions";
 import { getDataMode } from "@/server/env";
+import { clientIp } from "@/server/security/client-ip";
 import { getDemoStore } from "@/server/repositories/demo";
 import type { RepoContext, RequestMeta } from "@/server/repositories/types";
 import { verifySignedValue } from "@/server/session-signing";
@@ -69,9 +70,8 @@ export async function requireUser(): Promise<SessionUser> {
 
 export const getRequestMeta = cache(async (): Promise<RequestMeta> => {
   const h = await headers();
-  const forwarded = h.get("x-forwarded-for");
   return {
-    ip: forwarded ? forwarded.split(",")[0]!.trim() : h.get("x-real-ip"),
+    ip: clientIp(h.get("x-forwarded-for"), h.get("x-real-ip")),
     user_agent: h.get("user-agent")?.slice(0, 512) ?? null,
     request_id: h.get("x-request-id") ?? randomUUID(),
   };

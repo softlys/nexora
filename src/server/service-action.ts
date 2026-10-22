@@ -5,7 +5,8 @@ import { getRepoContext } from "@/server/auth";
 import { getDb } from "@/server/db";
 import { DomainError } from "@/server/repositories/types";
 import { assertSameOrigin, OriginError } from "@/server/security/origin";
-import { getRateLimiter, RateLimitError, type RateLimitBucket } from "@/server/security/rate-limit";
+import { hitRateLimit, RateLimitError, type RateLimitBucket } from "@/server/security/rate-limit";
+import { supabaseCounter } from "@/server/security/shared-counter";
 import { getValidationLog } from "@/server/security/validation-log";
 import { emitSecurity, flushSecurityEvents, type ServiceContext } from "@/server/services/context";
 import type { ActionResult } from "./action-result";
@@ -42,7 +43,7 @@ export async function serviceAction<S extends z.ZodType, T>(
     ctx = await getServiceContext();
 
     const bucket = options.bucket ?? (options.readOnly ? "search" : "mutate");
-    const limit = getRateLimiter().hit(ctx.actor.id, bucket);
+    const limit = await hitRateLimit(ctx.actor.id, bucket, supabaseCounter());
     if (!limit.allowed) {
       // One security event per window, not one per blocked request.
       if (limit.firstBlocked) {
