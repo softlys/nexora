@@ -84,7 +84,51 @@ async function recordSnapshot(tx: Tx, type: string, recordId: string | null): Pr
   return null;
 }
 
-export type AttemptOptions = { attempt: number; reason: WebhookDelivery["reason"]; retry: boolean };
+export type AttemptOptions = { attempt: number; reason: WebhookDelivery["reason"]; retry: boolean; /** Completes this pending outbox row instead of adding a new one. */ outboxId?: string };
+
+/** How long a pending outbox row may wait for its after-response send before the scheduler sends it. */
+export const OUTBOX_GRACE_MS = 2 * 60_000;
+
+/**
+ * Outbox: records the deliveries an event will need as "pending" rows before the user's action
+ * returns, so a crash between the commit and the send cannot lose them. The after-response send
+ * completes them; the scheduler sends any still pending after OUTBOX_GRACE_MS.
+ */
+export async function enqueueOutbound(tx: Tx, event: DomainEvent, now: Date): Promise<number> {
+  const mappings = outboundEventsFor(event);
+  let queued = 0;
+  for (const mapping of mappings) {
+    const integrations = await activeIntegrations(tx, mapping.type);
+    if (integrations.length === 0) continue;
+    const eventId = outboundEventId(event.id, mapping.type);
+    const already = new Set((await tx.find("webhook_deliveries", { event_id: eventId, reason: "event" })).map((d) => d.integration_id));
+    const snapshot = await recordSnapshot(tx, mapping.type, mapping.recordId);
+    for (const integration of integrations) {
+      if (already.has(integration.id)) continue;
+      const env: WebhookEnvelope = { event_id: eventId, type: mapping.type, occurred_at: event.occurred_at, organization_id: event.organization_id, data: { ...mapping.data, record: snapshot } };
+      await tx.insert("webhook_deliveries", {
+        id: randomUUID(),
+        organization_id: event.organization_id,
+        integration_id: integration.id,
+        event_id: eventId,
+        event_type: mapping.type,
+        url: integrationUrl(integration) ?? "https://invalid.example",
+        attempt: 1,
+        status: "pending",
+        status_code: null,
+        duration_ms: null,
+        request_body: env as unknown as Record<string, unknown>,
+        response_excerpt: null,
+        error: null,
+        next_retry_at: new Date(now.getTime() + OUTBOX_GRACE_MS).toISOString(),
+        reason: "event",
+        created_at: now.toISOString(),
+      });
+      queued += 1;
+    }
+  }
+  return queued;
+}
 
 /**
  * Sends one attempt and stores it in webhook_deliveries (status code, duration, response
@@ -155,7 +199,16 @@ export async function attemptDelivery(deps: WebhookDeps, integration: Integratio
 
   const ctx = systemContext(deps, orgId);
   await deps.db.write(orgId, async (tx) => {
-    await tx.insert("webhook_deliveries", delivery);
+    if (options.outboxId) {
+      const { id: _id, organization_id: _org, created_at: _created, ...result } = delivery;
+      void _id;
+      void _org;
+      void _created;
+      await tx.update("webhook_deliveries", options.outboxId, result);
+      delivery.id = options.outboxId;
+    } else {
+      await tx.insert("webhook_deliveries", delivery);
+    }
     if (options.reason === "test") {
       await tx.update("integration_settings", integration.id, {
         last_tested_at: at.toISOString(),
@@ -206,6 +259,13 @@ export async function dispatchDomainEvent(deps: WebhookDeps, event: DomainEvent)
   const out: WebhookDelivery[] = [];
   for (const mapping of mappings) {
     const eventId = outboundEventId(event.id, mapping.type);
+    // Rows queued by the outbox: send each once, claiming it so the scheduler does not send it too.
+    const pending = await deps.db.read(orgId, (tx) => tx.find("webhook_deliveries", { event_id: eventId, reason: "event", status: "pending" }));
+    for (const row of pending) {
+      const integration = await claimPending(deps, orgId, row.id);
+      if (integration) out.push(await attemptDelivery(deps, integration, row.request_body as unknown as WebhookEnvelope, { attempt: 1, reason: "event", retry: true, outboxId: row.id }));
+    }
+    if (pending.length > 0) continue;
     const { targets, snapshot } = await deps.db.read(orgId, async (tx) => {
       const integrations = await activeIntegrations(tx, mapping.type);
       if (integrations.length === 0) return { targets: [], snapshot: null };
@@ -255,6 +315,31 @@ export async function sendTestEvent(deps: WebhookDeps, integration: IntegrationS
 export async function redeliver(deps: WebhookDeps, integration: IntegrationSetting, original: WebhookDelivery): Promise<WebhookDelivery> {
   const env = original.request_body as unknown as WebhookEnvelope;
   return attemptDelivery(deps, integration, env, { attempt: 1, reason: "redeliver", retry: false });
+}
+
+/** Takes a pending outbox row for sending (clears its due time); null when another sender has it. */
+async function claimPending(deps: WebhookDeps, orgId: string, id: string): Promise<IntegrationSetting | null> {
+  return deps.db.write(orgId, async (tx) => {
+    const fresh = await tx.get("webhook_deliveries", id);
+    if (!fresh || fresh.status !== "pending" || !fresh.next_retry_at) return null;
+    await tx.update("webhook_deliveries", id, { next_retry_at: null });
+    const integration = await tx.get("integration_settings", fresh.integration_id);
+    return integration?.enabled ? integration : null;
+  });
+}
+
+/** Sends outbox rows whose after-response send never happened (crash, restart). Called by the scheduler. */
+export async function processStuckOutbox(deps: WebhookDeps, orgId: string): Promise<number> {
+  const nowIso = nowOf(deps).toISOString();
+  const stuck = await deps.db.read(orgId, async (tx) => (await tx.find("webhook_deliveries", { status: "pending" })).filter((d) => d.next_retry_at && d.next_retry_at <= nowIso));
+  let count = 0;
+  for (const row of stuck) {
+    const integration = await claimPending(deps, orgId, row.id);
+    if (!integration) continue;
+    await attemptDelivery(deps, integration, row.request_body as unknown as WebhookEnvelope, { attempt: 1, reason: "event", retry: true, outboxId: row.id });
+    count += 1;
+  }
+  return count;
 }
 
 /** Runs failed attempts whose backoff has elapsed. Called by the scheduler. */

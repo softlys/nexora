@@ -15,6 +15,7 @@ import { parseDealFilters } from "@/server/deal-filters";
 import { requirePermission } from "@/server/guards";
 import { dealFormOptions, loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { listDeals } from "@/server/services/deals";
+import { ExportButton } from "@/components/list/export-import";
 
 export const metadata = { title: "Deals" };
 
@@ -23,6 +24,7 @@ export default async function DealsPage({ searchParams }: PageProps<"/deals">) {
   const params = await searchParams;
   const query = parseListQuery(params);
   const filters = parseDealFilters(params);
+const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) => (typeof v === "string" && k !== "page" && k !== "new" ? [[k, v]] : []))).toString();
   const { page, people, perms, options } = await loadPage(async (ctx) => ({
     page: await listDeals(ctx, query, filters),
     people: await peopleFor(ctx, "deal"),
@@ -42,6 +44,7 @@ export default async function DealsPage({ searchParams }: PageProps<"/deals">) {
             <Link href="/pipeline" className="text-sm text-brand hover:underline">
               Open pipeline board
             </Link>
+            <ExportButton entity="deals" query={exportQuery} />
             {perms.canCreate && <DealFormButton options={options} autoOpen={first(params.new) === "1"} />}
           </>
         }

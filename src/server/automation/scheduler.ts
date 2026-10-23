@@ -10,7 +10,7 @@
 import type { DomainEvent } from "@/domain/events/types";
 import { validateDefinition } from "@/domain/automation/logic";
 import { emit } from "@/server/services/context";
-import { processDueRetries } from "@/server/integrations/webhooks";
+import { processDueRetries, processStuckOutbox } from "@/server/integrations/webhooks";
 import { handleEvent, runWorkflow, SERVICE_ACTOR_ID, type EngineDeps } from "./engine";
 
 export const HEARTBEAT_INTERVAL_MS = 5 * 60_000;
@@ -75,7 +75,9 @@ export async function runScheduler(deps: EngineDeps, orgId: string): Promise<Sch
   }
 
   // 3. Webhook retries (exponential backoff, stored per attempt in webhook_deliveries)
-  result.webhookRetries = await processDueRetries({ db: deps.db, meta: deps.meta, now: deps.now }, orgId);
+  // Outbox rows whose after-response send never ran (crash, restart), then failed attempts due for a retry.
+  result.webhookRetries =
+    (await processStuckOutbox({ db: deps.db, meta: deps.meta, now: deps.now }, orgId)) + (await processDueRetries({ db: deps.db, meta: deps.meta, now: deps.now }, orgId));
 
   // 4. Heartbeat
   const lastHeartbeat = await deps.db.read(orgId, async (tx) =>

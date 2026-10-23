@@ -7,7 +7,9 @@ import { blockedAddressReason, checkOutboundUrl } from "@/domain/integrations/ss
 import { isRetryableStatus, outboundEventsFor, retryDelayMs, SIGNATURE_HEADER, signatureHeader, verifySignature } from "@/domain/integrations/webhooks";
 import type { Db } from "@/server/db/types";
 import { createTransport, SsrfBlockedError, type Transport, type TransportRequest } from "@/server/integrations/transport";
-import { dispatchDomainEvent, processDueRetries, sendTestEvent, redeliver } from "@/server/integrations/webhooks";
+import { dispatchDomainEvent, enqueueOutbound, OUTBOX_GRACE_MS, processDueRetries, processStuckOutbox, sendTestEvent, redeliver } from "@/server/integrations/webhooks";
+import { createLead } from "@/server/services/leads";
+import { leadInput } from "@/domain/inputs";
 import { flushSecurityEvents } from "@/server/services/context";
 import { engineOverlaps, saveIntegration, statusOf } from "@/server/services/integrations";
 import { DomainError } from "@/server/repositories/types";
@@ -129,6 +131,40 @@ describe("webhook delivery", () => {
     expect(Object.keys(envelope)).toEqual(["event_id", "type", "occurred_at", "organization_id", "data"]);
     expect(envelope.data.record.title).toBe(data().leads[0]!.title);
     expect(data().security_events.some((e) => e.action === "integration.webhook_sent" && e.metadata.domain === "n8n.example.com")).toBe(true);
+  });
+
+  it("queues deliveries in the outbox with the action, so a crash before sending loses nothing", async () => {
+    await connect();
+    const ctx = ctxFor(db, data(), DEMO_USER_IDS.admin);
+    await createLead(ctx, leadInput.parse({ title: "Outbox lead", company_name: "Outbox Co", contact_name: "O. Box", email: "", phone: "", country: "DE", source: "website", status: "new", qualification: "warm", next_action: "", next_action_at: "", estimated_value: 1000 }));
+    let rows = data().webhook_deliveries.filter((d) => d.event_type === "lead.created");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ status: "pending", attempt: 1, reason: "event" });
+    expect(calls).toHaveLength(0);
+
+    // The after-response send never ran (process restarted). Within the grace period nothing happens…
+    expect(await processStuckOutbox(deps(), DEMO_ORG_ID)).toBe(0);
+    // …after it, the scheduler sends the queued delivery once.
+    now = new Date(now.getTime() + OUTBOX_GRACE_MS + 1000);
+    expect(await processStuckOutbox(deps(), DEMO_ORG_ID)).toBe(1);
+    expect(await processStuckOutbox(deps(), DEMO_ORG_ID)).toBe(0);
+    rows = data().webhook_deliveries.filter((d) => d.event_type === "lead.created");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ status: "success", status_code: 200 });
+    expect(calls).toHaveLength(1);
+    expect(JSON.parse(calls[0]!.body).data.record.title).toBe("Outbox lead");
+  });
+
+  it("the after-response send completes the queued row instead of adding another", async () => {
+    await connect();
+    const event = leadCreated("outbox-event");
+    await db.write(DEMO_ORG_ID, (tx) => enqueueOutbound(tx, event, now));
+    expect(data().webhook_deliveries.map((d) => d.status)).toEqual(["pending"]);
+    await dispatchDomainEvent(deps(), event);
+    expect(data().webhook_deliveries.map((d) => d.status)).toEqual(["success"]);
+    now = new Date(now.getTime() + OUTBOX_GRACE_MS + 1000);
+    expect(await processStuckOutbox(deps(), DEMO_ORG_ID)).toBe(0);
+    expect(calls).toHaveLength(1);
   });
 
   it("delivers each event once per integration", async () => {

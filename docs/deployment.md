@@ -1,6 +1,6 @@
 # Deployment
 
-NEXORA runs anywhere Next.js 16 runs. The recommended setup is **Vercel** (app and cron) plus **Supabase** (PostgreSQL, Auth and row-level security).
+NEXORA runs anywhere Next.js 16 runs. The recommended setup is **Vercel** (app and cron) plus **Supabase** (PostgreSQL, Auth and row-level security). To run it on your own server with Docker, see [self-hosting.md](self-hosting.md).
 
 ## Demo mode vs Supabase mode
 
@@ -68,7 +68,8 @@ curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://<your-host>/api/cro
   { "crons": [{ "path": "/api/cron/scheduler", "schedule": "*/5 * * * *" }] }
   ```
 
-- **Vercel Hobby** only allows daily cron jobs. Use an external scheduler instead (GitHub Actions on a `schedule`, cron-job.org, or a server crontab) with the `curl` call above.
+- **Vercel Hobby** only allows daily cron jobs. Use an external scheduler instead with the `curl` call above. The repository includes one: `.github/workflows/scheduler.yml` runs every 5 minutes once the `NEXORA_URL` and `CRON_SECRET` repository secrets are set. cron-job.org or a server crontab work too.
+- **Docker / own server:** the compose file starts a scheduler container; see [self-hosting.md](self-hosting.md).
 
 Without a cron, nothing time-based happens on its own, and the companion SIEM sees no heartbeat. Admins can still run the scheduler by hand from Automation Studio.
 
@@ -78,14 +79,14 @@ Without a cron, nothing time-based happens on its own, and the companion SIEM se
 
 - **Rate limits and the bulk-read detector are shared** in Supabase mode: counters live in PostgreSQL (`public.hit_counter`), so every serverless instance sees the same totals. Demo mode keeps them in memory.
 - **Multi-step writes** in Supabase mode run with an undo journal: if a later step fails, earlier inserts, updates and deletes of the same operation are reverted. Security events are kept, since they record the attempt.
-- **Webhooks** are sent after the response (Next.js `after`), and retries run from the scheduler. A crash between the commit and the send can drop an attempt; a durable queue would close that gap (see the roadmap).
+- **Webhooks** go through an outbox: each event is written as a pending delivery when the change happens, sent right after the response (Next.js `after`), and retried by the scheduler. A delivery that a crash or a cold start interrupted is picked up by the next scheduler run (after a 2-minute grace period), so no event is lost; a receiver may see one twice and should de-duplicate on the event id.
 - **Outbound webhook URLs** must be https in production and resolve to public addresses. Private, loopback, link-local and cloud metadata ranges are refused at configuration time and again at connection time.
 - **Security headers** (`nosniff`, `DENY` framing, strict referrer, permissions policy) are set in `next.config.ts`.
-- **Backups:** use Supabase point-in-time recovery. The `security_events` chain lets you detect tampering, not prevent data loss.
+- **Backups:** use Supabase point-in-time recovery, plus `scripts/backup.sh` for a copy you control (see [self-hosting.md](self-hosting.md#backups)). The `security_events` chain lets you detect tampering, not prevent data loss.
 
 ## Verifying a deployment
 
-1. `GET /api/v1/health` returns `{"data":{"status":"ok",…}}`.
+1. `GET /api/health` returns `{"status":"ok","release":…}` (readiness: the data mode is set and the database answers), and `GET /api/v1/health` returns `{"data":{"status":"ok",…}}`.
 2. Sign in, open **Settings → Security log**, click **Verify now**, and confirm the chain is intact.
 3. Run the scheduler once by hand. A `system.heartbeat` appears in the security log.
 4. On an integration page, send a test event to a request bin and check the delivery log.

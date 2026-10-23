@@ -12,6 +12,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
 import { loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { listLeads } from "@/server/services/leads";
+import { ExportButton } from "@/components/list/export-import";
 
 export const metadata = { title: "Leads" };
 
@@ -25,6 +26,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
     qualification: enumFilter(params, "qualification", LEAD_QUALIFICATIONS),
     owner: stringFilter(params, "owner", 36),
   };
+const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) => (typeof v === "string" && k !== "page" && k !== "new" ? [[k, v]] : []))).toString();
   const { page, people, perms } = await loadPage(async (ctx) => ({
     page: await listLeads(ctx, query, filters),
     people: await peopleFor(ctx, "lead"),
@@ -34,7 +36,13 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Leads" description="Interest that is not a deal yet. Qualify it, then convert it into a deal." actions={perms.canCreate && <LeadFormButton owners={people.assignable} autoOpen={first(params.new) === "1"} />} />
+      <PageHeader title="Leads" description="Interest that is not a deal yet. Qualify it, then convert it into a deal." actions={
+          <>
+            <ExportButton entity="leads" query={exportQuery} />
+            {perms.canCreate && <LeadFormButton owners={people.assignable} autoOpen={first(params.new) === "1"} />}
+          </>
+        }
+      />
       <ListToolbar
         searchPlaceholder="Search leads…"
         filters={[

@@ -15,7 +15,7 @@ All company and person data is fictional.
 
 ## Features
 
-- **CRM.** Companies, contacts and leads, with URL-based search and filters, record timelines, comments and activity logging. A lead converts into a company, contact and deal, once only.
+- **CRM.** Companies, contacts and leads, with URL-based search and filters, record timelines, comments and activity logging. A lead converts into a company, contact and deal, once only Every list exports to CSV with its current filters. Companies and contacts import from CSV: the file is checked first, with errors listed by row.
 - **Sales pipeline.** A kanban board with drag and drop and full keyboard support. Moves are optimistic with rollback. It also covers lost reasons, quick edits, a weighted forecast and full deal change history.
 - **Orders.**
   - A line-item editor with enforced status transitions.
@@ -113,7 +113,7 @@ Real screenshots of the demo build (fictional data), taken with Playwright.
 3. Load the demo data and users: `npm run supabase:seed`.
 4. Set `NEXORA_DATA_MODE=supabase`, run `npm run dev`, and sign in as one of the printed demo accounts.
 
-Deployment to Vercel, the cron setup and all environment variables are covered in [docs/deployment.md](docs/deployment.md).
+Deployment to Vercel, the cron setup and all environment variables are covered in [docs/deployment.md](docs/deployment.md); Docker on your own server in [docs/self-hosting.md](docs/self-hosting.md).
 
 ## Integration guides
 
@@ -136,6 +136,7 @@ Deployment to Vercel, the cron setup and all environment variables are covered i
 | [make-integration.md](docs/make-integration.md), [n8n-integration.md](docs/n8n-integration.md) | Step-by-step integration guides |
 | [figma-design-system.md](docs/figma-design-system.md) | Tokens, Tokens Studio import, Figma file structure |
 | [deployment.md](docs/deployment.md) | Vercel + Supabase, cron, environment variables |
+| [self-hosting.md](docs/self-hosting.md) | Docker on your own server, TLS, backups, upgrades, rollback |
 | [demo-guide.md](docs/demo-guide.md) | A five-minute click path for showing the product |
 | [PROGRESS.md](PROGRESS.md) | Build log, verification results, known issues, decisions |
 

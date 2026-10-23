@@ -28,6 +28,24 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Hosting readiness (2026-10-23)
+
+- **Docker.**
+  - `Dockerfile`: Next.js standalone output, node 24-alpine, non-root user `nexora`, `HEALTHCHECK`, `APP_RELEASE` label.
+  - `deploy/docker-compose.yml`: the app plus a scheduler container that calls `/api/cron/scheduler` every 5 minutes.
+  - `NEXT_PUBLIC_SUPABASE_*` are read at run time, so one image serves any Supabase project.
+- **Readiness.** `GET /api/health` checks that the data mode is configured and the database answers (503 otherwise), and returns the release.
+- **Scheduler for cloud hosts.** `.github/workflows/scheduler.yml` calls the scheduler every 5 minutes once the `NEXORA_URL` and `CRON_SECRET` secrets are set (Vercel Hobby only allows daily cron).
+- **Backups.** `scripts/backup.sh` / `restore.sh`: a `pg_dump` of the public schema from Supabase, kept for `BACKUP_KEEP` days; restore loads data only, into migrated schema.
+- **Durable webhooks (NX-008).** Outbound events are written to the outbox as pending in the same request that made the change. The delivery right after the response completes them. The scheduler sends the ones a crash or cold start left behind, after 2 minutes. Before, a crash between commit and send lost the event.
+- **CSV export and import (NX-009).**
+  - Export: companies, contacts, leads and deals, with the page's search, filters and sort, scoped to what the user may see. UTF-8 with BOM, so Excel opens Cyrillic. Cells that would run as formulas are neutralized. Rate-limited and logged like any list read.
+  - Import: companies and contacts. A dry run first lists errors by row; nothing is imported while there are errors. Rows go through the normal create path (validation, permissions, audit, automations). Headers match the export.
+- **CI.** A `docker` job builds the image, runs it and checks pages, the API, the cron, the non-root user and the 503 without a data mode.
+- **Docs.** `docs/self-hosting.md`: install, TLS, health, backups, upgrades, rollback.
+
+Verified: 262 unit tests, lint and typecheck pass; e2e and CI below.
+
 ## Countries, messengers and Telegram (2026-10-24)
 
 - **All countries.** Country pickers offer all 249 ISO 3166-1 countries (Russia, Kazakhstan, the UAE and so on; before, 34). Validation everywhere — forms, lead conversion, the public API, automation country maps and the entities — accepts only real codes ("XX" is rejected).

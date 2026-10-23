@@ -4,6 +4,10 @@
  * - the event bus with the audit-log subscriber
  * - visibility helpers that turn "exists but not yours" into 404 and emit authz.denied
  */
+import { outboundEventsFor } from "@/domain/integrations/webhooks";
+import { getServiceDb } from "@/server/db";
+import { getDataMode } from "@/server/env";
+import { enqueueOutbound } from "@/server/integrations/webhooks";
 import { randomUUID } from "node:crypto";
 import type { AuditLog, Profile } from "@/domain/entities";
 import { EventBus } from "@/domain/events/bus";
@@ -130,6 +134,21 @@ const AUTOMATION_TRIGGER_TYPES = new Set(["record.created", "record.updated", "d
 if (!eventBus.has("automation-queue")) {
   eventBus.subscribe("automation-queue", (event, { ctx }) => {
     if (ctx.pendingEvents && AUTOMATION_TRIGGER_TYPES.has(event.type)) ctx.pendingEvents.push(event);
+  });
+}
+// Outbox for outbound webhooks (see enqueueOutbound). Supabase mode has no multi-statement
+// transactions and RLS may hide integrations from the user, so the rows are written with the
+// service client before the action returns; the demo adapter writes them in the same unit of work.
+if (!eventBus.has("webhook-outbox")) {
+  eventBus.subscribe("webhook-outbox", async (event, { tx, ctx }) => {
+    if (outboundEventsFor(event).length === 0) return;
+    try {
+      if (getDataMode() === "supabase") await getServiceDb().write(event.organization_id, (stx) => enqueueOutbound(stx, event, nowOf(ctx)));
+      else await enqueueOutbound(tx, event, nowOf(ctx));
+    } catch (error) {
+      // Never fail the user's action over the outbox: the after-response send still runs.
+      console.error(`[outbox] could not queue webhooks for ${event.type}`, error);
+    }
   });
 }
 if (!eventBus.has("security-log")) {

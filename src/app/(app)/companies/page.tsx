@@ -12,6 +12,7 @@ import { countryName } from "@/lib/countries";
 import { loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { requirePermission } from "@/server/guards";
 import { listCompanies } from "@/server/services/companies";
+import { ExportButton, ImportButton } from "@/components/list/export-import";
 
 export const metadata = { title: "Companies" };
 
@@ -26,6 +27,7 @@ export default async function CompaniesPage({ searchParams }: PageProps<"/compan
     owner: stringFilter(params, "owner", 36),
     lifecycle: enumFilter(params, "lifecycle", LIFECYCLE_STAGES),
   };
+const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) => (typeof v === "string" && k !== "page" && k !== "new" ? [[k, v]] : []))).toString();
   const { page, people, perms } = await loadPage(async (ctx) => ({
     page: await listCompanies(ctx, query, filters),
     people: await peopleFor(ctx, "company"),
@@ -38,7 +40,13 @@ export default async function CompaniesPage({ searchParams }: PageProps<"/compan
       <PageHeader
         title="Companies"
         description="Accounts you sell to, with their contacts, deals, orders and history."
-        actions={perms.canCreate && <CompanyFormButton owners={people.assignable} autoOpen={first(params.new) === "1"} />}
+        actions={
+          <>
+            <ExportButton entity="companies" query={exportQuery} />
+            {perms.canCreate && <ImportButton entity="companies" />}
+            {perms.canCreate && <CompanyFormButton owners={people.assignable} autoOpen={first(params.new) === "1"} />}
+          </>
+        }
       />
       <ListToolbar
         searchPlaceholder="Search companies…"

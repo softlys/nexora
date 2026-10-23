@@ -12,6 +12,7 @@ import { loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { companyOptions } from "@/server/services/companies";
 import { listContacts } from "@/server/services/contacts";
 import { MessengerMarks } from "@/components/crm/messenger-links";
+import { ExportButton, ImportButton } from "@/components/list/export-import";
 
 export const metadata = { title: "Contacts" };
 
@@ -20,6 +21,7 @@ export default async function ContactsPage({ searchParams }: PageProps<"/contact
   const params = await searchParams;
   const query = parseListQuery(params);
   const filters = { owner: stringFilter(params, "owner", 36), company: stringFilter(params, "company", 36) };
+const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) => (typeof v === "string" && k !== "page" && k !== "new" ? [[k, v]] : []))).toString();
   const { page, people, perms, companies } = await loadPage(async (ctx) => ({
     page: await listContacts(ctx, query, filters),
     people: await peopleFor(ctx, "contact"),
@@ -33,7 +35,13 @@ export default async function ContactsPage({ searchParams }: PageProps<"/contact
       <PageHeader
         title="Contacts"
         description="People at your customer and prospect companies."
-        actions={perms.canCreate && <ContactFormButton owners={people.assignable} companies={companies} autoOpen={first(params.new) === "1"} />}
+        actions={
+          <>
+            <ExportButton entity="contacts" query={exportQuery} />
+            {perms.canCreate && <ImportButton entity="contacts" />}
+            {perms.canCreate && <ContactFormButton owners={people.assignable} companies={companies} autoOpen={first(params.new) === "1"} />}
+          </>
+        }
       />
       <ListToolbar
         searchPlaceholder="Search name, email, company, tag…"

@@ -33,6 +33,7 @@ import { convertLead, createLead, updateLead } from "@/server/services/leads";
 import { changeOrderStatus, convertDealToOrder, createOrder, recordPayment, updateOrder } from "@/server/services/orders";
 import { archiveRecord, hardDeleteRecord, restoreRecord, type OwnedTable } from "@/server/services/records";
 import { globalSearch } from "@/server/services/search";
+import { importCsv, importInput } from "@/server/services/imports";
 import { addComment, createTask, logActivity, setTaskDone, updateTask } from "@/server/services/tasks";
 
 const PATHS: Record<OwnedTable, string> = {
@@ -265,3 +266,12 @@ export async function searchAction(input: unknown) {
   return serviceAction({ name: "search", schema: searchInput, readOnly: true, bucket: "search" }, input, (ctx, data) => globalSearch(ctx, data.q));
 }
 
+
+/** CSV import of companies or contacts: dry_run validates and reports; the real run creates the rows. */
+export async function importCsvAction(input: unknown) {
+  return serviceAction({ name: "importCsv", schema: importInput, bucket: "create" }, input, async (ctx, data) => {
+    const result = await importCsv(ctx, data);
+    if (!data.dry_run) revalidatePath(data.entity === "companies" ? "/companies" : "/contacts");
+    return result;
+  });
+}
