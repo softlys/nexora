@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ConfigError, getDataMode } from "@/server/env";
+import { demoAccessToken } from "@/server/auth";
+import { ConfigError, demoAccessCode, getDataMode } from "@/server/env";
 
 const env = (vars: Record<string, string>) => vars as unknown as NodeJS.ProcessEnv;
 const SUPABASE = { NEXT_PUBLIC_SUPABASE_URL: "https://x.supabase.co", NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon" };
@@ -25,5 +26,16 @@ describe("data mode", () => {
   it("rejects supabase mode without its variables and unknown modes", () => {
     expect(() => getDataMode(env({ NEXORA_DATA_MODE: "supabase" }))).toThrow(ConfigError);
     expect(() => getDataMode(env({ NEXORA_DATA_MODE: "prod" }))).toThrow(/Unknown NEXORA_DATA_MODE/);
+  });
+});
+
+describe("demo access code", () => {
+  it("is optional, must be long enough, and its cookie value changes with the code", () => {
+    expect(demoAccessCode(env({}))).toBeNull();
+    expect(demoAccessCode(env({ NEXORA_DEMO_ACCESS_CODE: "  " }))).toBeNull();
+    expect(() => demoAccessCode(env({ NEXORA_DEMO_ACCESS_CODE: "short" }))).toThrow(ConfigError);
+    expect(demoAccessCode(env({ NEXORA_DEMO_ACCESS_CODE: " client-demo-2026 " }))).toBe("client-demo-2026");
+    expect(demoAccessToken("client-demo-2026")).not.toBe(demoAccessToken("client-demo-2027"));
+    expect(demoAccessToken("client-demo-2026")).not.toContain("client-demo-2026");
   });
 });

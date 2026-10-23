@@ -7,7 +7,7 @@ NEXORA runs anywhere Next.js 16 runs. The recommended setup is **Vercel** (app a
 | | Demo mode | Supabase mode |
 | --- | --- | --- |
 | Data | `.data/demo.json` on the server's disk | PostgreSQL with RLS |
-| Sign-in | None; a user switcher acts as any demo user | Supabase Auth |
+| Sign-in | Optional shared access code (`NEXORA_DEMO_ACCESS_CODE`); inside, a user switcher acts as any demo user | Supabase Auth |
 | Use for | Local development, a private showcase | Anything with real users |
 
 **Demo-mode file storage does not persist on serverless hosts** such as Vercel: the filesystem is ephemeral, so changes disappear on a cold start or a new deployment. A long-running Node server with a persistent disk keeps them. Never put real data in demo mode: anyone can switch to any user.
@@ -39,6 +39,7 @@ NEXORA runs anywhere Next.js 16 runs. The recommended setup is **Vercel** (app a
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase mode | Server only. Used for automation runs, the security log, invites, API key lookup and webhook deliveries |
 | `NEXORA_ENCRYPTION_KEY` | Supabase mode | At least 32 characters. Encrypts integration signing secrets (AES-256-GCM). Rotating it makes stored secrets unreadable; rotate the integration secrets after changing it |
 | `NEXORA_SESSION_SECRET` | demo mode on servers | At least 32 characters; signs the demo-user cookie |
+| `NEXORA_DEMO_ACCESS_CODE` | recommended for a demo on a server | At least 8 characters. Visitors enter it once (kept for 30 days) before the demo opens; changing it locks out everyone who used the old one. Attempts are limited to 10 per IP per 10 minutes |
 | `CRON_SECRET` | for the scheduler | At least 16 characters. Without it `/api/cron/scheduler` returns 503 |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | optional | Team notifications from the Send to Telegram workflow step. Without them the step is logged as skipped |
 | `RESEND_API_KEY`, `NEXORA_EMAIL_FROM` | optional | Email for the Send email step. Without them, email steps are logged as skipped |

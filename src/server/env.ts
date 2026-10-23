@@ -50,6 +50,18 @@ export function supabaseConfig(env: NodeJS.ProcessEnv = process.env) {
   return { url, anonKey };
 }
 
+/**
+ * Optional shared access code for a demo installation (NEXORA_DEMO_ACCESS_CODE, 8+ characters).
+ * When set, visitors enter it once before the demo opens; without it anyone who can reach the server
+ * uses the demo. It does not make demo mode suitable for real data: inside, anyone can act as any user.
+ */
+export function demoAccessCode(env: NodeJS.ProcessEnv = process.env): string | null {
+  const code = env.NEXORA_DEMO_ACCESS_CODE?.trim();
+  if (!code) return null;
+  if (code.length < 8) throw new ConfigError("NEXORA_DEMO_ACCESS_CODE must be at least 8 characters.");
+  return code;
+}
+
 export function demoDataPath(): string {
   return process.env.NEXORA_DEMO_DATA_PATH || ".data/demo.json";
 }

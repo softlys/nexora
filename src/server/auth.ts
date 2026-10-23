@@ -6,7 +6,8 @@ import { cache } from "react";
 import type { Profile } from "@/domain/entities";
 import { DEMO_ORG_ID, DEMO_USER_IDS } from "@/domain/seed/generate";
 import type { Actor } from "@/domain/permissions";
-import { getDataMode } from "@/server/env";
+import { createHash } from "node:crypto";
+import { demoAccessCode, getDataMode } from "@/server/env";
 import { clientIp } from "@/server/security/client-ip";
 import { getDemoStore } from "@/server/repositories/demo";
 import type { RepoContext, RequestMeta } from "@/server/repositories/types";
@@ -14,6 +15,12 @@ import { verifySignedValue } from "@/server/session-signing";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 export const DEMO_USER_COOKIE = "nx_demo_user";
+export const DEMO_ACCESS_COOKIE = "nx_demo_access";
+
+/** The signed value of the access cookie; it changes with the code, so a new code locks out old visitors. */
+export function demoAccessToken(code: string): string {
+  return `demo-access:${createHash("sha256").update(code).digest("hex").slice(0, 32)}`;
+}
 
 export type SessionUser = {
   profile: Profile;
@@ -34,6 +41,8 @@ async function demoSession(): Promise<SessionUser> {
   // Read the cookie first: it marks the route dynamic before any file I/O, so builds never
   // prerender (and write the demo store from) an authenticated page.
   const cookieStore = await cookies();
+  const code = demoAccessCode();
+  if (code && (await verifySignedValue(cookieStore.get(DEMO_ACCESS_COOKIE)?.value)) !== demoAccessToken(code)) redirect("/login");
   const data = await getDemoStore().read();
   const chosenId = await verifySignedValue(cookieStore.get(DEMO_USER_COOKIE)?.value);
   const profiles = data.profiles.filter((p) => p.organization_id === DEMO_ORG_ID);

@@ -117,9 +117,10 @@ curl -fsS https://crm.example.com/api/health   # shows the new release
 
 `NEXORA_DATA_MODE=demo` with `NEXORA_SESSION_SECRET` runs a self-contained showcase:
 - data in the `nexora-data` volume;
-- no sign-in; anyone can act as any user.
+- set `NEXORA_DEMO_ACCESS_CODE` (8+ characters), and visitors must enter it before the demo opens;
+- share the code only with the people you show the demo to, and change it afterwards to lock everyone out again.
 
-Use it only for a private demo, behind the proxy's basic auth or an IP allowlist, never with real data.
+Inside the demo, anyone with the code can act as any user and reset the data. It is for showing the product, never for real data: use Supabase mode for that.
 
 ## Connecting VIGIL
 

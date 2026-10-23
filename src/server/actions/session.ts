@@ -5,9 +5,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { assertCan } from "@/domain/permissions";
-import { DEMO_USER_COOKIE, getRepoContext } from "@/server/auth";
+import { DEMO_ACCESS_COOKIE, DEMO_USER_COOKIE, demoAccessToken, getRepoContext, getRequestMeta } from "@/server/auth";
+import { timingSafeEqual } from "node:crypto";
 import { runAction } from "@/server/action-result";
-import { getDataMode } from "@/server/env";
+import { demoAccessCode, getDataMode } from "@/server/env";
+import { hitRateLimit } from "@/server/security/rate-limit";
+import { supabaseCounter } from "@/server/security/shared-counter";
 import { DomainError, getRepositories } from "@/server/repositories";
 import { getDemoStore } from "@/server/repositories/demo";
 import { signValue } from "@/server/session-signing";
@@ -40,6 +43,31 @@ export async function switchDemoUserAction(input: unknown) {
     revalidatePath("/", "layout");
     return { role: target.role };
   });
+}
+
+export type DemoAccessState = { error: string | null };
+
+/** Demo mode with NEXORA_DEMO_ACCESS_CODE: checks the shared code and opens the demo for 30 days. */
+export async function demoAccessAction(_prev: DemoAccessState, form: FormData): Promise<DemoAccessState> {
+  const code = getDataMode() === "demo" ? demoAccessCode() : null;
+  if (!code) redirect("/");
+  const meta = await getRequestMeta();
+  const limit = await hitRateLimit(meta.ip ?? "unknown", "demo_access", supabaseCounter());
+  if (!limit.allowed) return { error: "Too many attempts. Try again in 10 minutes." };
+  const given = Buffer.from(String(form.get("code") ?? "").trim().slice(0, 200));
+  const expected = Buffer.from(code);
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
+    await new Promise((r) => setTimeout(r, 500));
+    return { error: "That access code is not correct." };
+  }
+  (await cookies()).set(DEMO_ACCESS_COOKIE, await signValue(demoAccessToken(code)), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  redirect("/");
 }
 
 /** Demo mode only: restore the seeded dataset. Admin only. */

@@ -64,6 +64,12 @@ Defined in `supabase/migrations/20261019000002_row_level_security.sql`.
 - No login. The acting user is stored in an `httpOnly`, `SameSite=Lax` cookie signed with HMAC-SHA256. A tampered cookie is ignored and the session falls back to the admin user.
 - The signing secret comes from `NEXORA_SESSION_SECRET`, or is generated once and stored in `.data/session-secret` (git-ignored).
 - The user switcher lets anyone act as any demo user. That is the point of a demo, so **demo mode must not hold real data**.
+- `NEXORA_DEMO_ACCESS_CODE` limits who can open a demo on a server:
+  - visitors enter a shared code first;
+  - the cookie is signed, lasts 30 days and is bound to the code;
+  - attempts are limited to 10 per IP per 10 minutes.
+
+  It is a gate for a showcase, not user authentication.
 - Data lives in `.data/demo.json` on the server, never in browser storage. On serverless hosts the file system is not persistent, so demo changes can be lost on a cold start.
 - Server code enforces the same permission matrix in demo mode as in Supabase mode.
 

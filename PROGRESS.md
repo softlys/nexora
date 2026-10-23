@@ -28,6 +28,18 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Demo access code (2026-10-23)
+
+- **`NEXORA_DEMO_ACCESS_CODE`** (optional, 8+ characters) protects a demo installation.
+  - Pages, server actions and CSV exports redirect to `/login`, where the visitor enters the code once.
+  - The cookie is signed and lasts 30 days. Its value depends on the code, so changing the code locks out every earlier visitor.
+  - Attempts are limited to 10 per IP per 10 minutes, and the comparison is constant-time.
+- Supabase mode is unchanged: real accounts, roles and RLS. Demo mode stays unsuitable for real data, since inside it anyone can act as any user; the docs say so.
+- Unit test for the setting; checked live: without the code `/` and `/export/companies` redirect to `/login`, a wrong code is refused, the right one opens the demo.
+- CSV e2e test (`tests/e2e/csv.spec.ts`):
+  - export: file name, BOM and header row;
+  - import: a file with an error row is refused with "Row 3", and the fixed file imports a Cyrillic company that then appears in the list.
+
 ## Hosting readiness (2026-10-23)
 
 - **Docker.**
