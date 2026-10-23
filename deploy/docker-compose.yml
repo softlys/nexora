@@ -1,0 +1,43 @@
+# Self-hosted NEXORA: the app plus the scheduler that runs every 5 minutes.
+# Data lives in Supabase (supabase.com, or self-hosted Supabase); see docs/self-hosting.md.
+#
+#   cp deploy/.env.example deploy/.env   # fill it in
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+#
+# Put a TLS reverse proxy (Caddy, nginx, Traefik) in front of port 3000.
+
+services:
+  nexora:
+    build:
+      context: ..
+      args:
+        APP_RELEASE: ${APP_RELEASE:-self-hosted}
+    image: nexora:${APP_RELEASE:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    ports:
+      - "${NEXORA_PORT:-3000}:3000"
+    volumes:
+      - nexora-data:/app/.data
+
+  # Calls /api/cron/scheduler every 5 minutes: due dates, delayed workflow steps, webhook retries,
+  # and the heartbeat VIGIL watches. Without it nothing time-based happens.
+  scheduler:
+    image: curlimages/curl:8.11.1
+    restart: unless-stopped
+    depends_on:
+      nexora:
+        condition: service_healthy
+    env_file: .env
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          curl -fsS -X POST -H "Authorization: Bearer $$CRON_SECRET" http://nexora:3000/api/cron/scheduler -o /dev/null -w "scheduler %{http_code}\n" || echo "scheduler call failed"
+          sleep 300
+        done
+
+volumes:
+  nexora-data:

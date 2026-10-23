@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
   // NEXORA renders per-user, per-role data on every request, so it uses the
   // request-time rendering model instead of Cache Components. See PROGRESS.md.
   poweredByHeader: false,
+  // Self-contained server bundle for the Docker image (Vercel ignores it).
+  output: "standalone",
   // The dev-only Next.js indicator sits bottom-right, away from the sidebar's sign-out button.
   devIndicators: { position: "bottom-right" },
   experimental: {

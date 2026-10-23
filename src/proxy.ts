@@ -14,9 +14,11 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request: { headers: requestHeaders } });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const mode = process.env.NEXORA_DATA_MODE ?? (url && anonKey ? "supabase" : "demo");
+  // Read through a variable so the values come from the runtime environment, not the build (see src/server/env.ts).
+  const env = process.env;
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const mode = env.NEXORA_DATA_MODE ?? (url && anonKey ? "supabase" : "demo");
 
   if (mode === "supabase" && url && anonKey) {
     const supabase = createServerClient(url, anonKey, {

@@ -53,3 +53,39 @@ jobs:
           name: playwright-traces
           path: test-results/
           retention-days: 7
+
+  docker:
+    name: Docker image (build, run, health)
+    runs-on: ubuntu-latest
+    needs: checks
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t nexora:ci --build-arg APP_RELEASE=${{ github.sha }} .
+      - name: Start in demo mode
+        run: docker run -d --name nexora -p 3000:3000 -e NEXORA_DATA_MODE=demo -e CRON_SECRET=ci-cron-secret-0123456789 nexora:ci
+      - name: Wait until ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health; then echo; exit 0; fi
+            sleep 2
+          done
+          docker logs nexora; exit 1
+      - name: Smoke test
+        run: |
+          set -e
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/pipeline)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/v1/health)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/v1/companies)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Authorization: Bearer ci-cron-secret-0123456789' http://localhost:3000/api/cron/scheduler)" = 200
+          curl -s http://localhost:3000/api/health | grep -q '"release":"${{ github.sha }}"'
+          # The container runs as a non-root user.
+          test "$(docker exec nexora id -u)" != 0
+      - name: Refuses to serve without an explicit data mode
+        run: |
+          docker run -d --name nexora-unset -p 3001:3000 nexora:ci
+          for i in $(seq 1 30); do code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3001/api/health || true); [ "$code" != "000" ] && break; sleep 2; done
+          test "$code" = 503
+

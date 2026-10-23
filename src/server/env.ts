@@ -38,9 +38,14 @@ export function getDataMode(env: NodeJS.ProcessEnv = process.env): DataMode {
   return hasSupabaseEnv(env) ? "supabase" : "demo";
 }
 
-export function supabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+/**
+ * Supabase URL and anon key, read when the server runs. `process.env.NEXT_PUBLIC_*` written out
+ * literally is replaced at build time, which would freeze a Docker image to one project; reading
+ * through a variable keeps one image configurable by its environment.
+ */
+export function supabaseConfig(env: NodeJS.ProcessEnv = process.env) {
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) throw new ConfigError("Supabase is not configured.");
   return { url, anonKey };
 }
