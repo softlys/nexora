@@ -163,8 +163,18 @@ export const dealFields = {
   notes: text(5000),
   owner_id: z.uuid().optional(),
 };
-export const dealInput = z.object({ ...dealFields, stage_id: z.uuid().optional() }).strict();
-export const dealUpdateInput = z.object({ id: z.uuid(), ...dealFields }).strict();
+/** A company typed by name in the deal form; it is created with the deal (or matched to an existing one). */
+export const newCompanyInput = z
+  .object({ name: required(160), industry: text(80), country: z.string().refine(isCountryCode, "Choose the company's country") })
+  .strict();
+const companyChoice = {
+  company_id: z.uuid().optional(),
+  new_company: newCompanyInput.optional(),
+};
+const needsCompany = (d: { company_id?: string; new_company?: unknown }) => Boolean(d.company_id || d.new_company);
+const companyMessage = { path: ["company_id"], message: "Choose a company or type a new name" };
+export const dealInput = z.object({ ...dealFields, ...companyChoice, stage_id: z.uuid().optional() }).strict().refine(needsCompany, companyMessage);
+export const dealUpdateInput = z.object({ id: z.uuid(), ...dealFields, ...companyChoice }).strict().refine(needsCompany, companyMessage);
 /** Quick edit from a pipeline card. */
 export const dealQuickEditInput = z
   .object({ id: z.uuid(), amount: amount.optional(), expected_close_date: optionalDate.optional(), probability: z.coerce.number().int().min(0).max(100).optional() })

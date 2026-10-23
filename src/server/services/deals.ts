@@ -10,6 +10,7 @@ import type { Tx } from "@/server/db/types";
 import { emit, emitSecurity, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { assertLinksVisible, byId, getOwned } from "./records";
 import { PermissionError } from "@/domain/permissions";
+import { companyForName } from "./companies";
 
 export async function sortedStages(tx: Tx): Promise<PipelineStage[]> {
   return (await tx.find("pipeline_stages")).sort((a, b) => a.position - b.position);
@@ -198,7 +199,8 @@ async function recordStageEntry(tx: Tx, ctx: ServiceContext, dealId: string, fro
 export async function createDeal(ctx: ServiceContext, input: z.output<typeof dealInput>, tx?: Tx): Promise<Deal> {
   requireCan(ctx, "create", "deal");
   const run = async (t: Tx) => {
-    await assertLinksVisible(t, ctx, { company_id: input.company_id, contact_id: input.primary_contact_id });
+    const companyId = input.company_id ?? (await companyForName(t, ctx, input.new_company!));
+    await assertLinksVisible(t, ctx, { company_id: companyId, contact_id: input.primary_contact_id });
     const stages = await sortedStages(t);
     const stage = input.stage_id ? stages.find((s) => s.id === input.stage_id) : firstOpenStage(stages);
     if (!stage || stage.is_won || stage.is_lost) throw new DomainError("New deals start in an open stage.");
@@ -208,7 +210,7 @@ export async function createDeal(ctx: ServiceContext, input: z.output<typeof dea
       id: newId(),
       organization_id: ctx.actor.organization_id,
       name: input.name,
-      company_id: input.company_id,
+      company_id: companyId,
       primary_contact_id: input.primary_contact_id,
       amount: input.amount,
       currency: input.currency,
@@ -251,13 +253,15 @@ export async function updateDeal(ctx: ServiceContext, input: z.output<typeof dea
     const current = await getOwned(tx, ctx, "deals", input.id);
     requireCan(ctx, "update", "deal", current.owner_id, current.id);
     await guardWonDealAmount(tx, ctx, current, input.amount, input.currency);
-    if (input.company_id !== current.company_id || input.primary_contact_id !== current.primary_contact_id) {
-      await assertLinksVisible(tx, ctx, { company_id: input.company_id, contact_id: input.primary_contact_id });
+    const companyId = input.company_id ?? (await companyForName(tx, ctx, input.new_company!));
+    if (companyId !== current.company_id || input.primary_contact_id !== current.primary_contact_id) {
+      await assertLinksVisible(tx, ctx, { company_id: companyId, contact_id: input.primary_contact_id });
     }
     const owner = (await resolveOwner(tx, ctx, "deal", input.owner_id, current.owner_id, current.id))!;
-    const { id, owner_id: _o, probability, ...fields } = input;
+    const { id, owner_id: _o, probability, new_company: _n, ...fields } = input;
     void _o;
-    const patch = { ...fields, owner_id: owner, ...(probability !== undefined && { probability }) };
+    void _n;
+    const patch = { ...fields, company_id: companyId, owner_id: owner, ...(probability !== undefined && { probability }) };
     const changes = diffFields(current as unknown as Record<string, unknown>, patch);
     if (Object.keys(changes).length === 0) return current;
     const updated = await tx.update("deals", id, { ...patch, updated_at: nowOf(ctx).toISOString() });

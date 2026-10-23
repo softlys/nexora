@@ -3,11 +3,12 @@ import { LIFECYCLE_STAGES } from "@/domain/entities";
 import type { Company } from "@/domain/entities";
 import { diffFields } from "@/domain/diff";
 import type { z } from "zod";
-import type { companyInput, companyUpdateInput } from "@/domain/inputs";
+import type { companyInput, companyUpdateInput, newCompanyInput } from "@/domain/inputs";
 import { applyListQuery, type ListQuery } from "@/domain/list";
 import { buildTimeline } from "@/domain/timeline";
 import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { getOwned, visibleIds } from "./records";
+import type { Tx } from "@/server/db/types";
 
 export type CompanyFilters = {
   industry?: string;
@@ -97,24 +98,51 @@ type CompanyUpdate = z.output<typeof companyUpdateInput>;
 
 export async function createCompany(ctx: ServiceContext, input: CompanyCreate): Promise<Company> {
   requireCan(ctx, "create", "company");
-  return ctx.db.write(ctx.actor.organization_id, async (tx) => {
-    const owner = (await resolveOwner(tx, ctx, "company", input.owner_id ?? ctx.actor.id, ctx.actor.id, null))!;
-    const at = nowOf(ctx).toISOString();
-    const { owner_id: _o, ...fields } = input;
-    void _o;
-    const company: Company = {
-      id: newId(),
-      organization_id: ctx.actor.organization_id,
-      ...fields,
-      owner_id: owner,
-      created_at: at,
-      updated_at: at,
-      archived_at: null,
-    };
-    await tx.insert("companies", company);
-    await emit(tx, ctx, { type: "record.created", payload: { entity: "company", id: company.id, after: company } });
-    return company;
-  });
+  return ctx.db.write(ctx.actor.organization_id, (tx) => insertCompany(tx, ctx, input));
+}
+
+async function insertCompany(tx: Tx, ctx: ServiceContext, input: CompanyCreate): Promise<Company> {
+  const owner = (await resolveOwner(tx, ctx, "company", input.owner_id ?? ctx.actor.id, ctx.actor.id, null))!;
+  const at = nowOf(ctx).toISOString();
+  const { owner_id: _o, ...fields } = input;
+  void _o;
+  const company: Company = {
+    id: newId(),
+    organization_id: ctx.actor.organization_id,
+    ...fields,
+    owner_id: owner,
+    created_at: at,
+    updated_at: at,
+    archived_at: null,
+  };
+  await tx.insert("companies", company);
+  await emit(tx, ctx, { type: "record.created", payload: { entity: "company", id: company.id, after: company } });
+  return company;
+}
+
+/**
+ * The company for a name typed in a form: an existing company the user can see with the same name
+ * (ignoring case), otherwise a new prospect owned by the user, in the same transaction.
+ */
+export async function companyForName(tx: Tx, ctx: ServiceContext, input: z.output<typeof newCompanyInput>): Promise<string> {
+  const ids = await visibleIds(tx, ctx, "companies");
+  const name = input.name.trim();
+  const existing = (await tx.find("companies", { archived_at: null })).find((c) => ids.has(c.id) && c.name.trim().toLowerCase() === name.toLowerCase());
+  if (existing) return existing.id;
+  requireCan(ctx, "create", "company");
+  const company = await insertCompany(tx, ctx, {
+    name,
+    industry: input.industry || "Other",
+    country: input.country,
+    size: "1-10",
+    website: "",
+    city: "",
+    address: "",
+    phone: "",
+    lifecycle_stage: "prospect",
+    notes: "",
+  } as CompanyCreate);
+  return company.id;
 }
 
 export async function updateCompany(ctx: ServiceContext, input: CompanyUpdate): Promise<Company> {

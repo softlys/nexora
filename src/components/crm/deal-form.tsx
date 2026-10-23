@@ -4,15 +4,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useForm, useWatch, type Resolver } from "react-hook-form";
+import { Controller, useForm, useWatch, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ComboboxField, DateField, SelectField, TextareaField, TextField } from "@/components/forms/fields";
 import { RecordSheet, useAutoOpen } from "@/components/forms/record-sheet";
+import { Combobox } from "@/components/patterns/combobox";
+import { FormField } from "@/components/patterns/form-field";
 import { humanizeStatus } from "@/components/patterns/status-badge";
 import { Button } from "@/components/ui/button";
 import { LEAD_SOURCES, type Deal } from "@/domain/entities";
-import { dealFields } from "@/domain/inputs";
+import { dealFields, newCompanyInput } from "@/domain/inputs";
+import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { applyServerErrors } from "@/lib/forms";
 import { createDealAction, updateDealAction } from "@/server/actions/crm";
 
@@ -21,6 +24,8 @@ type Option = { value: string; label: string };
 type Values = {
   name: string;
   company_id: string;
+  /** A company typed by name; created (or matched by name) when the deal is saved. */
+  new_company: { name: string; industry: string; country: string } | null;
   primary_contact_id: string | null;
   amount: string;
   currency: string;
@@ -32,7 +37,9 @@ type Values = {
   owner_id?: string;
 };
 
-const formSchema = z.object({ ...dealFields, probability: z.union([z.literal(""), z.coerce.number().int().min(0).max(100)]) });
+const formSchema = z
+  .object({ ...dealFields, company_id: z.string(), new_company: newCompanyInput.nullable(), probability: z.union([z.literal(""), z.coerce.number().int().min(0).max(100)]) })
+  .refine((d) => d.company_id || d.new_company, { path: ["company_id"], message: "Choose a company or type a new name" });
 
 export type DealFormOptions = {
   owners: Option[];
@@ -68,6 +75,7 @@ export function DealFormButton({
     ? {
         name: deal.name,
         company_id: deal.company_id,
+        new_company: null,
         primary_contact_id: deal.primary_contact_id,
         amount: String(deal.amount),
         currency: deal.currency,
@@ -78,9 +86,10 @@ export function DealFormButton({
         notes: deal.notes,
         ...(options.owners.length > 0 && { owner_id: deal.owner_id }),
       }
-    : { name: "", company_id: defaultCompanyId ?? "", primary_contact_id: null, amount: "", currency: options.currency, probability: "", expected_close_date: null, source: "outbound", next_activity: "", notes: "" };
-  const { control, handleSubmit, formState, setError, reset } = useForm<Values>({ resolver: zodResolver(formSchema) as unknown as Resolver<Values>, defaultValues: defaults });
+    : { name: "", company_id: defaultCompanyId ?? "", new_company: null, primary_contact_id: null, amount: "", currency: options.currency, probability: "", expected_close_date: null, source: "outbound", next_activity: "", notes: "" };
+  const { control, handleSubmit, formState, setError, reset, setValue } = useForm<Values>({ resolver: zodResolver(formSchema) as unknown as Resolver<Values>, defaultValues: defaults });
   const companyId = useWatch({ control, name: "company_id" });
+  const newCompany = useWatch({ control, name: "new_company" });
   // Load fresh values whenever the sheet opens (also when opened from the pipeline drawer).
   useEffect(() => {
     if (open) reset(defaults);
@@ -88,8 +97,8 @@ export function DealFormButton({
   }, [open, deal?.id, deal?.updated_at]);
 
   const onSubmit = handleSubmit(async (values) => {
-    const { probability, ...rest } = values;
-    const payload = { ...rest, ...(probability !== "" && { probability }) };
+    const { probability, company_id, new_company, ...rest } = values;
+    const payload = { ...rest, ...(company_id ? { company_id } : new_company && { new_company }), ...(probability !== "" && { probability }) };
     const result = deal ? await updateDealAction({ id: deal.id, ...payload }) : await createDealAction(payload);
     if (!result.ok) return applyServerErrors(result, setError);
     toast.success(deal ? "Deal updated" : "Deal created");
@@ -112,13 +121,47 @@ export function DealFormButton({
       )}
       <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={deal ? `Edit ${deal.name}` : "New deal"} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={deal ? "Save changes" : "Create deal"}>
         <TextField control={control} name="name" label="Deal name" />
-        <ComboboxField control={control} name="company_id" label="Company" options={options.companies} placeholder="Choose company" />
+        <Controller
+          control={control}
+          name="company_id"
+          render={({ field, fieldState }) => (
+            <FormField id="field-company_id" label="Company" hint="Pick a company, or type any name to add a new one." error={fieldState.error?.message}>
+              <Combobox
+                id="field-company_id"
+                options={options.companies}
+                value={field.value || null}
+                onChange={(v) => {
+                  field.onChange(v ?? "");
+                  setValue("new_company", null, { shouldDirty: true });
+                  setValue("primary_contact_id", null);
+                }}
+                onCreate={(name) => {
+                  field.onChange("");
+                  setValue("new_company", { name, industry: "", country: "" }, { shouldDirty: true });
+                  setValue("primary_contact_id", null);
+                }}
+                createdLabel={newCompany ? `${newCompany.name} (new)` : null}
+                placeholder="Choose or type a company"
+                invalid={!!fieldState.error}
+              />
+            </FormField>
+          )}
+        />
+        {newCompany && (
+          <div className="grid gap-4 rounded-md border border-dashed border-border p-3 sm:grid-cols-2" data-testid="new-company">
+            <p className="text-xs text-text-muted sm:col-span-2">
+              “{newCompany.name}” is not in your companies yet. It is added as a prospect when you save the deal; fill in the rest on its page later.
+            </p>
+            <TextField control={control} name="new_company.industry" label="Industry" hint="Optional" />
+            <ComboboxField control={control} name="new_company.country" label="Country" options={COUNTRY_OPTIONS} placeholder="Choose country" />
+          </div>
+        )}
         <ComboboxField
           control={control}
           name="primary_contact_id"
           label="Primary contact"
           options={options.contacts.filter((c) => c.company_id === companyId)}
-          placeholder={companyId ? "No contact" : "Choose a company first"}
+          placeholder={companyId ? "No contact" : newCompany ? "Add contacts to the new company later" : "Choose a company first"}
           disabled={!companyId}
         />
         <div className="grid gap-4 sm:grid-cols-3">

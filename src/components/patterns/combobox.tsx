@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -21,6 +21,8 @@ export function Combobox({
   id,
   invalid,
   className,
+  onCreate,
+  createdLabel,
 }: {
   options: ComboboxOption[];
   value: string | null;
@@ -32,11 +34,24 @@ export function Combobox({
   id?: string;
   invalid?: boolean;
   className?: string;
+  /** Offers "Create “text”" for a typed text that matches no option. */
+  onCreate?: (text: string) => void;
+  /** Shown on the button for a typed value that is not an option yet. */
+  createdLabel?: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const selected = options.find((o) => o.value === value);
+  const typed = search.trim();
+  const canCreate = Boolean(onCreate && typed && !options.some((o) => o.label.trim().toLowerCase() === typed.toLowerCase()));
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) setSearch("");
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           id={id}
@@ -48,15 +63,32 @@ export function Combobox({
           disabled={disabled}
           className={cn("w-full justify-between font-normal", !selected && "text-text-muted", className)}
         >
-          <span className="truncate">{selected?.label ?? placeholder}</span>
+          <span className="truncate">{selected?.label ?? createdLabel ?? placeholder}</span>
           <ChevronsUpDown className="opacity-50" aria-hidden />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) min-w-56 p-0" align="start">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
           <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
+            {!canCreate && <CommandEmpty>{emptyText}</CommandEmpty>}
+            {canCreate && (
+              // Its own always-shown group: the search filter would otherwise hide it.
+              <CommandGroup forceMount>
+                <CommandItem
+                  forceMount
+                  value={`__create__ ${typed}`}
+                  onSelect={() => {
+                    onCreate!(typed);
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                >
+                  <Plus className="size-4" aria-hidden />
+                  <span className="truncate">Create “{typed}”</span>
+                </CommandItem>
+              </CommandGroup>
+            )}
             <CommandGroup>
               {options.map((o) => (
                 <CommandItem
