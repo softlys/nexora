@@ -28,6 +28,19 @@ All company and person data is fictional.
   - Each workflow is validated and versioned, and supports test runs.
   - Run history with retry from the failed step.
   - Guardrails against loops and runaway runs.
+- **Connectors.** Each is configured on the server and documented in [docs/integrations.md](docs/integrations.md). Most work from Russia:
+  - Obsidian vault export (also kept on Yandex Disk);
+  - personal calendar feeds for Google, Yandex and Outlook;
+  - Tilda and Yandex Forms → leads;
+  - Mango Office, Zadarma and Twilio calls;
+  - Yandex 360 and Gmail mail on timelines;
+  - WhatsApp Business;
+  - an AI deal assistant (YandexGPT or Claude);
+  - printable invoices and quotes;
+  - ЮKassa and Stripe payment links;
+  - Yandex Telemost meetings;
+  - МойСклад products;
+  - Slack and Notion steps.
 - **Integrations.**
   - Outbound webhooks for Make, n8n and any HTTPS endpoint, signed with HMAC-SHA256 and protected against SSRF.
   - Retries with backoff, a delivery log and redelivery.
@@ -137,6 +150,7 @@ Deployment to Vercel, the cron setup and all environment variables are covered i
 | [figma-design-system.md](docs/figma-design-system.md) | Tokens, Tokens Studio import, Figma file structure |
 | [deployment.md](docs/deployment.md) | Vercel + Supabase, cron, environment variables |
 | [self-hosting.md](docs/self-hosting.md) | Docker on your own server, TLS, backups, upgrades, rollback |
+| [integrations.md](docs/integrations.md) | Obsidian, calendars, web forms, telephony, mail, WhatsApp, AI, payments, Yandex 360, MoySklad, Slack, Notion |
 | [demo-guide.md](docs/demo-guide.md) | A five-minute click path for showing the product |
 | [PROGRESS.md](PROGRESS.md) | Build log, verification results, known issues, decisions |
 

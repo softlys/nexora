@@ -2,7 +2,7 @@ import { formatAmount } from "@/lib/format";
 import type { z } from "zod";
 import type { Order, OrderItem, Payment } from "@/domain/entities";
 import { diffFields } from "@/domain/diff";
-import type { orderInput, orderStatusInput, orderUpdateInput, paymentInput } from "@/domain/inputs";
+import type { orderInput, orderStatusInput, orderUpdateInput, paymentInput, paymentLinkInput } from "@/domain/inputs";
 import { applyListQuery, type ListQuery } from "@/domain/list";
 import { derivePaymentStatus } from "@/domain/orders/payment-status";
 import { computeLineTotals, computeOrderTotals, roundMoney } from "@/domain/orders/totals";
@@ -12,6 +12,7 @@ import { UniqueViolation, type Tx } from "@/server/db/types";
 import { DomainError } from "@/server/repositories/types";
 import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { assertLinksVisible, byId, getOwned } from "./records";
+import { createPaymentLink } from "@/server/integrations/payments";
 
 const today = (ctx: ServiceContext) => nowOf(ctx).toISOString().slice(0, 10);
 
@@ -344,4 +345,19 @@ export async function productOptions(ctx: ServiceContext) {
       .map((p) => ({ id: p.id, name: p.name, sku: p.sku, unit_price: p.unit_price, tax_rate: p.tax_rate }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   );
+}
+
+
+/** A YooKassa or Stripe payment page for the order's outstanding amount; the payment is recorded by the provider's webhook. */
+export async function orderPaymentLink(ctx: ServiceContext, input: z.output<typeof paymentLinkInput>, returnUrl: string): Promise<{ url: string }> {
+  const order = await ctx.db.read(ctx.actor.organization_id, async (tx) => {
+    const o = await getOwned(tx, ctx, "orders", input.order_id);
+    requireCan(ctx, "create", "payment", o.owner_id, o.id);
+    const payments = await tx.find("payments", { order_id: o.id });
+    return { ...o, outstanding: roundMoney(o.total - payments.reduce((s, p) => s + p.amount, 0)) };
+  });
+  if (order.status === "draft" || order.status === "cancelled") throw new DomainError(`A ${order.status} order cannot be paid.`);
+  if (order.outstanding <= 0) throw new DomainError("This order is fully paid.");
+  const link = await createPaymentLink(input.provider, { orderId: order.id, orderNumber: order.order_number, amount: order.outstanding, currency: order.currency, returnUrl, organizationId: order.organization_id });
+  return { url: link.url };
 }

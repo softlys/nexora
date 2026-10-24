@@ -278,5 +278,45 @@ describe("engine guarantees", () => {
     expect(run!.status).toBe("success");
     expect(sent).toEqual([`New lead: ${lead.title}`]);
   });
+
+  it("sends WhatsApp, Slack and Notion steps when configured, and skips each one otherwise", async () => {
+    await insertWorkflow({
+      trigger: { type: "record.created", entity: "lead" },
+      steps: [
+        { id: "wa", type: "send_whatsapp", text: "Здравствуйте, {{lead.contact_name}}!", template_name: "", template_language: "ru" },
+        { id: "sl", type: "send_slack", text: "Lead {{lead.title}}" },
+        { id: "no", type: "create_notion_page", title: "{{lead.title}}", body: "From NEXORA" },
+      ],
+    });
+    const lead = data().leads.find((l) => l.phone)!;
+    const event = () =>
+      ({
+        id: randomUUID(), type: "record.created", occurred_at: NOW.toISOString(), organization_id: DEMO_ORG_ID,
+        actor: { id: null, role: "service" }, meta, causation: { depth: 0, chain: [] }, payload: { entity: "lead", id: lead.id, after: {} },
+      }) as DomainEvent;
+
+    const [skipped] = await handleEvent(deps, event());
+    const reasons = (skipped!.steps as Array<{ status: string; output: { reason: string } }>).map((s) => [s.status, s.output.reason]);
+    expect(reasons.map((r) => r[0])).toEqual(["skipped", "skipped", "skipped"]);
+    expect(reasons[0]![1]).toContain("WhatsApp is not configured");
+
+    const whatsapp: Array<{ to: string; text: string }> = [];
+    const slack: string[] = [];
+    const pages: Array<{ title: string; url?: string }> = [];
+    const [run] = await handleEvent(
+      {
+        ...deps,
+        baseUrl: "https://crm.example.ru",
+        whatsapp: { configured: true, send: async (m) => (whatsapp.push({ to: m.to, text: m.text }), { message_id: "wamid.1" }) },
+        slack: { configured: true, send: async (t) => void slack.push(t) },
+        notion: { configured: true, createPage: async (p) => (pages.push({ title: p.title, url: p.url }), { id: "p1", url: "https://notion.so/p1" }) },
+      },
+      event(),
+    );
+    expect(run!.status).toBe("success");
+    expect(whatsapp).toEqual([{ to: lead.phone!.replace(/\D/g, "").replace(/^8(\d{10})$/, "7$1"), text: `Здравствуйте, ${lead.contact_name}!` }]);
+    expect(slack).toEqual([`Lead ${lead.title}`]);
+    expect(pages).toEqual([{ title: lead.title, url: `https://crm.example.ru/leads/${lead.id}` }]);
+  });
 });
 

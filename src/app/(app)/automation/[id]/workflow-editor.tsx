@@ -49,6 +49,9 @@ const STEP_DEFAULTS: Record<StepType, Json> = {
   convert_deal_to_order: {},
   send_email: { to: "record_owner", subject: "Update", body: "" },
   send_telegram: { text: "New lead: {{lead.title}} ({{lead.company_name}})" },
+  send_whatsapp: { text: "Здравствуйте! Спасибо за обращение, мы свяжемся с вами в ближайшее время.", template_name: "", template_language: "ru" },
+  send_slack: { text: "New lead: {{lead.title}} ({{lead.company_name}})" },
+  create_notion_page: { title: "{{deal.name}}", body: "Deal brief created by NEXORA." },
   send_webhook: { event_type: "custom.event" },
   delay: { hours: 24 },
 };
@@ -711,6 +714,32 @@ function StepPanel({
         <>
           {text("text", "Message", true)}
           <p className="text-xs text-text-muted">Plain text to the team chat set in Integrations → Telegram. Placeholders like {"{{lead.title}}"} are filled in. Without a configured bot the step is logged as skipped.</p>
+        </>
+      )}
+
+      {step.type === "send_whatsapp" && (
+        <>
+          {text("text", "Message", true)}
+          {text("template_name", "Template name (optional)")}
+          {text("template_language", "Template language")}
+          <p className="text-xs text-text-muted">
+            Goes to the record&apos;s WhatsApp number (or phone; for deals, the primary contact&apos;s). Free text is allowed only within 24 hours of the customer&apos;s last message; to start a conversation, use an approved template whose {"{{1}}"} gets this text. Without WhatsApp configured the step is logged as skipped.
+          </p>
+        </>
+      )}
+
+      {step.type === "send_slack" && (
+        <>
+          {text("text", "Message", true)}
+          <p className="text-xs text-text-muted">Posted to the Slack channel of SLACK_WEBHOOK_URL. Without it the step is logged as skipped.</p>
+        </>
+      )}
+
+      {step.type === "create_notion_page" && (
+        <>
+          {text("title", "Page title")}
+          {text("body", "Page text", true)}
+          <p className="text-xs text-text-muted">Creates a page in the Notion database NOTION_DATABASE_ID with a link back to the record. Without Notion configured the step is logged as skipped.</p>
         </>
       )}
 

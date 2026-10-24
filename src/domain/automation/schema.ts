@@ -117,7 +117,7 @@ export const stepSchema = z.discriminatedUnion("type", [
     })
     .strict(),
   z.object({ ...base, type: z.literal("update_record"), fields: z.record(z.string(), z.unknown()) }).strict(),
-  z.object({ ...base, type: z.literal("create_activity"), activity_type: z.enum(["call", "meeting", "email", "note", "follow_up", "system"]).default("system"), subject: text(200).min(1), body: text().default("") }).strict(),
+  z.object({ ...base, type: z.literal("create_activity"), activity_type: z.enum(["call", "meeting", "email", "note", "follow_up", "message", "system"]).default("system"), subject: text(200).min(1), body: text().default("") }).strict(),
   z
     .object({
       ...base,
@@ -135,13 +135,28 @@ export const stepSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("send_webhook"), event_type: z.string().regex(/^[a-z0-9_.-]{1,64}$/) }).strict(),
   // Team notification to the configured Telegram chat (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID), plain text.
   z.object({ ...base, type: z.literal("send_telegram"), text: text(3500).min(1) }).strict(),
+  // Message to the record's customer over WhatsApp Business (their phone or WhatsApp number). A template is
+  // needed to start a conversation outside WhatsApp's 24-hour window; the text then fills its {{1}}.
+  z
+    .object({
+      ...base,
+      type: z.literal("send_whatsapp"),
+      text: text(1000).min(1),
+      template_name: z.string().regex(/^[a-z0-9_]{1,512}$/, "Template names use lowercase letters, digits and _").or(z.literal("")).default(""),
+      template_language: z.string().regex(/^[a-z]{2}(_[A-Z]{2})?$/).default("ru"),
+    })
+    .strict(),
+  // Team message to the Slack channel of SLACK_WEBHOOK_URL.
+  z.object({ ...base, type: z.literal("send_slack"), text: text(3000).min(1) }).strict(),
+  // A page in the Notion database NOTION_DATABASE_ID (meeting notes, deal briefs).
+  z.object({ ...base, type: z.literal("create_notion_page"), title: text(200).min(1), body: text(5000).default("") }).strict(),
   z
     .object({ ...base, type: z.literal("delay"), hours: z.number().int().min(1).max(LIMITS.maxDelayHours) })
     .strict(),
 ]);
 export type Step = z.infer<typeof stepSchema>;
 export type StepType = Step["type"];
-export const STEP_TYPES: StepType[] = ["condition", "assign_owner", "create_task", "update_record", "create_activity", "create_notification", "convert_deal_to_order", "send_email", "send_telegram", "send_webhook", "delay"];
+export const STEP_TYPES: StepType[] = ["condition", "assign_owner", "create_task", "update_record", "create_activity", "create_notification", "convert_deal_to_order", "send_email", "send_telegram", "send_whatsapp", "send_slack", "create_notion_page", "send_webhook", "delay"];
 
 export const definitionSchema = z
   .object({
@@ -161,6 +176,9 @@ export const STEP_LABELS: Record<StepType, string> = {
   convert_deal_to_order: "Create order from deal",
   send_email: "Send email",
   send_telegram: "Send to Telegram",
+  send_whatsapp: "Send WhatsApp message",
+  send_slack: "Send to Slack",
+  create_notion_page: "Create Notion page",
   send_webhook: "Send webhook",
   delay: "Wait",
 };

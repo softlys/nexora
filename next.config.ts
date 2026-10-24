@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // The dev-only Next.js indicator sits bottom-right, away from the sidebar's sign-out button.
   devIndicators: { position: "bottom-right" },
+  // Mail libraries load optional modules at run time; keep them as plain Node packages.
+  serverExternalPackages: ["imapflow", "mailparser"],
   experimental: {
     authInterrupts: true,
   },

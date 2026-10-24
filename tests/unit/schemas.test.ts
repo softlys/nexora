@@ -31,10 +31,12 @@ describe("entity schemas", () => {
     expect(pipelineStageSchema.safeParse({ ...stage, is_won: true, is_lost: true }).success).toBe(false);
   });
 
-  it("only allow simulated payments", () => {
+  it("accept recorded and online (real) payments, but only positive amounts", () => {
     const payment = seed.payments[0]!;
     expect(paymentSchema.safeParse(payment).success).toBe(true);
-    expect(paymentSchema.safeParse({ ...payment, is_simulated: false }).success).toBe(false);
+    // YooKassa and Stripe payments are real (is_simulated false); hand-recorded demo payments stay simulated.
+    expect(paymentSchema.safeParse({ ...payment, is_simulated: false }).success).toBe(true);
+    expect(paymentSchema.safeParse({ ...payment, amount: 0 }).success).toBe(false);
   });
 
   it("only allow internal notification links", () => {

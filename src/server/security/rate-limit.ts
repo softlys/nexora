@@ -15,6 +15,8 @@ export const RATE_LIMITS = {
   api: { limit: 120, windowSeconds: 60 },
   /** Public API requests with a missing or wrong key, per client IP. */
   api_auth: { limit: 20, windowSeconds: 60 },
+  /** AI assistant requests, per user (each one is a paid model call). */
+  ai: { limit: 10, windowSeconds: 60 },
   /** Demo access code attempts, per client IP. */
   demo_access: { limit: 10, windowSeconds: 600 },
 } satisfies Record<string, RateLimitRule>;

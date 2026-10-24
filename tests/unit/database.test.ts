@@ -60,11 +60,24 @@ describe("migrations", () => {
     ).rejects.toThrow(/duplicate key/);
   });
 
-  it("reject non-simulated payments", async () => {
+  it("accept online payments (is_simulated false) but reject unknown methods", async () => {
     const p = seed.payments[0]!;
     await expect(
       db.query("insert into public.payments (organization_id, order_id, amount, method, is_simulated) values ($1, $2, 10, 'card', false)", [p.organization_id, p.order_id]),
+    ).resolves.toBeDefined();
+    await expect(
+      db.query("insert into public.payments (organization_id, order_id, amount, method, is_simulated) values ($1, $2, 10, 'crypto', false)", [p.organization_id, p.order_id]),
     ).rejects.toThrow(/check constraint/);
+  });
+
+  it("keep integration records unique per organization, source and external id, and accept message activities", async () => {
+    const org = seed.organizations[0]!.id;
+    await db.query("insert into public.integration_records (organization_id, source, external_id) values ($1, 'mango', 'entry-1')", [org]);
+    await expect(db.query("insert into public.integration_records (organization_id, source, external_id) values ($1, 'mango', 'entry-1')", [org])).rejects.toThrow(/duplicate key/);
+    const contact = seed.contacts[0]!;
+    await expect(
+      db.query("insert into public.activities (organization_id, type, subject, contact_id, occurred_at) values ($1, 'message', 'WhatsApp', $2, now())", [contact.organization_id, contact.id]),
+    ).resolves.toBeDefined();
   });
 
   it("reject cross-organization references", async () => {

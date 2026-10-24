@@ -1,4 +1,4 @@
-import { Bell, GitBranch, ListTodo, Mail, MessageSquare, PackageCheck, PencilLine, Send, Timer, UserCheck, Webhook, Zap, type LucideIcon } from "lucide-react";
+import { Bell, FileText, GitBranch, Hash, ListTodo, Mail, MessageCircle, MessageSquare, PackageCheck, PencilLine, Send, Timer, UserCheck, Webhook, Zap, type LucideIcon } from "lucide-react";
 import { humanizeStatus } from "@/components/patterns/status-badge";
 import type { Step, StepType, WorkflowDefinition } from "@/domain/automation/schema";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,9 @@ const NODE: Record<StepType | "trigger", { icon: LucideIcon; tone: string; label
   convert_deal_to_order: { icon: PackageCheck, tone: "bg-success-bg text-success", label: "Create order", hint: "From a won deal" },
   send_email: { icon: Mail, tone: "bg-success-bg text-success", label: "Send email", hint: "Owner or assignee" },
   send_telegram: { icon: Send, tone: "bg-info-bg text-info", label: "Send to Telegram", hint: "Team chat via the bot" },
+  send_whatsapp: { icon: MessageCircle, tone: "bg-success-bg text-success", label: "WhatsApp", hint: "Message to the customer" },
+  send_slack: { icon: Hash, tone: "bg-info-bg text-info", label: "Send to Slack", hint: "Team channel" },
+  create_notion_page: { icon: FileText, tone: "bg-surface-muted text-text-subtle", label: "Notion page", hint: "In the configured database" },
   send_webhook: { icon: Webhook, tone: "bg-success-bg text-success", label: "Send webhook", hint: "Signed, to integrations" },
   delay: { icon: Timer, tone: "bg-surface-muted text-text-subtle", label: "Delay", hint: "Waits, then resumes" },
 };
@@ -32,7 +35,11 @@ function detail(step: Step): string {
     case "send_webhook":
       return step.event_type;
     case "send_telegram":
+    case "send_whatsapp":
+    case "send_slack":
       return step.text;
+    case "create_notion_page":
+      return step.title;
     case "send_email":
     case "create_activity":
       return step.subject;

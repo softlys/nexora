@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChangeHistory } from "@/components/crm/change-history";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
+import { DealAssistant, DealMeetingButton } from "@/components/crm/deal-assistant";
 import { DealFormButton } from "@/components/crm/deal-form";
 import { DetailHeader, Facts, MiniList, Panel } from "@/components/crm/detail";
 import { RecordActions } from "@/components/crm/record-actions";
@@ -13,6 +14,8 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
 import { dealFormOptions, loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { getDeal } from "@/server/services/deals";
+import { aiConfig } from "@/server/integrations/ai";
+import { yandexConfig } from "@/server/integrations/yandex";
 
 export async function generateMetadata({ params }: PageProps<"/deals/[id]">) {
   const { id } = await params;
@@ -91,6 +94,14 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
           </Panel>
         </div>
         <div className="space-y-6">
+          <Panel title="AI assistant">
+            <DealAssistant dealId={deal.id} provider={aiConfig().provider ? aiConfig().label : null} />
+          </Panel>
+          {yandexConfig().telemostConfigured && canEdit && (
+            <Panel title="Video meeting">
+              <DealMeetingButton dealId={deal.id} />
+            </Panel>
+          )}
           <Panel title="Details">
             <Facts
               className="sm:grid-cols-1"

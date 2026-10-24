@@ -94,7 +94,13 @@ export function validateDefinition(input: unknown): { ok: true; definition: Work
         checkTemplate(i, "body", s.body);
         break;
       case "send_telegram":
+      case "send_whatsapp":
+      case "send_slack":
         checkTemplate(i, "text", s.text);
+        break;
+      case "create_notion_page":
+        checkTemplate(i, "title", s.title);
+        checkTemplate(i, "body", s.body);
         break;
       default:
         break;

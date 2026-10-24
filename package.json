@@ -17,6 +17,7 @@
     "tokens:build": "tsx scripts/build-tokens.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.132.1",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -28,7 +29,9 @@
     "cmdk": "^1.1.1",
     "cn": "^0.5.0",
     "date-fns": "^4.4.0",
+    "imapflow": "2.2.10",
     "lucide-react": "^1.59.0",
+    "mailparser": "3.9.36",
     "next": "16.4.2",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.8.1",
@@ -47,6 +50,7 @@
     "@electric-sql/pglite": "^0.5.10",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
+    "@types/mailparser": "3.9.0",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",

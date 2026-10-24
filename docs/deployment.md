@@ -45,6 +45,8 @@ NEXORA runs anywhere Next.js 16 runs. The recommended setup is **Vercel** (app a
 | `RESEND_API_KEY`, `NEXORA_EMAIL_FROM` | optional | Email for the Send email step. Without them, email steps are logged as skipped |
 | `NEXORA_ALLOWED_ORIGINS` | optional | Extra origins allowed to call server actions (comma-separated hosts) |
 | `NEXORA_BULK_READ_THRESHOLD` | optional | Records per user per 5 minutes before `data.bulk_read` (default 300) |
+| `NEXORA_PUBLIC_URL` | recommended | The public https address (for links in calendar feeds, Notion pages and payment return URLs, and Twilio signatures) |
+| Connector variables | optional | Forms, telephony, mail, WhatsApp, AI, payments, Yandex Disk/Telemost, MoySklad, Slack, Notion: see [integrations.md](integrations.md) |
 | `NEXORA_WEBHOOK_ALLOW_PRIVATE` | development only | `1` lets webhooks reach private and loopback addresses, for example a local n8n. Ignored when `NODE_ENV=production` |
 
 Secrets never reach the browser: only `NEXT_PUBLIC_*` variables are exposed, and those are public by design.

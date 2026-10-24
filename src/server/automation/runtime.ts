@@ -6,6 +6,8 @@ import type { ServiceContext } from "@/server/services/context";
 import { dispatchDomainEvent, sendWorkflowWebhook, type WebhookDeps } from "@/server/integrations/webhooks";
 import { telegramSender } from "@/server/integrations/telegram";
 import { handleEvent, type EmailSender, type EngineDeps, type WebhookSender } from "./engine";
+import { notionWriter, slackSender, whatsappSender } from "@/server/integrations/messaging";
+import { publicBaseUrl } from "@/server/integrations/public-url";
 
 /**
  * Email through Resend when RESEND_API_KEY and NEXORA_EMAIL_FROM are set. Without them the
@@ -64,6 +66,10 @@ export function engineDeps(meta: RequestMeta): EngineDeps {
     meta,
     email: emailSender(),
     telegram: telegramSender(),
+    whatsapp: whatsappSender(),
+    slack: slackSender(),
+    notion: notionWriter(),
+    baseUrl: publicBaseUrl(),
     webhooks: webhookSender(webhookDeps),
     // Outbound webhooks for every handled event, including events caused by workflow runs.
     // Sent after the response so a slow receiver never delays the user's action.

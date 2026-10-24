@@ -28,6 +28,32 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Connectors (2026-10-24)
+
+Seventeen connectors, all configured on the server and listed on Integrations with status, setup steps and the addresses to paste (docs/integrations.md):
+
+| Area | Connectors |
+| --- | --- |
+| Data and notes | Obsidian vault export; personal iCalendar feeds for Google, Yandex, Outlook and Apple, with reset |
+| Leads and calls | Web forms (Tilda, Yandex Forms, any site) → leads; Mango Office, Zadarma and Twilio calls → timeline, Call back task or lead |
+| Messengers and mail | IMAP mail (Yandex 360, Gmail, Mail.ru) on timelines; WhatsApp Business, inbound and as a workflow step |
+| Sales tools | AI deal assistant (YandexGPT or Claude); printable invoices and quotes |
+| Payments | ЮKassa and Stripe payment links, with real payments recorded |
+| Team and warehouse | Yandex Disk sync of the vault; Yandex Telemost meeting links; МойСклад products; Slack and Notion workflow steps |
+
+- **Shared plumbing.**
+  - `src/server/integrations/inbound.ts` decides the organization and acting user, matches contacts by phone or email, and claims each provider's id in the new `integration_records` table so retries are no-ops.
+  - `/api/hooks/<provider>` checks each provider's signature.
+  - Connector jobs run from the 5-minute scheduler.
+- **Schema.**
+  - `message` activity type.
+  - `payments.is_simulated` can be false: online payments are real.
+  - Migration `20261025000001_integration_records.sql`.
+- **Verified.**
+  - Unit tests: provider signatures (including Twilio's published example), form parsing in English and Russian, call, mail and payment de-duplication, missed-call tasks, MoySklad SKUs, vault and calendar formats, the AI prompt, and the new workflow steps.
+  - Live checks: Tilda and Yandex Forms payloads create a lead once, the calendar feed serves events and a reset link stops working, the vault downloads, and the Russian invoice prints.
+  - None of the connectors was tried against a real external account.
+
 ## Demo access code (2026-10-23)
 
 - **`NEXORA_DEMO_ACCESS_CODE`** (optional, 8+ characters) protects a demo installation.

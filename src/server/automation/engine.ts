@@ -27,6 +27,7 @@ import { UniqueViolation } from "@/server/db/types";
 import type { RequestMeta } from "@/server/repositories/types";
 import { emit, emitSecurity, flushSecurityEvents, type ServiceContext } from "@/server/services/context";
 import { convertDealToOrder } from "@/server/services/orders";
+import { waNumber, type NotionWriter, type SlackSender, type WhatsAppSender } from "@/server/integrations/messaging";
 
 export const SERVICE_ACTOR_ID = "00000000-0000-4000-8000-00000000a070";
 
@@ -47,6 +48,11 @@ export type EngineDeps = {
   now?: () => Date;
   email?: EmailSender;
   telegram?: TelegramSender;
+  whatsapp?: WhatsAppSender;
+  slack?: SlackSender;
+  notion?: NotionWriter;
+  /** Base URL for links in messages and Notion pages. */
+  baseUrl?: string;
   webhooks?: WebhookSender;
   /** Called for every event the engine handles, including events its runs caused (outbound webhooks). */
   onEvent?: (event: DomainEvent) => Promise<void>;
@@ -458,6 +464,45 @@ async function executeStep(deps: EngineDeps, svc: ServiceContext, state: RunStat
       if (test) return { status: "success", output: { would_send: text.slice(0, 200) } };
       const result = await deps.telegram.send(text);
       return { status: "success", output: { message_id: result.message_id } };
+    }
+
+    case "send_whatsapp": {
+      if (!deps.whatsapp?.configured) return { status: "skipped", output: { reason: "WhatsApp is not configured (WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID), so nothing was sent" } };
+      const { vars, record } = await load();
+      let phone = (record.messengers as Record<string, string> | undefined)?.whatsapp ?? (record.phone as string | null) ?? null;
+      if (!phone && typeof record.primary_contact_id === "string") {
+        const contact = await deps.db.read(orgId, (tx) => tx.get("contacts", record.primary_contact_id as string));
+        phone = contact?.messengers?.whatsapp ?? contact?.phone ?? null;
+      }
+      if (!phone && typeof record.contact_id === "string") {
+        const contact = await deps.db.read(orgId, (tx) => tx.get("contacts", record.contact_id as string));
+        phone = contact?.messengers?.whatsapp ?? contact?.phone ?? null;
+      }
+      const to = waNumber(phone);
+      if (!to) return { status: "skipped", output: { reason: "The record has no phone or WhatsApp number" } };
+      const message = render(step.text, vars);
+      if (test) return { status: "success", output: { would_send_to: `+${to}`, text: message.slice(0, 200) } };
+      const result = await deps.whatsapp.send({ to, text: message, template: step.template_name ? { name: step.template_name, language: step.template_language } : null });
+      return { status: "success", output: { message_id: result.message_id } };
+    }
+
+    case "send_slack": {
+      if (!deps.slack?.configured) return { status: "skipped", output: { reason: "Slack is not configured (SLACK_WEBHOOK_URL), so nothing was sent" } };
+      const { vars } = await load();
+      const message = render(step.text, vars);
+      if (test) return { status: "success", output: { would_send: message.slice(0, 200) } };
+      await deps.slack.send(message);
+      return { status: "success", output: { sent: true } };
+    }
+
+    case "create_notion_page": {
+      if (!deps.notion?.configured) return { status: "skipped", output: { reason: "Notion is not configured (NOTION_TOKEN, NOTION_DATABASE_ID), so no page was created" } };
+      const { vars } = await load();
+      const title = render(step.title, vars);
+      if (test) return { status: "success", output: { would_create: title } };
+      const entityPath = ({ lead: "leads", deal: "deals", company: "companies", contact: "contacts", order: "orders", task: "tasks" } as Record<string, string>)[entity] ?? null;
+      const page = await deps.notion.createPage({ title, body: render(step.body, vars), url: deps.baseUrl && entityPath ? `${deps.baseUrl}/${entityPath}/${state.target.id}` : undefined });
+      return { status: "success", output: { notion_page: page.url || page.id } };
     }
 
     case "send_webhook": {

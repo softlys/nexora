@@ -1,10 +1,10 @@
-import { ArrowRightLeft, CheckCircle2, Circle, Mail, MessageSquare, NotebookPen, Phone, Repeat, Settings2, Users } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2, Circle, Mail, MessageCircle, MessageSquare, NotebookPen, Phone, Repeat, Settings2, Users } from "lucide-react";
 import type { TimelineEntry } from "@/domain/timeline";
 import { formatDate, formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/patterns/status-badge";
 
-const ACTIVITY_ICON = { call: Phone, meeting: Users, email: Mail, note: NotebookPen, follow_up: Repeat, system: Settings2 } as const;
+const ACTIVITY_ICON = { call: Phone, meeting: Users, email: Mail, note: NotebookPen, follow_up: Repeat, message: MessageCircle, system: Settings2 } as const;
 
 /**
  * Combined record timeline. User text (notes, comments, activity bodies) is rendered as

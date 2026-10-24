@@ -3,7 +3,9 @@ import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { DetailHeader, Facts, Panel } from "@/components/crm/detail";
 import { OrderStatusActions, RecordPaymentButton } from "@/components/crm/order-controls";
 import { OrderFormButton } from "@/components/crm/order-form";
+import { OrderDocuments } from "@/components/crm/order-documents";
 import { RecordActions } from "@/components/crm/record-actions";
+import { paymentsConfig } from "@/server/integrations/payments";
 import { Timeline } from "@/components/crm/timeline";
 import { humanizeStatus, StatusBadge } from "@/components/patterns/status-badge";
 import { can } from "@/domain/permissions";
@@ -109,7 +111,14 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
               </div>
             </dl>
           </Panel>
-          <Panel title="Payments" actions={<StatusBadge status="simulated" label="Simulated" />}>
+          <Panel title="Documents and online payment">
+            <OrderDocuments
+              orderId={order.id}
+              canPay={Boolean(canPay) && outstanding > 0}
+              providers={[...(paymentsConfig().yookassa ? [{ id: "yookassa" as const, label: "ЮKassa" }] : []), ...(paymentsConfig().stripe ? [{ id: "stripe" as const, label: "Stripe" }] : [])]}
+            />
+          </Panel>
+          <Panel title="Payments">
             {payments.length === 0 ? (
               <p className="text-sm text-text-muted">No payments recorded.</p>
             ) : (
@@ -121,7 +130,7 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
                       {p.reference && <span className="text-text-muted"> · {p.reference}</span>}
                     </span>
                     <span className="flex items-center gap-2">
-                      <StatusBadge status="simulated" label="Simulated" />
+                      {p.is_simulated ? <StatusBadge status="simulated" label="Simulated" /> : <StatusBadge status="paid" label="Online" />}
                       <span className="font-medium tabular-nums">{formatAmount(p.amount, p.currency)}</span>
                     </span>
                   </li>

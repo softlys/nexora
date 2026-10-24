@@ -33,6 +33,11 @@ export function createSeededStore(now: Date = new Date()): StoreFile {
  */
 export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
   let changed = capPastTimestamps(data, now) > 0;
+  // Tables added after a store was written start empty.
+  if (!data.integration_records) {
+    data.integration_records = [];
+    changed = true;
+  }
   data.contacts.forEach((c, i) => {
     if ((c as Partial<typeof c>).messengers !== undefined) return;
     const dial = c.phone?.match(/^\+\d{1,3}/)?.[0] ?? "+1";

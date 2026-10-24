@@ -239,7 +239,7 @@ export const taskUpdateInput = z.object({ id: z.uuid(), ...taskFields }).strict(
 
 export const activityInput = z
   .object({
-    type: z.enum(ACTIVITY_TYPES.filter((t) => t !== "system") as ["call", "meeting", "email", "note", "follow_up"]),
+    type: z.enum(ACTIVITY_TYPES.filter((t) => t !== "system") as ["call", "meeting", "email", "note", "follow_up", "message"]),
     subject: required(200),
     body: text(5000),
     occurred_at: optionalDateTime,
@@ -257,3 +257,6 @@ export const commentInput = z
   .strict();
 
 export const searchInput = z.object({ q: z.string().trim().min(1).max(100) }).strict();
+
+/** A YooKassa or Stripe payment page for an order's outstanding amount. */
+export const paymentLinkInput = z.object({ order_id: z.uuid(), provider: z.enum(["yookassa", "stripe"]) }).strict();

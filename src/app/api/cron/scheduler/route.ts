@@ -3,6 +3,7 @@ import { runScheduler } from "@/server/automation/scheduler";
 import { engineDeps } from "@/server/automation/runtime";
 import { getRequestMeta } from "@/server/auth";
 import { listOrganizationIds } from "@/server/db";
+import { runIntegrationJobs } from "@/server/integrations/jobs";
 import { recordSystemSecurity } from "@/server/security/record";
 
 /**
@@ -37,10 +38,13 @@ async function handle(request: Request): Promise<Response> {
     });
     return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
-  const deps = engineDeps(await getRequestMeta());
+  const meta = await getRequestMeta();
+  const deps = engineDeps(meta);
   const results = [];
   for (const orgId of orgIds) results.push({ organization_id: orgId, ...(await runScheduler(deps, orgId)) });
-  return Response.json({ ok: true, ran_at: new Date().toISOString(), results });
+  // Mailbox sync and other connector jobs (each isolated; failures are reported, not thrown).
+  const integrations = await runIntegrationJobs(meta);
+  return Response.json({ ok: true, ran_at: new Date().toISOString(), results, integrations });
 }
 
 export async function POST(request: Request) {

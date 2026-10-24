@@ -49,7 +49,7 @@ export const PAYMENT_METHODS = ["bank_transfer", "card", "other"] as const;
 export const TASK_PRIORITIES = ["low", "medium", "high", "urgent"] as const;
 export const TASK_STATUSES = ["todo", "in_progress", "done", "cancelled"] as const;
 export const TASK_TYPES = ["follow_up", "call", "email", "meeting", "todo"] as const;
-export const ACTIVITY_TYPES = ["call", "meeting", "email", "note", "follow_up", "system"] as const;
+export const ACTIVITY_TYPES = ["call", "meeting", "email", "note", "follow_up", "message", "system"] as const;
 export const ENTITY_TYPES = ["company", "contact", "lead", "deal", "order", "task"] as const;
 export const INTEGRATION_PROVIDERS = ["make", "n8n", "generic_webhook", "email"] as const;
 export const EXECUTION_STATUSES = ["running", "success", "failed", "skipped"] as const;
@@ -279,8 +279,8 @@ export const paymentSchema = z.object({
   paid_at: timestamp,
   method: z.enum(PAYMENT_METHODS),
   reference: shortText(120),
-  /** NEXORA never processes real payments. Always true. */
-  is_simulated: z.literal(true),
+  /** True for payments recorded by hand in the demo; false for payments confirmed by YooKassa or Stripe. */
+  is_simulated: z.boolean(),
   recorded_by: id.nullable(),
 });
 export type Payment = z.infer<typeof paymentSchema>;
@@ -467,6 +467,25 @@ export const apiIdempotencyKeySchema = z.object({
 });
 export type ApiIdempotencyKey = z.infer<typeof apiIdempotencyKeySchema>;
 
+/**
+ * What an external service already delivered (a call, an email, a chat message, a payment), so a
+ * retried webhook or a re-read mailbox never creates a record twice; also sync cursors such as the
+ * last mailbox UID. Written by the server only.
+ */
+export const integrationRecordSchema = z.object({
+  id,
+  organization_id: id,
+  /** e.g. "mango", "zadarma", "imap", "whatsapp", "yookassa", "cursor:imap". */
+  source: z.string().min(1).max(40),
+  external_id: z.string().min(1).max(255),
+  entity_type: z.string().max(40).nullable(),
+  entity_id: id.nullable(),
+  data: z.record(z.string(), z.unknown()),
+  created_at: timestamp,
+  updated_at: timestamp,
+});
+export type IntegrationRecord = z.infer<typeof integrationRecordSchema>;
+
 export const auditLogSchema = z.object({
   id,
   organization_id: id,
@@ -510,6 +529,7 @@ export const TABLES = [
   "webhook_deliveries",
   "api_keys",
   "api_idempotency_keys",
+  "integration_records",
   "audit_logs",
   "security_events",
 ] as const;
@@ -538,6 +558,7 @@ export type Dataset = {
   webhook_deliveries: WebhookDelivery[];
   api_keys: ApiKey[];
   api_idempotency_keys: ApiIdempotencyKey[];
+  integration_records: IntegrationRecord[];
   audit_logs: AuditLog[];
   security_events: SecurityEvent[];
 };
@@ -565,6 +586,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   webhook_deliveries: webhookDeliverySchema,
   api_keys: apiKeySchema,
   api_idempotency_keys: apiIdempotencyKeySchema,
+  integration_records: integrationRecordSchema,
   audit_logs: auditLogSchema,
   security_events: securityEventSchema,
 };

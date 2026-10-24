@@ -9,6 +9,7 @@ import { requirePermission } from "@/server/guards";
 import { loadPage } from "@/server/page-data";
 import { listIntegrations } from "@/server/services/integrations";
 import { telegramConfig } from "@/server/integrations/telegram";
+import { connectorCatalog } from "@/server/integrations/catalog";
 import { MessengerMark } from "@/components/crm/messenger-links";
 
 export const metadata = { title: "Integrations" };
@@ -26,6 +27,7 @@ export default async function IntegrationsPage() {
   const isAdmin = can(user.actor, "manage", "integration");
   const telegram = telegramConfig();
   const telegramStatus = { configured: Boolean(telegram.token && telegram.chat && !telegram.problem), chat: telegram.chat, problem: telegram.problem };
+  const groups = Object.groupBy(connectorCatalog(), (c) => c.group);
   const overlaps = data.webhooks.flatMap((w) => w.overlaps.map((o) => ({ ...o, provider: w.provider })));
 
   return (
@@ -133,6 +135,34 @@ export default async function IntegrationsPage() {
           <p className="mt-auto text-xs text-text-muted">Handles are stored on contacts; platform credentials stay in your scenario.</p>
         </Link>
       </section>
+
+      {Object.entries(groups).map(([group, items]) => (
+        <section key={group} aria-labelledby={`group-${group}`} className="space-y-3">
+          <h2 id={`group-${group}`} className="text-md font-semibold">
+            {group}
+          </h2>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {items.map((c) => (
+              <Link
+                key={c.id}
+                href={`/integrations/${c.id}`}
+                className="group flex flex-col gap-2 rounded-lg border border-border bg-surface p-4 shadow-xs transition-colors hover:border-border-strong hover:bg-surface-subtle focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
+                data-testid={`connector-card-${c.id}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-medium">{c.name}</h3>
+                  <StatusBadge status={c.state === "available" ? "configured" : c.state} label={c.state === "available" ? "Available" : c.state === "configured" ? "Configured" : c.state === "error" ? "Misconfigured" : "Not configured"} dot />
+                </div>
+                <p className="text-sm text-text-muted">{c.summary}</p>
+                <div className="mt-auto flex items-center gap-2 text-xs text-text-muted">
+                  {c.russia && <span className="rounded-full border border-border px-2 py-0.5">Works in Russia</span>}
+                  <ArrowRight className="ml-auto size-4 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ))}
 
       <section aria-labelledby="engines-heading" className="rounded-lg border border-border bg-surface p-5 shadow-xs">
         <h2 id="engines-heading" className="text-md font-semibold">

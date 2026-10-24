@@ -10,6 +10,7 @@ import { DomainError } from "@/server/repositories/types";
 import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { createDeal } from "./deals";
 import { byId, getOwned } from "./records";
+import type { Tx } from "@/server/db/types";
 
 export type LeadFilters = { status?: Lead["status"]; source?: Lead["source"]; qualification?: Lead["qualification"]; owner?: string };
 
@@ -54,30 +55,34 @@ export async function getLead(ctx: ServiceContext, id: string) {
 
 export async function createLead(ctx: ServiceContext, input: z.output<typeof leadInput>): Promise<Lead> {
   requireCan(ctx, "create", "lead");
-  return ctx.db.write(ctx.actor.organization_id, async (tx) => {
-    const owner = await resolveOwner(tx, ctx, "lead", input.owner_id === undefined ? ctx.actor.id : input.owner_id, ctx.actor.id, null);
-    const at = nowOf(ctx).toISOString();
-    const org = await tx.get("organizations", ctx.actor.organization_id);
-    const { owner_id: _o, ...fields } = input;
-    void _o;
-    const lead: Lead = {
-      id: newId(),
-      organization_id: ctx.actor.organization_id,
-      ...fields,
-      owner_id: owner,
-      currency: org?.currency ?? "USD",
-      company_id: null,
-      contact_id: null,
-      converted_deal_id: null,
-      converted_at: null,
-      created_at: at,
-      updated_at: at,
-      archived_at: null,
-    };
-    await tx.insert("leads", lead);
-    await emit(tx, ctx, { type: "record.created", payload: { entity: "lead", id: lead.id, after: lead } });
-    return lead;
-  });
+  return ctx.db.write(ctx.actor.organization_id, (tx) => insertLead(tx, ctx, input));
+}
+
+/** createLead inside an existing transaction (inbound integrations claim the external id in the same one). */
+export async function insertLead(tx: Tx, ctx: ServiceContext, input: z.output<typeof leadInput>): Promise<Lead> {
+  requireCan(ctx, "create", "lead");
+  const owner = await resolveOwner(tx, ctx, "lead", input.owner_id === undefined ? ctx.actor.id : input.owner_id, ctx.actor.id, null);
+  const at = nowOf(ctx).toISOString();
+  const org = await tx.get("organizations", ctx.actor.organization_id);
+  const { owner_id: _o, ...fields } = input;
+  void _o;
+  const lead: Lead = {
+    id: newId(),
+    organization_id: ctx.actor.organization_id,
+    ...fields,
+    owner_id: owner,
+    currency: org?.currency ?? "USD",
+    company_id: null,
+    contact_id: null,
+    converted_deal_id: null,
+    converted_at: null,
+    created_at: at,
+    updated_at: at,
+    archived_at: null,
+  };
+  await tx.insert("leads", lead);
+  await emit(tx, ctx, { type: "record.created", payload: { entity: "lead", id: lead.id, after: lead } });
+  return lead;
 }
 
 export async function updateLead(ctx: ServiceContext, input: z.output<typeof leadUpdateInput>): Promise<Lead> {

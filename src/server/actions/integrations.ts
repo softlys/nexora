@@ -7,7 +7,11 @@ import { emailSender } from "@/server/automation/runtime";
 import { getServiceDb } from "@/server/db";
 import { WEBHOOK_PROVIDERS, type WebhookDeps } from "@/server/integrations/webhooks";
 import { apiKeyInput, createApiKey, revokeApiKey, revokeInput } from "@/server/services/api-keys";
-import type { ServiceContext } from "@/server/services/context";
+import { requireCan, type ServiceContext } from "@/server/services/context";
+import { resetFeedToken } from "@/server/integrations/calendar";
+import { vaultFiles } from "@/server/integrations/obsidian";
+import { currentBaseUrl } from "@/server/integrations/public-url";
+import { syncVaultToDisk } from "@/server/integrations/yandex";
 import { disconnectIntegration, integrationInput, redeliverDelivery, rotateSecret, saveIntegration, testEmail, testIntegration, testTelegram } from "@/server/services/integrations";
 import { serviceAction } from "@/server/service-action";
 
@@ -93,5 +97,24 @@ export async function revokeApiKeyAction(input: unknown) {
     await revokeApiKey(ctx, data);
     revalidatePath("/settings/api-keys");
     return undefined;
+  });
+}
+
+/** Starts a new personal calendar link; the previous one stops working. */
+export async function resetCalendarFeedAction() {
+  return serviceAction({ name: "resetCalendarFeed", schema: z.object({}).strict(), bucket: "mutate" }, {}, async (ctx) => {
+    await resetFeedToken(ctx);
+    revalidatePath("/integrations/calendar");
+    return undefined;
+  });
+}
+
+/** Uploads the Obsidian notes to Yandex Disk now (admins), instead of waiting for the hourly job. */
+export async function syncVaultNowAction() {
+  return serviceAction({ name: "syncVaultNow", schema: z.object({}).strict(), bucket: "mutate" }, {}, async (ctx) => {
+    requireCan(ctx, "manage", "integration");
+    const result = await syncVaultToDisk(ctx, await vaultFiles(ctx, await currentBaseUrl()));
+    revalidatePath("/integrations/yandex_disk");
+    return result;
   });
 }

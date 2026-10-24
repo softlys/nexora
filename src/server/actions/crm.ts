@@ -21,6 +21,7 @@ import {
   orderStatusInput,
   orderUpdateInput,
   paymentInput,
+  paymentLinkInput,
   searchInput,
   taskInput,
   taskUpdateInput,
@@ -28,13 +29,17 @@ import {
 import { serviceAction } from "@/server/service-action";
 import { createCompany, updateCompany } from "@/server/services/companies";
 import { createContact, updateContact } from "@/server/services/contacts";
-import { createDeal, moveDealStage, quickEditDeal, updateDeal } from "@/server/services/deals";
+import { createDeal, getDeal, moveDealStage, quickEditDeal, updateDeal } from "@/server/services/deals";
 import { convertLead, createLead, updateLead } from "@/server/services/leads";
-import { changeOrderStatus, convertDealToOrder, createOrder, recordPayment, updateOrder } from "@/server/services/orders";
+import { changeOrderStatus, convertDealToOrder, createOrder, orderPaymentLink, recordPayment, updateOrder } from "@/server/services/orders";
 import { archiveRecord, hardDeleteRecord, restoreRecord, type OwnedTable } from "@/server/services/records";
 import { globalSearch } from "@/server/services/search";
 import { importCsv, importInput } from "@/server/services/imports";
 import { addComment, createTask, logActivity, setTaskDone, updateTask } from "@/server/services/tasks";
+import { assistDeal, dealAssistInput } from "@/server/services/ai";
+import { currentBaseUrl } from "@/server/integrations/public-url";
+import { createTelemostMeeting } from "@/server/integrations/yandex";
+import { DomainError } from "@/server/repositories/types";
 
 const PATHS: Record<OwnedTable, string> = {
   companies: "/companies",
@@ -273,5 +278,31 @@ export async function importCsvAction(input: unknown) {
     const result = await importCsv(ctx, data);
     if (!data.dry_run) revalidatePath(data.entity === "companies" ? "/companies" : "/contacts");
     return result;
+  });
+}
+
+/** AI assistant on a deal: a summary with next steps, or an email draft. */
+export async function dealAssistAction(input: unknown) {
+  return serviceAction({ name: "dealAssist", schema: dealAssistInput, bucket: "ai" }, input, (ctx, data) => assistDeal(ctx, data));
+}
+
+/** Creates a YooKassa or Stripe payment page for the order's outstanding amount. */
+export async function orderPaymentLinkAction(input: unknown) {
+  return serviceAction({ name: "orderPaymentLink", schema: paymentLinkInput, bucket: "mutate" }, input, async (ctx, data) => orderPaymentLink(ctx, data, `${await currentBaseUrl()}/orders/${data.order_id}`));
+}
+
+/** Creates a Yandex Telemost meeting for a deal and logs the link on its timeline. */
+export async function dealMeetingAction(input: unknown) {
+  return serviceAction({ name: "dealMeeting", schema: z.object({ deal_id: z.uuid() }).strict(), bucket: "create" }, input, async (ctx, data) => {
+    const deal = await getDeal(ctx, data.deal_id);
+    let meeting: { joinUrl: string };
+    try {
+      meeting = await createTelemostMeeting();
+    } catch (error) {
+      throw new DomainError(error instanceof Error ? error.message : "Telemost did not answer.");
+    }
+    await logActivity(ctx, activityInput.parse({ type: "meeting", subject: `Telemost meeting link: ${deal.deal.name}`.slice(0, 200), body: meeting.joinUrl, deal_id: deal.deal.id, company_id: deal.deal.company_id, contact_id: deal.deal.primary_contact_id }));
+    revalidatePath(`/deals/${deal.deal.id}`);
+    return { url: meeting.joinUrl };
   });
 }
