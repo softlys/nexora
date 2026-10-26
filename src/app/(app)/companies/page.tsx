@@ -45,7 +45,7 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
           <>
             <ExportButton entity="companies" query={exportQuery} />
             {perms.canCreate && <ImportButton entity="companies" />}
-            {perms.canCreate && <CompanyFormButton owners={people.assignable} autoOpen={first(params.new) === "1"} />}
+            {perms.canCreate && <CompanyFormButton fields={people.fields} owners={people.assignable} autoOpen={first(params.new) === "1"} />}
           </>
         }
       />
@@ -92,7 +92,7 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
             icon={Building2}
             title={filtered ? tr("No companies match these filters") : tr("No companies yet")}
             description={filtered ? tr("Try a different search or clear the filters.") : tr("Add the first account you sell to.")}
-            action={!filtered && perms.canCreate ? <CompanyFormButton owners={people.assignable} /> : undefined}
+            action={!filtered && perms.canCreate ? <CompanyFormButton fields={people.fields} owners={people.assignable} /> : undefined}
             className="m-4 border-0 bg-transparent"
           />
         }

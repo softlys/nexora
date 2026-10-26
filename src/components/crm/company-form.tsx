@@ -15,6 +15,8 @@ import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { applyServerErrors } from "@/lib/forms";
 import { createCompanyAction, updateCompanyAction } from "@/server/actions/crm";
 import { tr } from "@/lib/i18n";
+import { CustomFieldsSection, customFormValues, type CustomFormValues } from "./custom-fields";
+import type { CustomFieldDef } from "@/domain/custom-fields";
 
 type Values = {
   name: string;
@@ -28,6 +30,7 @@ type Values = {
   lifecycle_stage: Company["lifecycle_stage"];
   notes: string;
   owner_id?: string;
+  custom?: CustomFormValues;
 };
 
 const EMPTY: Values = { name: "", website: "", industry: "", size: "11-50", country: "US", city: "", address: "", phone: "", lifecycle_stage: "prospect", notes: "" };
@@ -37,7 +40,10 @@ export function CompanyFormButton({
   owners,
   variant = company ? "outline" : "default",
   autoOpen = false,
+  fields,
 }: {
+  /** Custom field definitions for companies (Settings → Fields). */
+  fields?: CustomFieldDef[];
   company?: Company;
   owners: Array<{ value: string; label: string }>;
   variant?: "default" | "outline";
@@ -45,7 +51,8 @@ export function CompanyFormButton({
 }) {
   const router = useRouter();
   const [open, setOpen] = useAutoOpen(autoOpen);
-  const defaults: Values = company
+  const defaults: Values = {
+    ...(company
     ? {
         name: company.name,
         website: company.website ?? "",
@@ -59,7 +66,9 @@ export function CompanyFormButton({
         notes: company.notes,
         ...(owners.length > 0 && { owner_id: company.owner_id }),
       }
-    : EMPTY;
+    : EMPTY),
+    ...(fields?.length ? { custom: customFormValues(fields, company?.custom) } : {}),
+  };
   const form = useForm<Values>({ resolver: zodResolver(companyInput) as unknown as Resolver<Values>, defaultValues: defaults });
   const { control, handleSubmit, formState, setError, reset } = form;
 
@@ -109,6 +118,7 @@ export function CompanyFormButton({
           <SelectField control={control} name="lifecycle_stage" label={tr("Lifecycle stage")} options={LIFECYCLE_STAGES.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
           {owners.length > 0 && <SelectField control={control} name="owner_id" label={tr("Owner")} options={owners} />}
         </div>
+        <CustomFieldsSection control={control} defs={fields} />
         <TextareaField control={control} name="notes" label={tr("Notes")} hint={tr("Plain text, visible to everyone who can see this company.")} />
       </RecordSheet>
     </>

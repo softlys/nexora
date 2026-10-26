@@ -6,6 +6,7 @@ import { applyListQuery, type ListQuery } from "@/domain/list";
 import { buildTimeline, lastInteraction } from "@/domain/timeline";
 import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { assertLinksVisible, byId, getOwned, visibleIds } from "./records";
+import { withCustom } from "./custom-fields";
 
 export type ContactFilters = { owner?: string; company?: string };
 
@@ -72,7 +73,8 @@ export async function createContact(ctx: ServiceContext, input: z.output<typeof 
     await assertLinksVisible(tx, ctx, { company_id: input.company_id });
     const owner = (await resolveOwner(tx, ctx, "contact", input.owner_id ?? ctx.actor.id, ctx.actor.id, null))!;
     const at = nowOf(ctx).toISOString();
-    const { owner_id: _o, ...fields } = input;
+    const { owner_id: _o, ...raw } = input;
+    const fields = await withCustom(tx, "contact", raw);
     void _o;
     const contact: Contact = { id: newId(), organization_id: ctx.actor.organization_id, ...fields, owner_id: owner, created_at: at, updated_at: at, archived_at: null };
     await tx.insert("contacts", contact);
@@ -87,7 +89,8 @@ export async function updateContact(ctx: ServiceContext, input: z.output<typeof 
     requireCan(ctx, "update", "contact", current.owner_id, current.id);
     if (input.company_id !== current.company_id) await assertLinksVisible(tx, ctx, { company_id: input.company_id });
     const owner = (await resolveOwner(tx, ctx, "contact", input.owner_id, current.owner_id, current.id))!;
-    const { id, owner_id: _o, ...fields } = input;
+    const { id, owner_id: _o, ...raw } = input;
+    const fields = await withCustom(tx, "contact", raw, current.custom);
     void _o;
     const patch = { ...fields, owner_id: owner };
     const changes = diffFields(current as unknown as Record<string, unknown>, patch);

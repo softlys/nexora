@@ -11,6 +11,7 @@ import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, t
 import { createDeal } from "./deals";
 import { byId, getOwned } from "./records";
 import type { Tx } from "@/server/db/types";
+import { withCustom } from "./custom-fields";
 
 export type LeadFilters = { status?: Lead["status"]; source?: Lead["source"]; qualification?: Lead["qualification"]; owner?: string };
 
@@ -64,7 +65,8 @@ export async function insertLead(tx: Tx, ctx: ServiceContext, input: z.output<ty
   const owner = await resolveOwner(tx, ctx, "lead", input.owner_id === undefined ? ctx.actor.id : input.owner_id, ctx.actor.id, null);
   const at = nowOf(ctx).toISOString();
   const org = await tx.get("organizations", ctx.actor.organization_id);
-  const { owner_id: _o, ...fields } = input;
+  const { owner_id: _o, ...raw } = input;
+  const fields = await withCustom(tx, "lead", raw);
   void _o;
   const lead: Lead = {
     id: newId(),
@@ -91,7 +93,8 @@ export async function updateLead(ctx: ServiceContext, input: z.output<typeof lea
     requireCan(ctx, "update", "lead", current.owner_id, current.id);
     if (current.status === "converted") throw new DomainError("Converted leads are read-only.", "conflict");
     const owner = await resolveOwner(tx, ctx, "lead", input.owner_id, current.owner_id, current.id);
-    const { id, owner_id: _o, ...fields } = input;
+    const { id, owner_id: _o, ...raw } = input;
+    const fields = await withCustom(tx, "lead", raw, current.custom);
     void _o;
     const patch = { ...fields, owner_id: owner };
     const changes = diffFields(current as unknown as Record<string, unknown>, patch);

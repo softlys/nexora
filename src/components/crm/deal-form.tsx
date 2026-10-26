@@ -19,6 +19,8 @@ import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { applyServerErrors } from "@/lib/forms";
 import { createDealAction, updateDealAction } from "@/server/actions/crm";
 import { tr } from "@/lib/i18n";
+import { CustomFieldsSection, customFormValues, type CustomFormValues } from "./custom-fields";
+import type { CustomFieldDef } from "@/domain/custom-fields";
 
 type Option = { value: string; label: string };
 
@@ -38,6 +40,7 @@ type Values = {
   owner_id?: string;
   /** New deals only: the pipeline whose first stage the deal starts in. */
   pipeline_id?: string;
+  custom?: CustomFormValues;
 };
 
 const formSchema = z
@@ -45,6 +48,8 @@ const formSchema = z
   .refine((d) => d.company_id || d.new_company, { path: ["company_id"], message: tr("Choose a company or type a new name") });
 
 export type DealFormOptions = {
+  /** Custom field definitions for deals (Settings → Fields). */
+  customFields?: CustomFieldDef[];
   pipelines?: Option[];
   owners: Option[];
   companies: Option[];
@@ -77,7 +82,8 @@ export function DealFormButton({
   const [internalOpen, setInternalOpen] = useAutoOpen(autoOpen);
   const open = controlledOpen ?? internalOpen;
   const setOpen = (v: boolean) => (onOpenChange ? onOpenChange(v) : setInternalOpen(v));
-  const defaults: Values = deal
+  const defaults: Values = {
+    ...(deal
     ? {
         name: deal.name,
         company_id: deal.company_id,
@@ -92,7 +98,9 @@ export function DealFormButton({
         notes: deal.notes,
         ...(options.owners.length > 0 && { owner_id: deal.owner_id }),
       }
-    : { name: "", company_id: defaultCompanyId ?? "", new_company: null, primary_contact_id: null, amount: "", currency: options.currency, probability: "", expected_close_date: null, source: "outbound", next_activity: "", notes: "", pipeline_id: defaultPipelineId ?? options.pipelines?.[0]?.value };
+    : { name: "", company_id: defaultCompanyId ?? "", new_company: null, primary_contact_id: null, amount: "", currency: options.currency, probability: "", expected_close_date: null, source: "outbound", next_activity: "", notes: "", pipeline_id: defaultPipelineId ?? options.pipelines?.[0]?.value }),
+    ...(options.customFields?.length ? { custom: customFormValues(options.customFields, deal?.custom) } : {}),
+  };
   const { control, handleSubmit, formState, setError, reset, setValue } = useForm<Values>({ resolver: zodResolver(formSchema) as unknown as Resolver<Values>, defaultValues: defaults });
   const companyId = useWatch({ control, name: "company_id" });
   const newCompany = useWatch({ control, name: "new_company" });
@@ -181,6 +189,7 @@ export function DealFormButton({
           {options.owners.length > 0 && <SelectField control={control} name="owner_id" label={tr("Owner")} options={options.owners} />}
         </div>
         <TextField control={control} name="next_activity" label={tr("Next activity")} />
+        <CustomFieldsSection control={control} defs={options.customFields} />
         <TextareaField control={control} name="notes" label={tr("Notes")} />
       </RecordSheet>
     </>

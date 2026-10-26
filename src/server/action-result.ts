@@ -5,6 +5,7 @@ import { DomainError } from "@/server/repositories/types";
 import { getRequestMeta } from "@/server/auth";
 import { assertSameOrigin, OriginError } from "@/server/security/origin";
 import { tr } from "@/lib/i18n";
+import { FieldErrors } from "@/server/services/custom-fields";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
@@ -31,6 +32,9 @@ export async function runAction<T>(body: () => Promise<T>): Promise<ActionResult
     }
     if (error instanceof PermissionError) {
       return { ok: false, error: tr("You don't have permission to do that.") };
+    }
+    if (error instanceof FieldErrors) {
+      return { ok: false, error: tr(error.message), fieldErrors: Object.fromEntries(Object.entries(error.fields).map(([k, v]) => [k, v.map((m) => tr(m))])) };
     }
     if (error instanceof DomainError) {
       return { ok: false, error: tr(error.message) };

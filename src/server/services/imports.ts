@@ -8,6 +8,8 @@ import { companyOptions, createCompany } from "./companies";
 import { createContact } from "./contacts";
 import { requireCan, type ServiceContext } from "./context";
 import { DomainError } from "@/server/repositories/types";
+import { normalizeCustom } from "@/domain/custom-fields";
+import { customFieldDefs } from "./custom-fields";
 
 /**
  * CSV import of companies and contacts. The file is checked first (dry run): every row is
@@ -29,7 +31,8 @@ export const importInput = z
 
 export type ImportResult = { rows: number; valid: number; errors: Array<{ row: number; message: string }>; created: number };
 
-const norm = (h: string) => h.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+/** Header names compared loosely; letters of any script are kept (custom field labels may be Cyrillic). */
+const norm = (h: string) => h.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 // Names in English and Russian, so files from either interface language import.
 const COUNTRY_BY_NAME = new Map<string, string>(COUNTRY_CODES.flatMap((c) => [[countryName(c, "en").toLowerCase(), c] as const, [countryName(c, "ru").toLowerCase(), c] as const]));
 
@@ -102,15 +105,25 @@ export async function importCsv(ctx: ServiceContext, input: z.output<typeof impo
   const errors: ImportResult["errors"] = [];
   const valid: Array<{ row: number; data: unknown }> = [];
   const companies = input.entity === "contacts" ? new Map((await companyOptions(ctx)).map((c) => [c.name.toLowerCase(), c.id])) : new Map<string, string>();
+  // Custom field columns are matched by the field label (as exported) or its key.
+  const defs = await ctx.db.read(ctx.actor.organization_id, (tx) => customFieldDefs(tx, input.entity === "companies" ? "company" : "contact"));
+  const columns = defs.map((d) => ({ def: d, header: [norm(d.label), norm(d.key)].find((h) => headers.includes(h)) }));
   records.forEach((r, i) => {
     const row = i + 2; // spreadsheet row number: 1 is the header
+    const submitted = Object.fromEntries(columns.flatMap((c) => (c.header ? [[c.def.key, r[c.header] === "no" || r[c.header] === "нет" ? "" : r[c.header]]] : [])));
+    const { values: custom, issues } = normalizeCustom(defs, submitted);
+    if (issues.length) {
+      const def = defs.find((d) => d.key === issues[0]!.key)!;
+      errors.push({ row, message: `${def.label}: ${issues[0]!.message}` });
+      return;
+    }
     if (input.entity === "companies") {
       const p = companyRow(r);
-      if (p.success) valid.push({ row, data: p.data });
+      if (p.success) valid.push({ row, data: { ...p.data, custom } });
       else errors.push({ row, message: firstIssue(p.error) });
     } else {
       const p = contactRow(r, companies);
-      if (p.success) valid.push({ row, data: p.data });
+      if (p.success) valid.push({ row, data: { ...p.data, custom } });
       else errors.push({ row, message: p.message });
     }
   });

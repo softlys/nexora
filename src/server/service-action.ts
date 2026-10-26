@@ -12,6 +12,7 @@ import { emitSecurity, flushSecurityEvents, type ServiceContext } from "@/server
 import type { ActionResult } from "./action-result";
 import { dispatchAutomations } from "./automation/runtime";
 import { tr } from "@/lib/i18n";
+import { FieldErrors } from "@/server/services/custom-fields";
 
 /** Builds the service context from the session. Organization and actor never come from the client. */
 export async function getServiceContext(): Promise<ServiceContext> {
@@ -70,6 +71,7 @@ export async function serviceAction<S extends z.ZodType, T>(
     return { ok: true, data };
   } catch (error) {
     if (error instanceof PermissionError) return { ok: false, error: tr("You don't have permission to do that.") };
+    if (error instanceof FieldErrors) return { ok: false, error: tr(error.message), fieldErrors: Object.fromEntries(Object.entries(error.fields).map(([k, v]) => [k, v.map((m) => tr(m))])) };
     if (error instanceof DomainError) return { ok: false, error: tr(error.message) };
     if (error instanceof RateLimitError) return { ok: false, error: tr(error.message) };
     if (error instanceof OriginError) return { ok: false, error: tr("This request was blocked because it came from another site.") };

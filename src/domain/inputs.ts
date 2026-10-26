@@ -70,6 +70,8 @@ const phone = z.preprocess(emptyToNull, z.string().regex(/^\+?[0-9 ()-]{6,24}$/,
 // --- Companies -------------------------------------------------------------
 
 export const companyFields = {
+  /** Custom field values by key; validated against the field definitions by the services. */
+  custom: z.record(z.string().max(40), z.unknown()).optional(),
   name: required(160),
   website,
   industry: required(80),
@@ -88,6 +90,8 @@ export const companyUpdateInput = z.object({ id: z.uuid(), ...companyFields }).s
 // --- Contacts --------------------------------------------------------------
 
 export const contactFields = {
+  /** Custom field values by key; validated against the field definitions by the services. */
+  custom: z.record(z.string().max(40), z.unknown()).optional(),
   company_id: optionalId,
   first_name: required(80),
   last_name: required(80),
@@ -104,6 +108,8 @@ export const contactUpdateInput = z.object({ id: z.uuid(), ...contactFields }).s
 // --- Leads -----------------------------------------------------------------
 
 export const leadFields = {
+  /** Custom field values by key; validated against the field definitions by the services. */
+  custom: z.record(z.string().max(40), z.unknown()).optional(),
   title: required(160),
   company_name: required(160),
   contact_name: required(160),
@@ -154,6 +160,8 @@ export const convertLeadInput = z
 // --- Deals -----------------------------------------------------------------
 
 export const dealFields = {
+  /** Custom field values by key; validated against the field definitions by the services. */
+  custom: z.record(z.string().max(40), z.unknown()).optional(),
   name: required(160),
   company_id: z.uuid(),
   primary_contact_id: optionalId,

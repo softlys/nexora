@@ -9,6 +9,7 @@ import { buildTimeline } from "@/domain/timeline";
 import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { getOwned, visibleIds } from "./records";
 import type { Tx } from "@/server/db/types";
+import { withCustom } from "./custom-fields";
 
 export type CompanyFilters = {
   industry?: string;
@@ -104,7 +105,8 @@ export async function createCompany(ctx: ServiceContext, input: CompanyCreate): 
 async function insertCompany(tx: Tx, ctx: ServiceContext, input: CompanyCreate): Promise<Company> {
   const owner = (await resolveOwner(tx, ctx, "company", input.owner_id ?? ctx.actor.id, ctx.actor.id, null))!;
   const at = nowOf(ctx).toISOString();
-  const { owner_id: _o, ...fields } = input;
+  const { owner_id: _o, ...raw } = input;
+  const fields = await withCustom(tx, "company", raw);
   void _o;
   const company: Company = {
     id: newId(),
@@ -150,7 +152,8 @@ export async function updateCompany(ctx: ServiceContext, input: CompanyUpdate): 
     const current = await getOwned(tx, ctx, "companies", input.id);
     requireCan(ctx, "update", "company", current.owner_id, current.id);
     const owner = (await resolveOwner(tx, ctx, "company", input.owner_id, current.owner_id, current.id))!;
-    const { id, owner_id: _o, ...fields } = input;
+    const { id, owner_id: _o, ...raw } = input;
+    const fields = await withCustom(tx, "company", raw, current.custom);
     void _o;
     const patch = { ...fields, owner_id: owner };
     const changes = diffFields(current as unknown as Record<string, unknown>, patch);

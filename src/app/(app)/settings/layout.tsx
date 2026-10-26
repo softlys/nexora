@@ -6,7 +6,7 @@ import { tr } from "@/lib/i18n";
 
 export default async function SettingsLayout({ children }: LayoutProps<"/settings">) {
   const { user } = await requirePermission("view", "profile");
-  const sections = visibleSettingsSections(user.actor).map(({ href, label }) => ({ href, label }));
+  const sections = visibleSettingsSections(user.actor).map(({ href, label }) => ({ href, label: tr(label) }));
   return (
     <div className="space-y-6">
       <PageHeader title={tr("Settings")} description={tr("Your profile, organization, team and pipeline.")} />

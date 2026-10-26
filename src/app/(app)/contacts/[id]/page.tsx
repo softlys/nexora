@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { ContactFormButton } from "@/components/crm/contact-form";
-import { DetailHeader, Facts, MiniList, Panel } from "@/components/crm/detail";
+import { DetailHeader, Facts, MiniList, Panel, customFacts } from "@/components/crm/detail";
 import { MessengerLinks } from "@/components/crm/messenger-links";
 import { RecordActions } from "@/components/crm/record-actions";
 import { Timeline } from "@/components/crm/timeline";
@@ -50,7 +50,7 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
             listPath="/contacts"
           >
             {can(user.actor, "update", "contact", record) && !contact.archived_at && (
-              <ContactFormButton contact={contact} owners={people.assignable} companies={companies} />
+              <ContactFormButton fields={people.fields} contact={contact} owners={people.assignable} companies={companies} />
             )}
           </RecordActions>
         }
@@ -76,6 +76,7 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
                 [tr("Owner"), people.names[contact.owner_id]],
                 [tr("Last interaction"), last_interaction ? `${formatRelative(last_interaction)} (${formatDate(last_interaction)})` : tr("None logged")],
                 [tr("Tags"), contact.tags.length ? contact.tags.join(", ") : null],
+                ...customFacts(people.fields, contact.custom, tr("Yes"), tr("No")),
               ]}
             />
           </Panel>

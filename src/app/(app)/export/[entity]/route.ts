@@ -3,6 +3,8 @@ import { enumFilter, MAX_PAGE_SIZE, parseListQuery, stringFilter, type ListQuery
 import { can, type Resource } from "@/domain/permissions";
 import { countryName } from "@/lib/countries";
 import { toCsv } from "@/lib/csv";
+import { formatCustom, type CustomFieldEntity, type CustomValues } from "@/domain/custom-fields";
+import { customFieldDefs } from "@/server/services/custom-fields";
 import { MESSENGER_CHANNELS, MESSENGERS } from "@/lib/messengers";
 import { parseDealFilters } from "@/server/deal-filters";
 import { hitRateLimit } from "@/server/security/rate-limit";
@@ -19,7 +21,7 @@ import { listLeads } from "@/server/services/leads";
  * the signed-in user may see. Large exports raise data.bulk_read like any list read.
  */
 type Params = Record<string, string | undefined>;
-type Export = { resource: Resource; headers: string[]; rows: (ctx: ServiceContext, query: ListQuery, params: Params) => Promise<unknown[][]> };
+type Export = { resource: CustomFieldEntity & Resource; headers: string[]; rows: (ctx: ServiceContext, query: ListQuery, params: Params) => Promise<Array<{ cells: unknown[]; custom?: CustomValues }>> };
 
 const MAX_ROWS = 20_000;
 
@@ -47,7 +49,7 @@ const EXPORTS: Record<string, Export> = {
       const filters = { industry: stringFilter(p, "industry", 80), size: enumFilter(p, "size", COMPANY_SIZES), country: stringFilter(p, "country", 2), owner: stringFilter(p, "owner", 36), lifecycle: enumFilter(p, "lifecycle", LIFECYCLE_STAGES) };
       const owners = await ownerNames(ctx);
       const rows = await allPages(query, (q) => listCompanies(ctx, q, filters));
-      return rows.map((c) => [c.name, c.industry, c.size, countryName(c.country), c.country, c.city, c.address, c.phone, c.website, c.lifecycle_stage, owners.get(c.owner_id) ?? "", c.open_deals, c.contacts, c.created_at]);
+      return rows.map((c) => ({ custom: c.custom as CustomValues | undefined, cells: [c.name, c.industry, c.size, countryName(c.country), c.country, c.city, c.address, c.phone, c.website, c.lifecycle_stage, owners.get(c.owner_id) ?? "", c.open_deals, c.contacts, c.created_at] }));
     },
   },
   contacts: {
@@ -56,7 +58,7 @@ const EXPORTS: Record<string, Export> = {
     async rows(ctx, query, p) {
       const owners = await ownerNames(ctx);
       const rows = await allPages(query, (q) => listContacts(ctx, q, { owner: stringFilter(p, "owner", 36), company: stringFilter(p, "company", 36) }));
-      return rows.map((c) => [c.first_name, c.last_name, c.email, c.phone, c.job_title, c.company_name, owners.get(c.owner_id) ?? "", c.tags, ...MESSENGER_CHANNELS.map((m) => c.messengers?.[m] ?? ""), c.created_at]);
+      return rows.map((c) => ({ custom: c.custom as CustomValues | undefined, cells: [c.first_name, c.last_name, c.email, c.phone, c.job_title, c.company_name, owners.get(c.owner_id) ?? "", c.tags, ...MESSENGER_CHANNELS.map((m) => c.messengers?.[m] ?? ""), c.created_at] }));
     },
   },
   leads: {
@@ -65,7 +67,7 @@ const EXPORTS: Record<string, Export> = {
     async rows(ctx, query, p) {
       const filters = { status: enumFilter(p, "status", LEAD_STATUSES), source: enumFilter(p, "source", LEAD_SOURCES), qualification: enumFilter(p, "qualification", LEAD_QUALIFICATIONS), owner: stringFilter(p, "owner", 36) };
       const rows = await allPages(query, (q) => listLeads(ctx, q, filters));
-      return rows.map((l) => [l.title, l.company_name, l.contact_name, l.email, l.phone, l.country ? countryName(l.country) : "", l.source, l.status, l.qualification, l.estimated_value, l.currency, l.owner_name ?? "", l.created_at]);
+      return rows.map((l) => ({ custom: l.custom as CustomValues | undefined, cells: [l.title, l.company_name, l.contact_name, l.email, l.phone, l.country ? countryName(l.country) : "", l.source, l.status, l.qualification, l.estimated_value, l.currency, l.owner_name ?? "", l.created_at] }));
     },
   },
   deals: {
@@ -74,7 +76,7 @@ const EXPORTS: Record<string, Export> = {
     async rows(ctx, query, p) {
       const filters = parseDealFilters(p);
       const rows = await allPages(query, async (q) => (await listDeals(ctx, q, filters)) as unknown as Page<Record<string, unknown>>);
-      return rows.map((d) => [d.name, d.company_name, d.stage_name, d.amount, d.currency, d.probability, d.expected_close_date, d.closed_at, d.owner_name, d.created_at]);
+      return rows.map((d) => ({ custom: d.custom as CustomValues | undefined, cells: [d.name, d.company_name, d.stage_name, d.amount, d.currency, d.probability, d.expected_close_date, d.closed_at, d.owner_name, d.created_at] }));
     },
   },
 };
@@ -90,8 +92,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ enti
     if (!limit.allowed) return new Response("Too many requests. Please wait a minute.", { status: 429, headers: { "Retry-After": String(limit.rule.windowSeconds) } });
     const p = Object.fromEntries(new URL(request.url).searchParams) as Params;
     const rows = await spec.rows(ctx, parseListQuery(p), p);
+    // Custom fields (Settings → Fields) follow the standard columns, headed by their labels.
+    const defs = await ctx.db.read(ctx.actor.organization_id, (tx) => customFieldDefs(tx, spec.resource));
+    const headers = [...spec.headers, ...defs.map((d) => d.label)];
+    const cells = rows.map((r) => [...r.cells, ...defs.map((d) => formatCustom(d, r.custom?.[d.key], "yes", "no"))]);
     const date = new Date().toISOString().slice(0, 10);
-    return new Response(toCsv(spec.headers, rows), {
+    return new Response(toCsv(headers, cells), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="nexora-${entity}-${date}.csv"`,

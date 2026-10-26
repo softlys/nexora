@@ -15,6 +15,8 @@ import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { applyServerErrors } from "@/lib/forms";
 import { createLeadAction, updateLeadAction } from "@/server/actions/crm";
 import { tr } from "@/lib/i18n";
+import { CustomFieldsSection, customFormValues, type CustomFormValues } from "./custom-fields";
+import type { CustomFieldDef } from "@/domain/custom-fields";
 
 type Values = {
   title: string;
@@ -30,6 +32,7 @@ type Values = {
   next_action_at: string;
   estimated_value: string;
   owner_id?: string | null;
+  custom?: CustomFormValues;
 };
 
 const toDateInput = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
@@ -37,10 +40,11 @@ const fromDateInput = (value: string) => (value ? new Date(`${value}T09:00:00Z`)
 
 const AUTO = "__auto";
 
-export function LeadFormButton({ lead, owners, variant = lead ? "outline" : "default", autoOpen = false }: { lead?: Lead; owners: Array<{ value: string; label: string }>; variant?: "default" | "outline"; autoOpen?: boolean }) {
+export function LeadFormButton({ lead, owners, fields, variant = lead ? "outline" : "default", autoOpen = false }: { lead?: Lead; owners: Array<{ value: string; label: string }>; fields?: CustomFieldDef[]; variant?: "default" | "outline"; autoOpen?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useAutoOpen(autoOpen);
-  const defaults: Values = lead
+  const defaults: Values = {
+    ...(lead
     ? {
         title: lead.title,
         company_name: lead.company_name,
@@ -71,7 +75,9 @@ export function LeadFormButton({ lead, owners, variant = lead ? "outline" : "def
         estimated_value: "0",
         // Admins and managers can leave a new lead unassigned so the New lead automation routes it.
         ...(owners.length > 0 && { owner_id: AUTO }),
-      };
+      }),
+    ...(fields?.length ? { custom: customFormValues(fields, lead?.custom) } : {}),
+  };
   const ownerOptions = lead ? owners : [{ value: AUTO, label: tr("Unassigned (route automatically)") }, ...owners];
   const toPayloadOwner = (v: string | null | undefined) => (v === AUTO ? null : v);
 
@@ -126,6 +132,7 @@ export function LeadFormButton({ lead, owners, variant = lead ? "outline" : "def
           <TextField control={control} name="next_action" label={tr("Next action")} />
           <TextField control={control} name="next_action_at" label={tr("Next action date")} type="date" />
         </div>
+        <CustomFieldsSection control={control} defs={fields} />
       </RecordSheet>
     </>
   );

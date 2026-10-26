@@ -40,7 +40,7 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
       <PageHeader title={tr("Leads")} description={tr("Interest that is not a deal yet. Qualify it, then convert it into a deal.")} actions={
           <>
             <ExportButton entity="leads" query={exportQuery} />
-            {perms.canCreate && <LeadFormButton owners={people.assignable} autoOpen={first(params.new) === "1"} />}
+            {perms.canCreate && <LeadFormButton fields={people.fields} owners={people.assignable} autoOpen={first(params.new) === "1"} />}
           </>
         }
       />
@@ -88,7 +88,7 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
             icon={Target}
             title={filtered ? tr("No leads match these filters") : tr("No leads yet")}
             description={filtered ? tr("Try a different search or clear the filters.") : tr("Add a lead when someone shows interest.")}
-            action={!filtered && perms.canCreate ? <LeadFormButton owners={people.assignable} /> : undefined}
+            action={!filtered && perms.canCreate ? <LeadFormButton fields={people.fields} owners={people.assignable} /> : undefined}
             className="m-4 border-0 bg-transparent"
           />
         }

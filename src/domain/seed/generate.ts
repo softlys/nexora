@@ -803,6 +803,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     companies,
     contacts,
     leads,
+    custom_fields: [],
     pipelines,
     pipeline_stages,
     deals,

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { CompanyFormButton } from "@/components/crm/company-form";
-import { DetailHeader, ExternalLink, Facts, MiniList, Panel } from "@/components/crm/detail";
+import { DetailHeader, ExternalLink, Facts, MiniList, Panel, customFacts } from "@/components/crm/detail";
 import { RecordActions } from "@/components/crm/record-actions";
 import { RecordTabs } from "@/components/crm/record-tabs";
 import { Timeline } from "@/components/crm/timeline";
@@ -57,7 +57,7 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
             canDelete={can(user.actor, "delete", "company", record)}
             listPath="/companies"
           >
-            {canEdit && !company.archived_at && <CompanyFormButton company={company} owners={people.assignable} />}
+            {canEdit && !company.archived_at && <CompanyFormButton fields={people.fields} company={company} owners={people.assignable} />}
           </RecordActions>
         }
       />
@@ -81,6 +81,7 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
                       [tr("Owner"), people.names[company.owner_id]],
                       [tr("Lifecycle stage"), <StatusBadge key="l" status={company.lifecycle_stage} />],
                       [tr("Created"), formatDate(company.created_at)],
+                      ...customFacts(people.fields, company.custom, tr("Yes"), tr("No")),
                     ]}
                   />
                 </Panel>

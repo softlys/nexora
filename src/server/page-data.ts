@@ -8,6 +8,8 @@ import { activeProfiles, assignableOwners } from "@/server/services/records";
 import { companyOptions } from "@/server/services/companies";
 import { contactOptions } from "@/server/services/contacts";
 import { pipelineOptions } from "@/server/services/deals";
+import { customFieldDefs } from "@/server/services/custom-fields";
+import { CUSTOM_FIELD_ENTITIES, type CustomFieldEntity } from "@/domain/custom-fields";
 
 /**
  * Runs page data loading with a service context. A record the user may not see renders
@@ -26,6 +28,8 @@ export async function loadPage<T>(fn: (ctx: ServiceContext) => Promise<T>): Prom
   }
 }
 
+const isCustomFieldEntity = (r: string): r is CustomFieldEntity => (CUSTOM_FIELD_ENTITIES as readonly string[]).includes(r);
+
 export type PersonOption = { value: string; label: string };
 
 /** People for owner pickers and name lookups. `assignable` is empty when the user cannot reassign. */
@@ -37,6 +41,8 @@ export async function peopleFor(ctx: ServiceContext, resource: Resource) {
       names: Object.fromEntries((await tx.find("profiles")).map((p) => [p.id, p.full_name])) as Record<string, string>,
       all: all.map((p) => ({ value: p.id, label: p.full_name })),
       assignable: assignable.map((p) => ({ value: p.id, label: p.full_name })),
+      /** Custom field definitions for this kind of record (empty for other resources). */
+      fields: isCustomFieldEntity(resource) ? await customFieldDefs(tx, resource) : [],
     };
   });
 }
@@ -65,6 +71,7 @@ export async function dealFormOptions(ctx: ServiceContext) {
     companies: companies.map((c) => ({ value: c.id, label: c.name })),
     contacts: contacts.map((c) => ({ value: c.id, label: c.name, company_id: c.company_id })),
     currency: org?.currency ?? "USD",
+    customFields: people.fields,
   };
 }
 

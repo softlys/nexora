@@ -15,6 +15,8 @@ import { applyServerErrors } from "@/lib/forms";
 import { MESSENGER_CHANNELS, MESSENGERS, type MessengerChannel } from "@/lib/messengers";
 import { createContactAction, updateContactAction } from "@/server/actions/crm";
 import { tr } from "@/lib/i18n";
+import { CustomFieldsSection, customFormValues, type CustomFormValues } from "./custom-fields";
+import type { CustomFieldDef } from "@/domain/custom-fields";
 
 type Values = {
   company_id: string | null;
@@ -26,6 +28,7 @@ type Values = {
   tags: string;
   messengers: Record<MessengerChannel, string>;
   owner_id?: string;
+  custom?: CustomFormValues;
 };
 
 const messengerDefaults = (m?: Contact["messengers"]) =>
@@ -43,7 +46,10 @@ export function ContactFormButton({
   variant = contact ? "outline" : "default",
   label,
   autoOpen = false,
+  fields,
 }: {
+  /** Custom field definitions for contacts (Settings → Fields). */
+  fields?: CustomFieldDef[];
   autoOpen?: boolean;
   contact?: Contact;
   owners: Array<{ value: string; label: string }>;
@@ -54,7 +60,8 @@ export function ContactFormButton({
 }) {
   const router = useRouter();
   const [open, setOpen] = useAutoOpen(autoOpen);
-  const defaults: Values = contact
+  const defaults: Values = {
+    ...(contact
     ? {
         company_id: contact.company_id,
         first_name: contact.first_name,
@@ -66,7 +73,9 @@ export function ContactFormButton({
         messengers: messengerDefaults(contact.messengers),
         ...(owners.length > 0 && { owner_id: contact.owner_id }),
       }
-    : { company_id: defaultCompanyId ?? null, first_name: "", last_name: "", email: "", phone: "", job_title: "", tags: "", messengers: messengerDefaults() };
+    : { company_id: defaultCompanyId ?? null, first_name: "", last_name: "", email: "", phone: "", job_title: "", tags: "", messengers: messengerDefaults() }),
+    ...(fields?.length ? { custom: customFormValues(fields, contact?.custom) } : {}),
+  };
   const { control, handleSubmit, formState, setError, reset } = useForm<Values>({
     resolver: zodResolver(formSchema) as unknown as Resolver<Values>,
     defaultValues: defaults,
@@ -124,6 +133,7 @@ export function ContactFormButton({
             ))}
           </div>
         </fieldset>
+        <CustomFieldsSection control={control} defs={fields} />
         <TextField control={control} name="tags" label={tr("Tags")} hint={tr("Comma-separated, up to 10. For example: decision-maker, technical")} />
         {owners.length > 0 && <SelectField control={control} name="owner_id" label={tr("Owner")} options={owners} />}
       </RecordSheet>

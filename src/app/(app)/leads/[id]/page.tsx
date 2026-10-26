@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { ConvertLeadDialog } from "@/components/crm/convert-lead-dialog";
-import { DetailHeader, Facts, Panel } from "@/components/crm/detail";
+import { DetailHeader, Facts, Panel, customFacts } from "@/components/crm/detail";
 import { LeadFormButton } from "@/components/crm/lead-form";
 import { RecordActions } from "@/components/crm/record-actions";
 import { Timeline } from "@/components/crm/timeline";
@@ -58,7 +58,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             canDelete={can(user.actor, "delete", "lead", record)}
             listPath="/leads"
           >
-            {canEdit && !converted && <LeadFormButton lead={lead} owners={people.assignable} />}
+            {canEdit && !converted && <LeadFormButton fields={people.fields} lead={lead} owners={people.assignable} />}
             {canEdit && !converted && lead.status !== "unqualified" && can(user.actor, "create", "deal") && (
               <ConvertLeadDialog lead={lead} companies={companies} contacts={contacts} />
             )}
@@ -93,6 +93,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
               [tr("Next action"), lead.next_action ? `${lead.next_action}${lead.next_action_at ? ` (${formatDate(lead.next_action_at)})` : ""}` : null],
               [tr("Owner"), lead.owner_id ? people.names[lead.owner_id] : tr("Unassigned")],
               [tr("Created"), formatDate(lead.created_at)],
+              ...customFacts(people.fields, lead.custom, tr("Yes"), tr("No")),
             ]}
           />
         </Panel>

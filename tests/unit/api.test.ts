@@ -72,7 +72,7 @@ describe("API key authentication and scopes", () => {
     expect(res.status).toBe(200);
     expect(res.json.data).toHaveLength(5);
     expect(res.json.meta).toMatchObject({ page: 2, per_page: 5, total: state.data().companies.length });
-    expect(Object.keys(res.json.data[0]).sort()).toEqual(["city", "contacts", "country", "created_at", "id", "industry", "lifecycle_stage", "name", "open_deals", "owner_id", "website"]);
+    expect(Object.keys(res.json.data[0]).sort()).toEqual(["city", "contacts", "country", "created_at", "custom", "id", "industry", "lifecycle_stage", "name", "open_deals", "owner_id", "website"]);
     expect(state.data().api_keys[0]!.last_used_at).not.toBeNull();
   });
 

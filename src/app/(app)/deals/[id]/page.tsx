@@ -3,7 +3,7 @@ import { ChangeHistory } from "@/components/crm/change-history";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { DealAssistant, DealMeetingButton } from "@/components/crm/deal-assistant";
 import { DealFormButton } from "@/components/crm/deal-form";
-import { DetailHeader, Facts, MiniList, Panel } from "@/components/crm/detail";
+import { DetailHeader, Facts, MiniList, Panel, customFacts } from "@/components/crm/detail";
 import { RecordActions } from "@/components/crm/record-actions";
 import { CreateOrderButton, StageSelect } from "@/components/crm/stage-controls";
 import { Timeline } from "@/components/crm/timeline";
@@ -119,6 +119,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
                 ...(deal.lost_reason ? ([[tr("Lost reason"), deal.lost_reason]] as Array<[string, string]>) : []),
                 ...(deal.lead_id ? ([[tr("Lead"), <Link key="l" href={`/leads/${deal.lead_id}`} className="text-brand hover:underline">{tr("Converted lead")}</Link>]] as Array<[string, React.ReactNode]>) : []),
                 [tr("Created"), formatDate(deal.created_at)],
+                ...customFacts(options.customFields, deal.custom, tr("Yes"), tr("No")),
               ]}
             />
             {deal.notes && <p className="mt-4 border-t border-border pt-3 text-sm whitespace-pre-wrap">{deal.notes}</p>}

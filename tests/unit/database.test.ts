@@ -160,6 +160,24 @@ describe("row-level security matches the permission matrix", () => {
     });
   });
 
+  it("lets members read custom fields and only admins define them; records carry their values", async () => {
+    const org = seed.organizations[0]!.id;
+    const insert = "insert into public.custom_fields (organization_id, entity, key, label, type) values ($1, 'company', 'inn', 'ИНН', 'text')";
+    await expect(asUser(db, DEMO_USER_IDS.manager, (tx) => tx.query(insert, [org]))).rejects.toThrow(/row-level security/);
+    await asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query(insert, [org]));
+    // asUser rolls back, so the field is added once more for the read check.
+    await db.query(insert, [org]);
+    expect(await count(DEMO_USER_IDS.repDaniel, "public.custom_fields")).toBe(1);
+    const mine = seed.companies.find((c) => c.owner_id === DEMO_USER_IDS.repDaniel)!;
+    const custom = await asUser(db, DEMO_USER_IDS.repDaniel, async (tx) => {
+      await tx.query(`update public.companies set custom = '{"inn": "7701234567"}' where id = $1`, [mine.id]);
+      const saved = (await tx.query<{ custom: unknown }>("select custom from public.companies where id = $1", [mine.id])).rows[0]!.custom;
+      await expect(tx.query("update public.companies set custom = '[]' where id = $1", [mine.id])).rejects.toThrow(/check constraint/);
+      return saved;
+    });
+    expect(custom).toEqual({ inn: "7701234567" });
+  });
+
   it("does not expose API key hashes to the client role", async () => {
     await expect(asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select key_hash from public.api_keys"))).rejects.toThrow(/permission denied/);
   });

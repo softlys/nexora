@@ -6,6 +6,7 @@
 import { messengersSchema } from "@/lib/messengers";
 import { isCountryCode } from "@/lib/countries";
 import { z } from "zod";
+import { CUSTOM_FIELD_ENTITIES, CUSTOM_FIELD_TYPES, customValuesSchema } from "./custom-fields";
 import { securityEventSchema, type SecurityEvent } from "./security/events";
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,8 @@ export type Profile = z.infer<typeof profileSchema>;
 export const companySchema = z.object({
   ...base,
   ...archivable,
+  /** Custom field values (see src/domain/custom-fields.ts). */
+  custom: customValuesSchema.optional(),
   name: requiredText(160),
   website: z.url().max(255).nullable(),
   industry: requiredText(80),
@@ -128,6 +131,8 @@ export type Company = z.infer<typeof companySchema>;
 export const contactSchema = z.object({
   ...base,
   ...archivable,
+  /** Custom field values (see src/domain/custom-fields.ts). */
+  custom: customValuesSchema.optional(),
   company_id: id.nullable(),
   first_name: requiredText(80),
   last_name: requiredText(80),
@@ -147,6 +152,8 @@ export type Contact = z.infer<typeof contactSchema>;
 export const leadSchema = z.object({
   ...base,
   ...archivable,
+  /** Custom field values (see src/domain/custom-fields.ts). */
+  custom: customValuesSchema.optional(),
   title: requiredText(160),
   company_name: requiredText(160),
   contact_name: requiredText(160),
@@ -167,6 +174,20 @@ export const leadSchema = z.object({
   converted_at: timestamp.nullable(),
 });
 export type Lead = z.infer<typeof leadSchema>;
+
+/** An admin-defined field on companies, contacts, leads or deals. */
+export const customFieldSchema = z.object({
+  ...base,
+  ...archivable,
+  entity: z.enum(CUSTOM_FIELD_ENTITIES),
+  key: z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),
+  label: requiredText(60),
+  type: z.enum(CUSTOM_FIELD_TYPES),
+  options: z.array(z.string().trim().min(1).max(60)).max(50),
+  required: z.boolean(),
+  position: z.number().int().min(0).max(200),
+});
+export type CustomField = z.infer<typeof customFieldSchema>;
 
 /** A sales pipeline (воронка): wholesale, retail, tenders… Each has its own stages, one won and one lost. */
 export const pipelineSchema = z.object({
@@ -194,6 +215,8 @@ export type PipelineStage = z.infer<typeof pipelineStageSchema>;
 export const dealSchema = z.object({
   ...base,
   ...archivable,
+  /** Custom field values (see src/domain/custom-fields.ts). */
+  custom: customValuesSchema.optional(),
   name: requiredText(160),
   company_id: id,
   primary_contact_id: id.nullable(),
@@ -523,6 +546,7 @@ export const TABLES = [
   "companies",
   "contacts",
   "leads",
+  "custom_fields",
   "pipelines",
   "pipeline_stages",
   "deals",
@@ -553,6 +577,7 @@ export type Dataset = {
   companies: Company[];
   contacts: Contact[];
   leads: Lead[];
+  custom_fields: CustomField[];
   pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
@@ -582,6 +607,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   companies: companySchema,
   contacts: contactSchema,
   leads: leadSchema,
+  custom_fields: customFieldSchema,
   pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,

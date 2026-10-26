@@ -23,7 +23,7 @@ import { ApiError, apiRoute } from "./handler";
 const toListQuery = (q: z.output<typeof listQuery>): ListQuery => ({ q: q.q, page: q.page, size: q.per_page, sort: undefined, dir: "asc", archived: "0" });
 const pageMeta = (p: { total: number; page: number; size: number; pageCount: number }) => ({ page: p.page, per_page: p.size, total: p.total, page_count: p.pageCount });
 
-const leadView = (l: Lead) => ({ id: l.id, title: l.title, company_name: l.company_name, contact_name: l.contact_name, email: l.email, country: l.country, source: l.source, status: l.status, estimated_value: l.estimated_value, currency: l.currency, owner_id: l.owner_id, created_at: l.created_at });
+const leadView = (l: Lead) => ({ id: l.id, title: l.title, company_name: l.company_name, contact_name: l.contact_name, email: l.email, country: l.country, source: l.source, status: l.status, estimated_value: l.estimated_value, currency: l.currency, owner_id: l.owner_id, created_at: l.created_at, custom: l.custom ?? {} });
 
 export const health = apiRoute(endpoint("GET", "/health"), async () => ({ body: { data: { status: "ok", version: "1", time: new Date().toISOString() } } }));
 
@@ -54,7 +54,7 @@ export const listCompaniesRoute = apiRoute(endpoint("GET", "/companies"), async 
   const rows = page.rows as Array<Company & { open_deals: number; contacts: number }>;
   return {
     body: {
-      data: rows.map((c) => ({ id: c.id, name: c.name, industry: c.industry, country: c.country, city: c.city, website: c.website, lifecycle_stage: c.lifecycle_stage, owner_id: c.owner_id, open_deals: c.open_deals, contacts: c.contacts, created_at: c.created_at })),
+      data: rows.map((c) => ({ id: c.id, name: c.name, industry: c.industry, country: c.country, city: c.city, website: c.website, lifecycle_stage: c.lifecycle_stage, owner_id: c.owner_id, open_deals: c.open_deals, contacts: c.contacts, created_at: c.created_at, custom: c.custom ?? {} })),
       meta: pageMeta(page),
     },
   };
@@ -65,7 +65,7 @@ export const listContactsRoute = apiRoute(endpoint("GET", "/contacts"), async ({
   const rows = page.rows as Contact[];
   return {
     body: {
-      data: rows.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, email: c.email, phone: c.phone, job_title: c.job_title, messengers: c.messengers ?? {}, company_id: c.company_id, owner_id: c.owner_id, created_at: c.created_at })),
+      data: rows.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, email: c.email, phone: c.phone, job_title: c.job_title, messengers: c.messengers ?? {}, company_id: c.company_id, owner_id: c.owner_id, created_at: c.created_at, custom: c.custom ?? {} })),
       meta: pageMeta(page),
     },
   };
@@ -77,7 +77,7 @@ export const listDealsRoute = apiRoute(endpoint("GET", "/deals"), async ({ ctx, 
   const rows = page.rows as Deal[];
   return {
     body: {
-      data: rows.map((d) => ({ id: d.id, name: d.name, company_id: d.company_id, amount: d.amount, currency: d.currency, stage_id: d.stage_id, stage: stageName.get(d.stage_id) ?? null, probability: d.probability, expected_close_date: d.expected_close_date, owner_id: d.owner_id, closed_at: d.closed_at, created_at: d.created_at })),
+      data: rows.map((d) => ({ id: d.id, name: d.name, company_id: d.company_id, amount: d.amount, currency: d.currency, stage_id: d.stage_id, stage: stageName.get(d.stage_id) ?? null, probability: d.probability, expected_close_date: d.expected_close_date, owner_id: d.owner_id, closed_at: d.closed_at, created_at: d.created_at, custom: d.custom ?? {} })),
       meta: pageMeta(page),
     },
   };

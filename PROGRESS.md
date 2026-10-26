@@ -28,6 +28,21 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Custom fields (2026-10-26)
+
+- **Settings → Fields.** Admins add their own fields to companies, contacts, leads and deals, for example ИНН, customer type or a contract date.
+  - Types: text, number, date, list of values, yes/no, link. A field can be required.
+  - Label, values and the required flag can be changed later; the type cannot.
+  - Removing a field archives it: it leaves forms and pages, and filled-in values stay on the records.
+- **Records.**
+  - The four record forms show the fields; record pages list the values under Details.
+  - Values are validated on the server against the definitions (numbers, dates, list values, http(s) links, required); errors appear next to the field.
+  - An update without `custom` keeps the stored values.
+- **CSV and API.** Export adds a column per field, headed by its label. Company and contact import reads these columns by label or key (Cyrillic headers work) and reports bad values by row. API v1 lists return `custom`.
+- **Data.** Table `custom_fields` (members read, admins manage) and `custom jsonb` on companies, contacts, leads and deals (migration `20261026000002_custom_fields.sql`). Demo stores are upgraded in place.
+- **Also fixed.** The settings menu and the breadcrumbs were still in English in the Russian interface.
+- **Tests.** Value normalization and keys, admin-only definitions, validation on create and update, archived values kept, deals, CSV import (unit); RLS and the jsonb check on PGlite; e2e: add a field and fill it on a company.
+
 ## Several pipelines (2026-10-26)
 
 - **Pipelines (воронки).** Each organization can have several, for example wholesale, retail or tenders.

@@ -68,4 +68,5 @@ export const UNIQUE_KEYS: Partial<Record<TableName, string[][]>> = {
   api_keys: [["key_hash"]],
   api_idempotency_keys: [["api_key_id", "key"]],
   integration_records: [["source", "external_id"]],
+  custom_fields: [["entity", "key"]],
 };

@@ -11,7 +11,7 @@ const EXTRA_LABELS: Record<string, string> = { "/help": tr("Help") };
 
 function labelFor(href: string): string | null {
   return (
-    [...NAV_ITEMS, ...SETTINGS_SECTIONS].find((i) => i.href === href)?.label ?? EXTRA_LABELS[href] ?? null
+    tr([...NAV_ITEMS, ...SETTINGS_SECTIONS].find((i) => i.href === href)?.label ?? "") || (EXTRA_LABELS[href] ?? null)
   );
 }
 

@@ -49,6 +49,10 @@ export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
     }
     changed = true;
   }
+  if (!data.custom_fields) {
+    data.custom_fields = [];
+    changed = true;
+  }
   // Tables added after a store was written start empty.
   if (!data.integration_records) {
     data.integration_records = [];

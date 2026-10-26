@@ -60,7 +60,9 @@ erDiagram
 | `companies` | Customer and prospect accounts. | `size`, `lifecycle_stage` enumerations |
 | `contacts` | People at companies. `tags` text array. | Company must be in the same organization |
 | `leads` | Interest that is not a deal yet. | `converted_deal_id` unique: a lead converts once |
-| `pipeline_stages` | Ordered stages with default probability and won/lost flags. | Position unique per org (deferrable); exactly one won and one lost stage, enforced by the stage functions |
+| `pipelines` | Sales pipelines (воронки), each with its own stages; the first by position is the default. | Name unique per org; the last pipeline and pipelines with deals cannot be deleted |
+| `pipeline_stages` | Ordered stages of a pipeline with default probability and won/lost flags. | Position and name unique per pipeline; exactly one won and one lost stage per pipeline, enforced by the stage functions |
+| `custom_fields` | Admin-defined fields (text, number, date, list, yes/no, link) on companies, contacts, leads and deals. Values live in each record's `custom` jsonb object, keyed by the field key and validated by the services. | `(organization_id, entity, key)` unique; members read, admins manage; archived fields keep their values on records |
 | `deals` | Opportunities. `probability` defaults from the stage. | `lead_id` unique |
 | `deal_stage_history` | Every stage move with who and when. | |
 | `products` | Catalog. | `sku` unique per organization |
@@ -89,6 +91,8 @@ erDiagram
 | `20261019000003_admin_functions.sql` | Role changes and pipeline stage editing with invariants |
 | `20261020000001_crm_core.sql` | `next_order_number()` (numbers orders across the organization even though RLS hides other users' orders), list/search indexes |
 | `20261022000001_integrations_api.sql` | Encrypted integration secrets (`secret_ciphertext`, `secret_preview`, one integration per provider), delivery `reason` and retry index, `api_idempotency_keys` (server-only, 24 h), API key prefix index |
+| `20261026000001_pipelines.sql` | `pipelines`, `pipeline_stages.pipeline_id`, per-pipeline stage functions, `create_pipeline()` / `rename_pipeline()` / `delete_pipeline()` |
+| `20261026000002_custom_fields.sql` | `custom_fields` with RLS, `custom jsonb` (object) on companies, contacts, leads and deals |
 | `20261021000001_security_events_and_automation.sql` | `security_events` (hash chain, unique `(organization_id, sequence)`, insert-only), `automation_executions.resume_at` / `resume_step_id` for delayed runs, `set_profile_active()` for disabling users |
 
 ## Derived values

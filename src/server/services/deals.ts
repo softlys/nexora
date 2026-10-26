@@ -11,6 +11,7 @@ import { emit, emitSecurity, findVisible, trackRead, newId, nowOf, requireCan, r
 import { assertLinksVisible, byId, getOwned } from "./records";
 import { PermissionError } from "@/domain/permissions";
 import { companyForName } from "./companies";
+import { withCustom } from "./custom-fields";
 
 export async function sortedPipelines(tx: Tx): Promise<Pipeline[]> {
   return (await tx.find("pipelines", { archived_at: null })).sort((a, b) => a.position - b.position);
@@ -229,7 +230,9 @@ export async function createDeal(ctx: ServiceContext, input: z.output<typeof dea
     if (!stage || stage.is_won || stage.is_lost) throw new DomainError("New deals start in an open stage.");
     const owner = (await resolveOwner(t, ctx, "deal", input.owner_id ?? ctx.actor.id, ctx.actor.id, null))!;
     const at = nowOf(ctx).toISOString();
+    const custom = (await withCustom(t, "deal", { custom: input.custom })).custom;
     const deal: Deal = {
+      ...(custom && { custom }),
       id: newId(),
       organization_id: ctx.actor.organization_id,
       name: input.name,
@@ -281,7 +284,8 @@ export async function updateDeal(ctx: ServiceContext, input: z.output<typeof dea
       await assertLinksVisible(tx, ctx, { company_id: companyId, contact_id: input.primary_contact_id });
     }
     const owner = (await resolveOwner(tx, ctx, "deal", input.owner_id, current.owner_id, current.id))!;
-    const { id, owner_id: _o, probability, new_company: _n, ...fields } = input;
+    const { id, owner_id: _o, probability, new_company: _n, ...raw } = input;
+    const fields = await withCustom(tx, "deal", raw, current.custom);
     void _o;
     void _n;
     const patch = { ...fields, company_id: companyId, owner_id: owner, ...(probability !== undefined && { probability }) };

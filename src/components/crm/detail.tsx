@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { RecordLabel } from "@/components/shell/record-label";
 import { cn } from "@/lib/utils";
 import { trNode } from "@/lib/i18n";
+import { formatCustom, type CustomFieldDef, type CustomValues } from "@/domain/custom-fields";
 
 export function DetailHeader({
   back,
@@ -80,4 +81,12 @@ export function ExternalLink({ href, children }: { href: string | null; children
 export function MiniList<T>({ rows, empty, render }: { rows: T[]; empty: string; render: (row: T) => ReactNode }) {
   if (rows.length === 0) return <p className="py-4 text-center text-sm text-text-muted">{trNode(empty)}</p>;
   return <ul className="divide-y divide-border">{rows.map((r, i) => <li key={i} className="py-2.5">{render(r)}</li>)}</ul>;
+}
+
+/** Custom field values as Facts rows, in the order the fields are defined. */
+export function customFacts(defs: CustomFieldDef[] | undefined, values: CustomValues | undefined, yes: string, no: string): Array<[string, ReactNode]> {
+  return (defs ?? []).map((d) => {
+    const text = formatCustom(d, values?.[d.key], yes, no);
+    return [d.label, !text ? null : d.type === "url" ? <ExternalLink key={d.key} href={text} /> : text];
+  });
 }
