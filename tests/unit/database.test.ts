@@ -178,6 +178,16 @@ describe("row-level security matches the permission matrix", () => {
     expect(custom).toEqual({ inn: "7701234567" });
   });
 
+  it("lets members read e-mail templates and only admins change them", async () => {
+    const seeded = seed.email_templates.length;
+    expect(await count(DEMO_USER_IDS.repDaniel, "public.email_templates")).toBe(seeded);
+    const update = "update public.email_templates set subject = 'Changed' where id = $1";
+    const changed = await asUser(db, DEMO_USER_IDS.repDaniel, async (tx) => (await tx.query(update, [seed.email_templates[0]!.id])).affectedRows);
+    expect(changed).toBe(0);
+    const byAdmin = await asUser(db, DEMO_USER_IDS.admin, async (tx) => (await tx.query(update, [seed.email_templates[0]!.id])).affectedRows);
+    expect(byAdmin).toBe(1);
+  });
+
   it("does not expose API key hashes to the client role", async () => {
     await expect(asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select key_hash from public.api_keys"))).rejects.toThrow(/permission denied/);
   });

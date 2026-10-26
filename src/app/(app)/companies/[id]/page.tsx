@@ -13,6 +13,9 @@ import { loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { requirePermission } from "@/server/guards";
 import { getCompany } from "@/server/services/companies";
 import { tr } from "@/lib/i18n";
+import { EmailComposerButton } from "@/components/crm/email-composer";
+import { emailComposer } from "@/server/services/email";
+import { emailConfigured } from "@/server/services/integrations";
 
 export async function generateMetadata({ params }: PageProps<"/companies/[id]">) {
   const { id } = await params;
@@ -22,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/companies/[id]">)
 export default async function CompanyPage({ params }: PageProps<"/companies/[id]">) {
   const { user } = await requirePermission("view", "company");
   const { id } = await params;
-  const { data, people } = await loadPage(async (ctx) => ({ data: await getCompany(ctx, id), people: await peopleFor(ctx, "company") }));
+  const { data, people, composer } = await loadPage(async (ctx) => ({ data: await getCompany(ctx, id), people: await peopleFor(ctx, "company"), composer: await emailComposer(ctx, { company_id: id }, emailConfigured()) }));
   const { company, contacts, deals, orders, tasks, timeline, stages } = data;
   // Open tasks first, soonest due first (no date last); then done and cancelled, newest first.
   const nowIso = new Date().toISOString();
@@ -57,6 +60,7 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
             canDelete={can(user.actor, "delete", "company", record)}
             listPath="/companies"
           >
+            {!company.archived_at && composer.recipients.length > 0 && <EmailComposerButton composer={composer} />}
             {canEdit && !company.archived_at && <CompanyFormButton fields={people.fields} company={company} owners={people.assignable} />}
           </RecordActions>
         }

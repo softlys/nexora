@@ -28,6 +28,17 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## E-mail from record pages (2026-10-26)
+
+- **Write e-mail** on contacts, deals, leads and companies (companies: when a contact has an address).
+  - Recipient from the record's contacts (free input allowed), a template, subject and text; the text stays editable.
+  - Template variables: `contact.*`, `company.*`, `deal.name`, `deal.amount`, `lead.title`, `me.name`, `me.title`, `me.email` (`src/domain/email-templates.ts`); unknown variables are rejected when a template is saved.
+  - With the e-mail provider configured (Resend, `RESEND_API_KEY` + `NEXORA_EMAIL_FROM`), NEXORA sends it with the user's address as reply-to and logs an `email` activity on the deal, contact, company and lead timelines. Access to the linked records is checked before sending.
+  - Without a provider, "Open in mail app" opens the filled e-mail (mailto) in the user's mail program; nothing is logged as sent.
+- **Settings → E-mail templates** (admins): add, edit, remove. Three default templates (Introduction, Follow-up, Commercial offer) for new and existing organizations.
+- **Data.** Table `email_templates` (members read, admins manage), migration `20261026000003_email_templates.sql` (also adds the defaults to existing organizations). Demo stores get the defaults on upgrade.
+- **Tests.** Rendering and unknown variables, composer data, sending with reply-to and logging, no send without a provider or for hidden records, admin-only templates (unit); RLS (PGlite); e2e: template filled from a deal, mailto link.
+
 ## Duplicates (2026-10-26)
 
 - **Match keys.** Records are compared by the company name without legal forms and quotes ("ООО «Ромашка»" = "Ромашка, LLC"), the website host, the last 10 digits of a phone number and the e-mail. A contact's name only matches within the same company (`src/domain/duplicates.ts`).

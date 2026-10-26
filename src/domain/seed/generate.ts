@@ -6,7 +6,7 @@
  * `now`, so the demo never looks stale. The same dataset feeds the demo store and
  * the Supabase seed script.
  */
-import { LEAD_SOURCES, Pipeline, type Activity, type Comment, type Company, type Contact, type Dataset, type Deal, type DealStageHistory, type Lead, type LeadSource, type Notification, type Order, type OrderItem, type OrderStatus, type Organization, type Payment, type PipelineStage, type Product, type Profile, type Task, type TaskPriority, type TaskStatus } from "../entities";
+import { LEAD_SOURCES, Pipeline, type Activity, type Comment, type Company, type Contact, type Dataset, type Deal, type DealStageHistory, type EmailTemplate, type Lead, type LeadSource, type Notification, type Order, type OrderItem, type OrderStatus, type Organization, type Payment, type PipelineStage, type Product, type Profile, type Task, type TaskPriority, type TaskStatus } from "../entities";
 import { computeLineTotals, computeOrderTotals, roundMoney } from "../orders/totals";
 import { derivePaymentStatus } from "../orders/payment-status";
 import { seedAutomation } from "./automation";
@@ -24,6 +24,7 @@ import {
   PRODUCT_FIXTURES,
   TASK_TITLES,
 } from "./fixtures";
+import { DEFAULT_EMAIL_TEMPLATES } from "../email-templates";
 
 export const SEED_NUMBER = 20261018;
 
@@ -83,6 +84,18 @@ function createClock(now: Date): Clock {
 }
 
 const latest = (...isos: string[]) => isos.reduce((a, b) => (a > b ? a : b));
+
+/** The starting e-mail templates of an organization, with stable ids for the demo. */
+export function defaultEmailTemplates(organizationId: string, at: string): EmailTemplate[] {
+  return DEFAULT_EMAIL_TEMPLATES.map((t, i) => ({
+    id: organizationId === DEMO_ORG_ID ? `00000000-0000-4000-8000-0000000005${String(i + 1).padStart(2, "0")}` : crypto.randomUUID(),
+    organization_id: organizationId,
+    ...t,
+    created_at: at,
+    updated_at: at,
+    archived_at: null,
+  }));
+}
 
 export function generateSeed(now: Date = new Date()): Dataset {
   const rng = createRng(SEED_NUMBER);
@@ -804,6 +817,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     contacts,
     leads,
     custom_fields: [],
+    email_templates: defaultEmailTemplates(org, orgCreated),
     pipelines,
     pipeline_stages,
     deals,

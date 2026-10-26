@@ -31,7 +31,7 @@ import { waNumber, type NotionWriter, type SlackSender, type WhatsAppSender } fr
 
 export const SERVICE_ACTOR_ID = "00000000-0000-4000-8000-00000000a070";
 
-export type EmailMessage = { to: string; subject: string; text: string };
+export type EmailMessage = { to: string; subject: string; text: string; /** Where replies go, e.g. the sending user. */ replyTo?: string };
 export interface EmailSender {
   readonly configured: boolean;
   send(message: EmailMessage): Promise<{ id: string }>;

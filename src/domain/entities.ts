@@ -189,6 +189,16 @@ export const customFieldSchema = z.object({
 });
 export type CustomField = z.infer<typeof customFieldSchema>;
 
+/** A reusable e-mail for writing to customers from record pages (see src/domain/email-templates.ts). */
+export const emailTemplateSchema = z.object({
+  ...base,
+  ...archivable,
+  name: requiredText(80),
+  subject: requiredText(200),
+  body: requiredText(10000),
+});
+export type EmailTemplate = z.infer<typeof emailTemplateSchema>;
+
 /** A sales pipeline (воронка): wholesale, retail, tenders… Each has its own stages, one won and one lost. */
 export const pipelineSchema = z.object({
   ...base,
@@ -547,6 +557,7 @@ export const TABLES = [
   "contacts",
   "leads",
   "custom_fields",
+  "email_templates",
   "pipelines",
   "pipeline_stages",
   "deals",
@@ -578,6 +589,7 @@ export type Dataset = {
   contacts: Contact[];
   leads: Lead[];
   custom_fields: CustomField[];
+  email_templates: EmailTemplate[];
   pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
@@ -608,6 +620,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   contacts: contactSchema,
   leads: leadSchema,
   custom_fields: customFieldSchema,
+  email_templates: emailTemplateSchema,
   pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,

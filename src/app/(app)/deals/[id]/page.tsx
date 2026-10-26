@@ -17,6 +17,9 @@ import { getDeal } from "@/server/services/deals";
 import { aiConfig } from "@/server/integrations/ai";
 import { yandexConfig } from "@/server/integrations/yandex";
 import { plural, tr, trNode } from "@/lib/i18n";
+import { EmailComposerButton } from "@/components/crm/email-composer";
+import { emailComposer } from "@/server/services/email";
+import { emailConfigured } from "@/server/services/integrations";
 
 export async function generateMetadata({ params }: PageProps<"/deals/[id]">) {
   const { id } = await params;
@@ -26,10 +29,11 @@ export async function generateMetadata({ params }: PageProps<"/deals/[id]">) {
 export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
   const { user } = await requirePermission("view", "deal");
   const { id } = await params;
-  const { data, people, options } = await loadPage(async (ctx) => ({
+  const { data, people, options, composer } = await loadPage(async (ctx) => ({
     data: await getDeal(ctx, id),
     people: await peopleFor(ctx, "deal"),
     options: await dealFormOptions(ctx),
+    composer: await emailComposer(ctx, { deal_id: id }, emailConfigured()),
   }));
   const { deal, stage, stages, pipelines, company, contact, order, tasks, timeline, changes } = data;
   // With several pipelines, the stage menu also offers moving the deal to another pipeline.
@@ -68,6 +72,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
             canDelete={can(user.actor, "delete", "deal", record)}
             listPath="/deals"
           >
+            {!deal.archived_at && <EmailComposerButton composer={composer} />}
             {canEdit && <StageSelect dealId={deal.id} dealName={deal.name} stageId={deal.stage_id} stages={stageChoices} />}
             {stage?.is_won && (order || can(user.actor, "create", "order", record)) && <CreateOrderButton dealId={deal.id} existing={order ? { id: order.id, order_number: order.order_number } : null} />}
             {canEdit && <DealFormButton deal={deal} options={options} />}

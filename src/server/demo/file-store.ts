@@ -8,7 +8,7 @@
 import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { Dataset } from "../../domain/entities";
-import { DEMO_ORG_ID, DEMO_PIPELINE_IDS, generateSeed, SEED_NUMBER, seedMessengers } from "../../domain/seed/generate";
+import { defaultEmailTemplates, DEMO_ORG_ID, DEMO_PIPELINE_IDS, generateSeed, SEED_NUMBER, seedMessengers } from "../../domain/seed/generate";
 import { capPastTimestamps, daysBetween, shiftDataset } from "../../domain/seed/shift";
 
 /** Bump when the dataset shape changes; older files are replaced by a fresh seed. */
@@ -51,6 +51,10 @@ export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
   }
   if (!data.custom_fields) {
     data.custom_fields = [];
+    changed = true;
+  }
+  if (!data.email_templates) {
+    data.email_templates = data.organizations.map((o) => defaultEmailTemplates(o.id, now.toISOString())).flat();
     changed = true;
   }
   // Tables added after a store was written start empty.

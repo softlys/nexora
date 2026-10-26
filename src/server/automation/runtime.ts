@@ -22,7 +22,7 @@ export function emailSender(): EmailSender {
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from, to: message.to, subject: message.subject, text: message.text }),
+        body: JSON.stringify({ from, to: message.to, subject: message.subject, text: message.text, ...(message.replyTo && { reply_to: message.replyTo }) }),
         signal: AbortSignal.timeout(4_000),
       });
       if (!response.ok) throw new Error(`Email provider returned ${response.status}`);
