@@ -31,7 +31,10 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
     people: await peopleFor(ctx, "deal"),
     options: await dealFormOptions(ctx),
   }));
-  const { deal, stage, stages, company, contact, order, tasks, timeline, changes } = data;
+  const { deal, stage, stages, pipelines, company, contact, order, tasks, timeline, changes } = data;
+  // With several pipelines, the stage menu also offers moving the deal to another pipeline.
+  const pipelineName = new Map(pipelines.map((p) => [p.id, tr(p.name)]));
+  const stageChoices = pipelines.length > 1 ? stages.map((s) => ({ ...s, name: `${pipelineName.get(s.pipeline_id) ?? ""} · ${tr(s.name)}` })) : stages;
   const record = { organization_id: deal.organization_id, owner_id: deal.owner_id };
   const canEdit = can(user.actor, "update", "deal", record) && !deal.archived_at;
   const weighted = (deal.amount * deal.probability) / 100;
@@ -65,7 +68,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
             canDelete={can(user.actor, "delete", "deal", record)}
             listPath="/deals"
           >
-            {canEdit && <StageSelect dealId={deal.id} dealName={deal.name} stageId={deal.stage_id} stages={stages} />}
+            {canEdit && <StageSelect dealId={deal.id} dealName={deal.name} stageId={deal.stage_id} stages={stageChoices} />}
             {stage?.is_won && (order || can(user.actor, "create", "order", record)) && <CreateOrderButton dealId={deal.id} existing={order ? { id: order.id, order_number: order.order_number } : null} />}
             {canEdit && <DealFormButton deal={deal} options={options} />}
           </RecordActions>

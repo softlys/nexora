@@ -12,6 +12,7 @@ import { requirePermission } from "@/server/guards";
 import { loadPage } from "@/server/page-data";
 import { getAnalytics } from "@/server/services/analytics";
 import { plural, tr } from "@/lib/i18n";
+import { PipelineTabs } from "@/components/crm/pipeline-tabs";
 
 export const metadata = { title: tr("Analytics") };
 
@@ -20,7 +21,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
   const params = await searchParams;
   const { preset, period } = resolvePeriod({ range: first(params.range), from: first(params.from), to: first(params.to) });
   const { a, currency } = await loadPage(async (ctx) => ({
-    a: await getAnalytics(ctx, period),
+    a: await getAnalytics(ctx, period, first(params.pipeline)),
     currency: (await ctx.db.read(ctx.actor.organization_id, (tx) => tx.get("organizations", ctx.actor.organization_id)))?.currency ?? "USD",
   }));
   const t = a.totals;
@@ -55,9 +56,10 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
         period={period}
       />
 
+      <PipelineTabs pipelines={a.pipelines} current={a.pipeline?.id ?? null} path="/analytics" params={params} />
       <div className="grid gap-4 lg:grid-cols-2">
         <BarsChart
-          title={tr("Conversion funnel")}
+          title={a.pipelines.length > 1 && a.pipeline ? `${tr("Conversion funnel")} · ${tr(a.pipeline.name)}` : tr("Conversion funnel")}
           description={tr("Deals created in the period that reached each stage or later, and how many were won.")}
           data={a.funnel.map((s) => ({ label: tr(s.stage), value: s.count, href: `/deals?stage=${s.stage_id}&${created}` }))}
           format="count"

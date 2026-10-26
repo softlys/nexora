@@ -8,6 +8,7 @@ import type { Profile } from "@/domain/entities";
 import { visibleOwnerIds, type Actor, type Resource } from "@/domain/permissions";
 import { DEMO_USER_IDS, generateSeed } from "@/domain/seed/generate";
 import { asUser, createDatabase, loadDataset } from "./helpers/pglite";
+import { DEMO_PIPELINE_IDS } from "@/domain/seed/generate";
 
 const seed = generateSeed(new Date("2026-10-19T12:00:00Z"));
 let db: PGlite;
@@ -182,35 +183,68 @@ describe("admin functions", () => {
     ).rejects.toThrow(/last_admin/);
   });
 
-  it("reorders stages atomically and rejects incomplete orderings", async () => {
-    const ids = [...seed.pipeline_stages].sort((a, b) => a.position - b.position).map((s) => s.id);
+  it("reorders stages atomically within a pipeline and rejects incomplete orderings", async () => {
+    const sales = DEMO_PIPELINE_IDS.sales;
+    const ids = seed.pipeline_stages.filter((s) => s.pipeline_id === sales).sort((a, b) => a.position - b.position).map((s) => s.id);
     const swapped = [ids[1]!, ids[0]!, ...ids.slice(2)];
     const names = await asUser(db, DEMO_USER_IDS.admin, async (tx) => {
-      await tx.query("select public.reorder_pipeline_stages($1::uuid[])", [swapped]);
+      await tx.query("select public.reorder_pipeline_stages($1, $2::uuid[])", [sales, swapped]);
       await tx.exec("set constraints all immediate");
-      return (await tx.query<{ name: string }>("select name from public.pipeline_stages order by position")).rows.map((r) => r.name);
+      return (await tx.query<{ name: string }>("select name from public.pipeline_stages where pipeline_id = $1 order by position", [sales])).rows.map((r) => r.name);
     });
     expect(names.slice(0, 2)).toEqual(["Discovery", "Qualification"]);
     await expect(
-      asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select public.reorder_pipeline_stages($1::uuid[])", [ids.slice(1)])),
+      asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select public.reorder_pipeline_stages($1, $2::uuid[])", [sales, ids.slice(1)])),
+    ).rejects.toThrow(/invalid_order/);
+    // A stage of another pipeline is not part of this pipeline's order.
+    const tender = seed.pipeline_stages.find((s) => s.pipeline_id === DEMO_PIPELINE_IDS.tenders)!.id;
+    await expect(
+      asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select public.reorder_pipeline_stages($1, $2::uuid[])", [sales, [...ids.slice(1), tender]])),
     ).rejects.toThrow(/invalid_order/);
   });
 
-  it("adds a new open stage before won/lost and keeps one won stage", async () => {
+  it("adds a new open stage before won/lost and keeps one won stage per pipeline", async () => {
+    const sales = DEMO_PIPELINE_IDS.sales;
     const names = await asUser(db, DEMO_USER_IDS.admin, async (tx) => {
-      await tx.query("select public.create_pipeline_stage('Technical review', 60, false, false)");
+      await tx.query("select public.create_pipeline_stage($1, 'Technical review', 60, false, false)", [sales]);
       await tx.exec("set constraints all immediate");
-      return (await tx.query<{ name: string }>("select name from public.pipeline_stages order by position")).rows.map((r) => r.name);
+      return (await tx.query<{ name: string }>("select name from public.pipeline_stages where pipeline_id = $1 order by position", [sales])).rows.map((r) => r.name);
     });
     expect(names.slice(-3)).toEqual(["Technical review", "Won", "Lost"]);
     await expect(
-      asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select public.create_pipeline_stage('Second won', 100, true, false)")),
+      asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select public.create_pipeline_stage($1, 'Second won', 100, true, false)", [sales])),
     ).rejects.toThrow(/terminal_stage/);
+    // The same name is fine in another pipeline: names are unique per pipeline.
+    await asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select public.create_pipeline_stage($1, 'Proposal', 40, false, false)", [DEMO_PIPELINE_IDS.tenders]));
+  });
+
+  it("creates, renames and deletes pipelines with their own won and lost stages", async () => {
+    const stages = JSON.stringify([
+      { name: "Won", probability: 100, is_won: true, is_lost: false },
+      { name: "New", probability: 10, is_won: false, is_lost: false },
+      { name: "Lost", probability: 0, is_won: false, is_lost: true },
+    ]);
+    const result = await asUser(db, DEMO_USER_IDS.admin, async (tx) => {
+      const created = (await tx.query<{ id: string }>("select (public.create_pipeline('Wholesale', $1::jsonb)).id", [stages])).rows[0]!.id;
+      await tx.exec("set constraints all immediate");
+      const order = (await tx.query<{ name: string }>("select name from public.pipeline_stages where pipeline_id = $1 order by position", [created])).rows.map((r) => r.name);
+      await tx.query("select public.rename_pipeline($1, 'Опт')", [created]);
+      const renamed = (await tx.query<{ name: string }>("select name from public.pipelines where id = $1", [created])).rows[0]!.name;
+      await tx.query("select public.delete_pipeline($1)", [created]);
+      const left = (await tx.query<{ n: number }>("select count(*)::int as n from public.pipeline_stages where pipeline_id = $1", [created])).rows[0]!.n;
+      return { order, renamed, left };
+    });
+    expect(result).toEqual({ order: ["New", "Won", "Lost"], renamed: "Опт", left: 0 });
+    await expect(
+      asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select public.create_pipeline('Broken', $1::jsonb)", [JSON.stringify([{ name: "Only open", probability: 10, is_won: false, is_lost: false }])])),
+    ).rejects.toThrow(/terminal_stage/);
+    await expect(asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select public.delete_pipeline($1)", [DEMO_PIPELINE_IDS.sales]))).rejects.toThrow(/pipeline_has_deals/);
+    await expect(asUser(db, DEMO_USER_IDS.manager, (tx) => tx.query("select public.create_pipeline('Sneaky', $1::jsonb)", [stages]))).rejects.toThrow(/forbidden/);
   });
 
   it("refuses stage changes from non-admins", async () => {
     await expect(
-      asUser(db, DEMO_USER_IDS.repDaniel, (tx) => tx.query("select public.create_pipeline_stage('Sneaky', 10, false, false)")),
+      asUser(db, DEMO_USER_IDS.repDaniel, (tx) => tx.query("select public.create_pipeline_stage($1, 'Sneaky', 10, false, false)", [DEMO_PIPELINE_IDS.sales])),
     ).rejects.toThrow(/forbidden/);
   });
 

@@ -22,7 +22,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
   const { preset, period } = resolvePeriod({ range: first(params.range), from: first(params.from), to: first(params.to) });
   const { dash, currency } = await loadPage(async (ctx) => ({
-    dash: await getDashboard(ctx, period),
+    dash: await getDashboard(ctx, period, first(params.pipeline)),
     currency: (await ctx.db.read(ctx.actor.organization_id, (tx) => tx.get("organizations", ctx.actor.organization_id)))?.currency ?? "USD",
   }));
   const k = dash.kpis;
@@ -77,7 +77,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
         </div>
         <div className="lg:col-span-2">
           <BarsChart
-            title={tr("Deals by stage")}
+            title={dash.pipelines.length > 1 && dash.pipeline ? `${tr("Deals by stage")} · ${tr(dash.pipeline.name)}` : tr("Deals by stage")}
             description={tr("Deals created in {p0}, by current stage. Click a bar to see them.", { p0: tr(RANGE_LABELS[preset]).toLowerCase() })}
             data={dash.byStage.map((s) => ({ label: tr(s.stage), value: s.count, href: `/deals?stage=${s.stage_id}&created_from=${period.from}&created_to=${period.to}`, muted: s.is_lost }))}
             format="count"

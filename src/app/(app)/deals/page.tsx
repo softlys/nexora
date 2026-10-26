@@ -17,6 +17,7 @@ import { dealFormOptions, loadPage, peopleFor, permissionsFor } from "@/server/p
 import { listDeals } from "@/server/services/deals";
 import { ExportButton } from "@/components/list/export-import";
 import { tr } from "@/lib/i18n";
+import { PipelineTabs } from "@/components/crm/pipeline-tabs";
 
 export const metadata = { title: tr("Deals") };
 
@@ -33,7 +34,10 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
     options: await dealFormOptions(ctx),
   }));
   const filtered = Boolean(query.q || Object.values(filters).some((v) => v !== undefined) || query.archived === "1");
-  const stageOptions = page.stages.map((s) => ({ id: s.id, name: s.name, is_won: s.is_won, is_lost: s.is_lost }));
+  const pipelineName = new Map(page.pipelines.map((p) => [p.id, tr(p.name)]));
+  // With every pipeline shown, stage names say which pipeline they belong to.
+  const stageLabel = (s: { name: string; pipeline_id: string }) => (page.pipelines.length > 1 && !filters.pipeline ? `${pipelineName.get(s.pipeline_id) ?? ""} · ${tr(s.name)}` : tr(s.name));
+  const stageOptions = page.stages.map((s) => ({ id: s.id, name: stageLabel(s), is_won: s.is_won, is_lost: s.is_lost }));
 
   return (
     <div className="space-y-5">
@@ -44,15 +48,16 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
           <>
             <Link href="/pipeline" className="text-sm text-brand hover:underline">{tr("Open pipeline board")}</Link>
             <ExportButton entity="deals" query={exportQuery} />
-            {perms.canCreate && <DealFormButton options={options} autoOpen={first(params.new) === "1"} />}
+            {perms.canCreate && <DealFormButton options={options} defaultPipelineId={filters.pipeline} autoOpen={first(params.new) === "1"} />}
           </>
         }
       />
+      <PipelineTabs pipelines={page.pipelines} current={filters.pipeline ?? null} path="/deals" params={params} all />
       <ListToolbar
         searchPlaceholder={tr("Search deals…")}
         filters={[
           { key: "status", label: tr("Statuses"), options: [{ value: "open", label: tr("Open") }, { value: "won", label: tr("Won") }, { value: "lost", label: tr("Lost") }] },
-          { key: "stage", label: tr("Stages"), options: page.stages.map((s) => ({ value: s.id, label: tr(s.name) })) },
+          { key: "stage", label: tr("Stages"), options: page.stages.map((s) => ({ value: s.id, label: stageLabel(s) })) },
           ...(people.assignable.length > 1 ? [{ key: "owner", label: tr("Owners"), options: people.assignable }] : []),
         ]}
       >

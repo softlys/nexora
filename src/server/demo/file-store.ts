@@ -8,7 +8,7 @@
 import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { Dataset } from "../../domain/entities";
-import { generateSeed, SEED_NUMBER, seedMessengers } from "../../domain/seed/generate";
+import { DEMO_ORG_ID, DEMO_PIPELINE_IDS, generateSeed, SEED_NUMBER, seedMessengers } from "../../domain/seed/generate";
 import { capPastTimestamps, daysBetween, shiftDataset } from "../../domain/seed/shift";
 
 /** Bump when the dataset shape changes; older files are replaced by a fresh seed. */
@@ -33,6 +33,22 @@ export function createSeededStore(now: Date = new Date()): StoreFile {
  */
 export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
   let changed = capPastTimestamps(data, now) > 0;
+  // Stores written before pipelines existed: one default pipeline that owns every stage.
+  if (!data.pipelines) {
+    const created = data.organizations[0]?.created_at ?? now.toISOString();
+    data.pipelines = data.organizations.map((o, i) => ({ id: i === 0 ? DEMO_PIPELINE_IDS.sales : crypto.randomUUID(), organization_id: o.id, name: "Sales", position: 0, created_at: created, updated_at: created, archived_at: null }));
+    for (const s of data.pipeline_stages) {
+      if (!(s as { pipeline_id?: string }).pipeline_id) s.pipeline_id = data.pipelines.find((p) => p.organization_id === s.organization_id)!.id;
+    }
+    // The demo organization also gets the empty tenders pipeline that fresh demos have.
+    const demo = data.organizations.find((o) => o.id === DEMO_ORG_ID);
+    if (demo) {
+      const fresh = generateSeed(now);
+      data.pipelines.push(...fresh.pipelines.filter((p) => p.id === DEMO_PIPELINE_IDS.tenders));
+      data.pipeline_stages.push(...fresh.pipeline_stages.filter((s) => s.pipeline_id === DEMO_PIPELINE_IDS.tenders));
+    }
+    changed = true;
+  }
   // Tables added after a store was written start empty.
   if (!data.integration_records) {
     data.integration_records = [];

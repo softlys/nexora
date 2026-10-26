@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Notification, Organization, PipelineStage, Profile } from "@/domain/entities";
+import type { Notification, Organization, Pipeline, PipelineStage, Profile } from "@/domain/entities";
 import { visibleOwnerIds, type Resource } from "@/domain/permissions";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 import { createSupabaseServiceClient } from "@/server/supabase/service";
@@ -147,16 +147,62 @@ export function createSupabaseRepositories(): Repositories {
       },
     },
 
-    pipelineStages: {
+    pipelines: {
       async list(ctx) {
         const db = await client();
-        const { data, error } = await db.from("pipeline_stages").select("*").eq("organization_id", ctx.actor.organization_id).order("position");
-        if (error) fail(error, "Could not load pipeline stages.");
-        return data as PipelineStage[];
+        const { data, error } = await db.from("pipelines").select("*").eq("organization_id", ctx.actor.organization_id).is("archived_at", null).order("position");
+        if (error) fail(error, "Could not load pipelines.");
+        return data as Pipeline[];
       },
       async create(ctx, input) {
         const db = await client();
+        const { data, error } = await db.rpc("create_pipeline", { pipeline_name: input.name, stages: input.stages });
+        if (error) {
+          if (error.message.includes("terminal_stage")) throw new DomainError("The pipeline needs exactly one won and one lost stage.", "conflict");
+          if (error.code === "23505") throw new DomainError("A pipeline with this name already exists.", "conflict");
+          fail(error, "Could not create the pipeline.");
+        }
+        await insertAudit(db, ctx, { action: "pipeline.created", target_type: "pipeline", target_id: (data as Pipeline).id, changes: { after: { name: input.name, stages: input.stages.map((s) => s.name) } } });
+        return data as Pipeline;
+      },
+      async rename(ctx, id, name) {
+        const db = await client();
+        const { data, error } = await db.rpc("rename_pipeline", { target_pipeline: id, pipeline_name: name });
+        if (error) {
+          if (error.code === "23505") throw new DomainError("A pipeline with this name already exists.", "conflict");
+          fail(error, "Pipeline not found.");
+        }
+        await insertAudit(db, ctx, { action: "pipeline.renamed", target_type: "pipeline", target_id: id, changes: { after: { name } } });
+        return data as Pipeline;
+      },
+      async remove(ctx, id) {
+        const db = await client();
+        const { error } = await db.rpc("delete_pipeline", { target_pipeline: id });
+        if (error) {
+          if (error.message.includes("last_pipeline")) throw new DomainError("The last pipeline cannot be deleted.", "conflict");
+          if (error.message.includes("pipeline_has_deals")) throw new DomainError("Move or delete the pipeline's deals first.", "conflict");
+          fail(error, "Pipeline not found.");
+        }
+        await insertAudit(db, ctx, { action: "pipeline.deleted", target_type: "pipeline", target_id: id, changes: {} });
+      },
+    },
+
+    pipelineStages: {
+      async list(ctx) {
+        const db = await client();
+        const [stages, pipelines] = await Promise.all([
+          db.from("pipeline_stages").select("*").eq("organization_id", ctx.actor.organization_id).order("position"),
+          db.from("pipelines").select("id, position").eq("organization_id", ctx.actor.organization_id).is("archived_at", null),
+        ]);
+        if (stages.error) fail(stages.error, "Could not load pipeline stages.");
+        if (pipelines.error) fail(pipelines.error, "Could not load pipelines.");
+        const order = new Map((pipelines.data as Array<{ id: string; position: number }>).map((p) => [p.id, p.position]));
+        return (stages.data as PipelineStage[]).filter((s) => order.has(s.pipeline_id)).sort((a, b) => order.get(a.pipeline_id)! - order.get(b.pipeline_id)! || a.position - b.position);
+      },
+      async create(ctx, pipelineId, input) {
+        const db = await client();
         const { data, error } = await db.rpc("create_pipeline_stage", {
+          target_pipeline: pipelineId,
           stage_name: input.name,
           stage_probability: input.probability,
           stage_is_won: input.is_won,
@@ -185,12 +231,12 @@ export function createSupabaseRepositories(): Repositories {
         await insertAudit(db, ctx, { action: "pipeline.stage_updated", target_type: "pipeline_stage", target_id: id, changes: { after: input } });
         return data as PipelineStage;
       },
-      async reorder(ctx, orderedIds) {
+      async reorder(ctx, pipelineId, orderedIds) {
         const db = await client();
-        const { error } = await db.rpc("reorder_pipeline_stages", { ordered_ids: orderedIds });
+        const { error } = await db.rpc("reorder_pipeline_stages", { target_pipeline: pipelineId, ordered_ids: orderedIds });
         if (error) fail(error, "Could not reorder stages.");
         await insertAudit(db, ctx, { action: "pipeline.stages_reordered", target_type: "pipeline_stage", target_id: null, changes: { after: orderedIds } });
-        return this.list(ctx);
+        return (await this.list(ctx)).filter((s) => s.pipeline_id === pipelineId);
       },
     },
 

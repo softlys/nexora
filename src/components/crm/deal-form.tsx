@@ -36,13 +36,16 @@ type Values = {
   next_activity: string;
   notes: string;
   owner_id?: string;
+  /** New deals only: the pipeline whose first stage the deal starts in. */
+  pipeline_id?: string;
 };
 
 const formSchema = z
-  .object({ ...dealFields, company_id: z.string(), new_company: newCompanyInput.nullable(), probability: z.union([z.literal(""), z.coerce.number().int().min(0).max(100)]) })
+  .object({ ...dealFields, company_id: z.string(), new_company: newCompanyInput.nullable(), pipeline_id: z.string().optional(), probability: z.union([z.literal(""), z.coerce.number().int().min(0).max(100)]) })
   .refine((d) => d.company_id || d.new_company, { path: ["company_id"], message: tr("Choose a company or type a new name") });
 
 export type DealFormOptions = {
+  pipelines?: Option[];
   owners: Option[];
   companies: Option[];
   contacts: Array<Option & { company_id: string | null }>;
@@ -53,6 +56,7 @@ export function DealFormButton({
   deal,
   options,
   defaultCompanyId,
+  defaultPipelineId,
   variant = deal ? "outline" : "default",
   open: controlledOpen,
   onOpenChange,
@@ -63,6 +67,7 @@ export function DealFormButton({
   deal?: Deal;
   options: DealFormOptions;
   defaultCompanyId?: string;
+  defaultPipelineId?: string;
   variant?: "default" | "outline";
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -87,7 +92,7 @@ export function DealFormButton({
         notes: deal.notes,
         ...(options.owners.length > 0 && { owner_id: deal.owner_id }),
       }
-    : { name: "", company_id: defaultCompanyId ?? "", new_company: null, primary_contact_id: null, amount: "", currency: options.currency, probability: "", expected_close_date: null, source: "outbound", next_activity: "", notes: "" };
+    : { name: "", company_id: defaultCompanyId ?? "", new_company: null, primary_contact_id: null, amount: "", currency: options.currency, probability: "", expected_close_date: null, source: "outbound", next_activity: "", notes: "", pipeline_id: defaultPipelineId ?? options.pipelines?.[0]?.value };
   const { control, handleSubmit, formState, setError, reset, setValue } = useForm<Values>({ resolver: zodResolver(formSchema) as unknown as Resolver<Values>, defaultValues: defaults });
   const companyId = useWatch({ control, name: "company_id" });
   const newCompany = useWatch({ control, name: "new_company" });
@@ -98,9 +103,9 @@ export function DealFormButton({
   }, [open, deal?.id, deal?.updated_at]);
 
   const onSubmit = handleSubmit(async (values) => {
-    const { probability, company_id, new_company, ...rest } = values;
+    const { probability, company_id, new_company, pipeline_id, ...rest } = values;
     const payload = { ...rest, ...(company_id ? { company_id } : new_company && { new_company }), ...(probability !== "" && { probability }) };
-    const result = deal ? await updateDealAction({ id: deal.id, ...payload }) : await createDealAction(payload);
+    const result = deal ? await updateDealAction({ id: deal.id, ...payload }) : await createDealAction({ ...payload, ...(pipeline_id && { pipeline_id }) });
     if (!result.ok) return applyServerErrors(result, setError);
     toast.success(deal ? tr("Deal updated") : tr("Deal created"));
     reset(values);
@@ -122,6 +127,7 @@ export function DealFormButton({
       )}
       <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={deal ? tr("Edit {p0}", { p0: deal.name }) : tr("New deal")} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={deal ? tr("Save changes") : tr("Create deal")}>
         <TextField control={control} name="name" label={tr("Deal name")} />
+        {!deal && (options.pipelines?.length ?? 0) > 1 && <SelectField control={control} name="pipeline_id" label={tr("Pipeline")} options={options.pipelines!.map((p) => ({ value: p.value, label: tr(p.label) }))} />}
         <Controller
           control={control}
           name="company_id"

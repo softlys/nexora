@@ -28,6 +28,31 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Several pipelines (2026-10-26)
+
+- **Pipelines (воронки).** Each organization can have several, for example wholesale, retail or tenders.
+  - Each pipeline has its own stages with exactly one won and one lost stage.
+  - The first pipeline is the default for new deals.
+- **Board and lists.**
+  - The board has pipeline tabs (`?pipeline=`).
+  - The deal list has tabs with "All pipelines" and labels stages "Pipeline · Stage".
+  - The new-deal form asks for the pipeline.
+  - A deal's stage menu lists every pipeline's stages, so a deal can move between pipelines (history and events as for any stage move).
+- **Settings → Pipelines.**
+  - Create a pipeline; it starts with default stages in the interface language.
+  - Rename a pipeline, and edit and reorder its stages.
+  - Delete a pipeline only when it has no deals; the last pipeline cannot be deleted.
+- **Analytics.** The funnel, the distribution and "Deals by stage" are per pipeline, with tabs. Totals stay organization-wide.
+- **Data.**
+  - New `pipelines` table; `pipeline_stages.pipeline_id`. Stage positions and names are unique per pipeline.
+  - Migration `20261026000001_pipelines.sql` moves existing stages into a default "Sales" pipeline.
+  - The admin SQL functions now take the pipeline: `create_pipeline`, `rename_pipeline`, `delete_pipeline`, and per-pipeline `create_pipeline_stage` and `reorder_pipeline_stages`.
+  - Demo stores are upgraded in place. The demo has an empty "Tenders" pipeline.
+- **Tests.**
+  - SQL functions on PGlite: per-pipeline ordering, won and lost rules, create, rename and delete, permissions.
+  - Services: deal start stage, board, filters, cross-pipeline moves, per-pipeline analytics.
+  - e2e: tabs and a cross-pipeline move.
+
 ## Russian interface (2026-10-26)
 
 - **Whole interface in Russian.** Set with `NEXORA_LOCALE`: `ru` by default, `en` for English.

@@ -33,7 +33,7 @@ import { tr } from "@/lib/i18n";
 
 type Stage = { id: string; name: string; probability: number; is_won: boolean; is_lost: boolean; position: number };
 
-export function PipelineEditor({ stages: initial, openNew }: { stages: Stage[]; openNew: boolean }) {
+export function PipelineEditor({ pipeline, stages: initial, openNew, actions }: { pipeline: { id: string; name: string }; stages: Stage[]; openNew: boolean; actions?: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [stages, setStages] = useState(initial);
@@ -56,7 +56,7 @@ export function PipelineEditor({ stages: initial, openNew }: { stages: Stage[]; 
   const persistOrder = (next: Stage[], previous: Stage[]) => {
     setStages(next);
     startTransition(async () => {
-      const result = await reorderPipelineStagesAction({ ordered_ids: next.map((s) => s.id) });
+      const result = await reorderPipelineStagesAction({ pipeline_id: pipeline.id, ordered_ids: next.map((s) => s.id) });
       if (!result.ok) {
         setStages(previous);
         toast.error(result.error);
@@ -87,11 +87,16 @@ export function PipelineEditor({ stages: initial, openNew }: { stages: Stage[]; 
 
   return (
     <SettingsCard
-      title={tr("Pipeline stages")}
+      title={tr(pipeline.name)}
       description={tr("Stages used by deals and the pipeline board. Probability is the default for deals entering the stage. The pipeline needs exactly one won and one lost stage.")}
       footer={
-        <Button onClick={() => setEditing("new")}>
-          <Plus aria-hidden />{tr("Add stage")}</Button>
+        <div className="flex w-full flex-wrap items-center gap-2">
+          <Button onClick={() => setEditing("new")}>
+            <Plus aria-hidden />
+            {tr("Add stage")}
+          </Button>
+          <div className="ml-auto flex gap-2">{actions}</div>
+        </div>
       }
     >
       <p id="reorder-help" className="mb-3 text-xs text-text-muted">{tr("Drag a stage by its handle, or focus the handle and use Space and the arrow keys. The arrow buttons also reorder.")}</p>
@@ -114,6 +119,7 @@ export function PipelineEditor({ stages: initial, openNew }: { stages: Stage[]; 
       </DndContext>
 
       <StageDialog
+        pipelineId={pipeline.id}
         stage={editing === "new" ? null : editing}
         open={editing !== null}
         onClose={closeDialog}
@@ -176,7 +182,7 @@ function SortableStage({
 
 type FormValues = z.input<typeof pipelineStageInput>;
 
-function StageDialog({ stage, open, onClose, onSaved }: { stage: Stage | null; open: boolean; onClose: () => void; onSaved: () => void }) {
+function StageDialog({ pipelineId, stage, open, onClose, onSaved }: { pipelineId: string; stage: Stage | null; open: boolean; onClose: () => void; onSaved: () => void }) {
   const { register, handleSubmit, formState, setError, reset, control } = useForm<FormValues>({
     resolver: zodResolver(pipelineStageInput),
   });
@@ -191,7 +197,7 @@ function StageDialog({ stage, open, onClose, onSaved }: { stage: Stage | null; o
   }, [open, stage, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
-    const result = await savePipelineStageAction(values);
+    const result = await savePipelineStageAction(stage ? values : { ...values, pipeline_id: pipelineId });
     if (!result.ok) return applyServerErrors(result, setError);
     toast.success(stage ? tr("Stage updated") : tr("Stage added"));
     onSaved();

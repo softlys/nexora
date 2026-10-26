@@ -5,14 +5,7 @@
  * Organization id and user always come from `ctx.actor`, never from client input,
  * and every lookup by id also filters by organization and the actor's visibility.
  */
-import type {
-  AuditLog,
-  Notification,
-  Organization,
-  PipelineStage,
-  Profile,
-  Role,
-} from "@/domain/entities";
+import type { AuditLog, Notification, Organization, Pipeline, PipelineStage, Profile, Role } from "@/domain/entities";
 import type { Actor } from "@/domain/permissions";
 
 export type RequestMeta = {
@@ -54,11 +47,20 @@ export interface Repositories {
     setActive(ctx: RepoContext, profileId: string, active: boolean): Promise<Profile>;
     invite(ctx: RepoContext, input: { email: string; full_name: string; role: Role }): Promise<Profile>;
   };
+  pipelines: {
+    list(ctx: RepoContext): Promise<Pipeline[]>;
+    /** A new pipeline with its stages (exactly one won and one lost among them). */
+    create(ctx: RepoContext, input: { name: string; stages: StageInput[] }): Promise<Pipeline>;
+    rename(ctx: RepoContext, id: string, name: string): Promise<Pipeline>;
+    /** Deletes a pipeline that has no deals, with its stages. The last pipeline cannot be deleted. */
+    remove(ctx: RepoContext, id: string): Promise<void>;
+  };
   pipelineStages: {
+    /** Every stage of the organization, ordered by pipeline, then by position. */
     list(ctx: RepoContext): Promise<PipelineStage[]>;
-    create(ctx: RepoContext, input: StageInput): Promise<PipelineStage>;
+    create(ctx: RepoContext, pipelineId: string, input: StageInput): Promise<PipelineStage>;
     update(ctx: RepoContext, id: string, input: StageInput): Promise<PipelineStage>;
-    reorder(ctx: RepoContext, orderedIds: string[]): Promise<PipelineStage[]>;
+    reorder(ctx: RepoContext, pipelineId: string, orderedIds: string[]): Promise<PipelineStage[]>;
   };
   notifications: {
     listMine(ctx: RepoContext, limit: number): Promise<{ items: Notification[]; unread: number }>;

@@ -177,7 +177,10 @@ const companyChoice = {
 };
 const needsCompany = (d: { company_id?: string; new_company?: unknown }) => Boolean(d.company_id || d.new_company);
 const companyMessage = { path: ["company_id"], message: "Choose a company or type a new name" };
-export const dealInput = z.object({ ...dealFields, ...companyChoice, stage_id: z.uuid().optional() }).strict().refine(needsCompany, companyMessage);
+export const dealInput = z
+  .object({ ...dealFields, ...companyChoice, stage_id: z.uuid().optional(), /** New deals start in this pipeline's first stage (default pipeline otherwise). */ pipeline_id: z.uuid().optional() })
+  .strict()
+  .refine(needsCompany, companyMessage);
 export const dealUpdateInput = z.object({ id: z.uuid(), ...dealFields, ...companyChoice }).strict().refine(needsCompany, companyMessage);
 /** Quick edit from a pipeline card. */
 export const dealQuickEditInput = z

@@ -74,7 +74,7 @@ test.describe("foundation", () => {
 
     await switchUser(page, "admin");
     await page.goto("/settings/pipeline");
-    await expect(page.getByRole("heading", { name: "Pipeline stages" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pipelines", exact: true })).toBeVisible();
   });
 
   test("the command palette navigates between pages", async ({ page }) => {

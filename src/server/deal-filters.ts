@@ -20,6 +20,7 @@ export function parseDealFilters(params: Params): DealFilters {
     return v && DATE.test(v) ? v : undefined;
   };
   return {
+    pipeline: stringFilter(params, "pipeline", 36),
     stage: stringFilter(params, "stage", 36),
     owner: stringFilter(params, "owner", 36),
     company: stringFilter(params, "company", 36),

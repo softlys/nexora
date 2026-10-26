@@ -10,6 +10,7 @@ export const LOAD_ORDER: TableName[] = [
   "profiles",
   "companies",
   "contacts",
+  "pipelines",
   "pipeline_stages",
   "leads",
   "deals",

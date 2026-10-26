@@ -7,6 +7,7 @@ import { findVisible, flushSecurityEvents, NotFoundError, type ServiceContext } 
 import { activeProfiles, assignableOwners } from "@/server/services/records";
 import { companyOptions } from "@/server/services/companies";
 import { contactOptions } from "@/server/services/contacts";
+import { pipelineOptions } from "@/server/services/deals";
 
 /**
  * Runs page data loading with a service context. A record the user may not see renders
@@ -51,13 +52,15 @@ export function permissionsFor(ctx: ServiceContext, resource: Resource) {
 
 /** Select options for deal forms. */
 export async function dealFormOptions(ctx: ServiceContext) {
-  const [people, companies, contacts, org] = await Promise.all([
+  const [people, companies, contacts, org, pipelines] = await Promise.all([
     peopleFor(ctx, "deal"),
     companyOptions(ctx),
     contactOptions(ctx),
     ctx.db.read(ctx.actor.organization_id, (tx) => tx.get("organizations", ctx.actor.organization_id)),
+    pipelineOptions(ctx),
   ]);
   return {
+    pipelines: pipelines.map((p) => ({ value: p.id, label: p.name })),
     owners: people.assignable,
     companies: companies.map((c) => ({ value: c.id, label: c.name })),
     contacts: contacts.map((c) => ({ value: c.id, label: c.name, company_id: c.company_id })),

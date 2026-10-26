@@ -168,9 +168,20 @@ export const leadSchema = z.object({
 });
 export type Lead = z.infer<typeof leadSchema>;
 
+/** A sales pipeline (воронка): wholesale, retail, tenders… Each has its own stages, one won and one lost. */
+export const pipelineSchema = z.object({
+  ...base,
+  ...archivable,
+  name: requiredText(60),
+  /** Order in tabs and menus; the first pipeline is the default for new deals. */
+  position: z.number().int().min(0).max(100),
+});
+export type Pipeline = z.infer<typeof pipelineSchema>;
+
 export const pipelineStageSchema = z
   .object({
     ...base,
+    pipeline_id: id,
     name: requiredText(60),
     position: z.number().int().min(0).max(100),
     probability: z.number().int().min(0).max(100),
@@ -512,6 +523,7 @@ export const TABLES = [
   "companies",
   "contacts",
   "leads",
+  "pipelines",
   "pipeline_stages",
   "deals",
   "deal_stage_history",
@@ -541,6 +553,7 @@ export type Dataset = {
   companies: Company[];
   contacts: Contact[];
   leads: Lead[];
+  pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
   deal_stage_history: DealStageHistory[];
@@ -569,6 +582,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   companies: companySchema,
   contacts: contactSchema,
   leads: leadSchema,
+  pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,
   deal_stage_history: dealStageHistorySchema,
@@ -623,6 +637,8 @@ export const changeRoleInput = z
 export const pipelineStageInput = z
   .object({
     id: id.optional(),
+    /** Required for a new stage: the pipeline it belongs to. */
+    pipeline_id: id.optional(),
     name: requiredText(60),
     probability: z.coerce.number().int().min(0).max(100),
     is_won: z.boolean(),
@@ -636,6 +652,10 @@ export const pipelineStageInput = z
 
 export const reorderStagesInput = z
   .object({
+    pipeline_id: id,
     ordered_ids: z.array(id).min(2).max(30),
   })
   .strict();
+
+export const pipelineInput = z.object({ id: id.optional(), name: requiredText(60) }).strict();
+export const deletePipelineInput = z.object({ id }).strict();

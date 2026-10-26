@@ -56,8 +56,9 @@ test.describe("main journey", () => {
     await dialog.getByRole("button", { name: "Convert" }).click();
     await expect(page).toHaveURL(/\/deals\/[0-9a-f-]{36}$/);
     await page.getByLabel("Deal stage").click();
-    await page.getByRole("option", { name: "Won" }).click();
-    await expect(page.getByText("Moved to Won")).toBeVisible();
+    // With several pipelines the stage menu names the pipeline too.
+    await page.getByRole("option", { name: "Sales · Won" }).click();
+    await expect(page.getByText("Moved to Sales · Won")).toBeVisible();
 
     // The Deal won automation created exactly one order.
     await page.reload();

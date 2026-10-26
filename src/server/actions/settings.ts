@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   changeRoleInput,
+  deletePipelineInput,
+  pipelineInput,
   pipelineStageInput,
   reorderStagesInput,
   updateOrganizationInput,
@@ -15,6 +17,7 @@ import { runAction } from "@/server/action-result";
 import { getDataMode } from "@/server/env";
 import { DomainError, getRepositories } from "@/server/repositories";
 import { recordSecurity } from "@/server/security/record";
+import { tr } from "@/lib/i18n";
 
 export async function updateOrganizationAction(input: unknown) {
   return runAction(async () => {
@@ -70,9 +73,10 @@ export async function savePipelineStageAction(input: unknown) {
   return runAction(async () => {
     const { ctx } = await getRepoContext();
     assertCan(ctx.actor, "manage", "pipeline_stage");
-    const { id, ...stage } = pipelineStageInput.parse(input);
+    const { id, pipeline_id, ...stage } = pipelineStageInput.parse(input);
     const repo = getRepositories().pipelineStages;
-    const saved = id ? await repo.update(ctx, id, stage) : await repo.create(ctx, stage);
+    if (!id && !pipeline_id) throw new DomainError("Choose the pipeline for the new stage.");
+    const saved = id ? await repo.update(ctx, id, stage) : await repo.create(ctx, pipeline_id!, stage);
     await recordSecurity({
       type: "pipeline.stages_changed",
       payload: { target: { type: "pipeline_stage", id: saved.id }, change: id ? "updated" : "created", name: stage.name, probability: stage.probability, is_won: stage.is_won, is_lost: stage.is_lost },
@@ -87,9 +91,49 @@ export async function reorderPipelineStagesAction(input: unknown) {
     const { ctx } = await getRepoContext();
     assertCan(ctx.actor, "manage", "pipeline_stage");
     const parsed = reorderStagesInput.parse(input);
-    await getRepositories().pipelineStages.reorder(ctx, parsed.ordered_ids);
+    await getRepositories().pipelineStages.reorder(ctx, parsed.pipeline_id, parsed.ordered_ids);
     await recordSecurity({ type: "pipeline.stages_changed", payload: { target: { type: "pipeline_stage", id: null }, change: "reordered", order: parsed.ordered_ids } });
     revalidatePath("/settings/pipeline");
+    return undefined;
+  });
+}
+
+/** The stages a new pipeline starts with; admins rename and add stages afterwards. */
+function defaultStages() {
+  return [
+    { name: tr("Qualification"), probability: 10, is_won: false, is_lost: false },
+    { name: tr("Proposal"), probability: 50, is_won: false, is_lost: false },
+    { name: tr("Negotiation"), probability: 75, is_won: false, is_lost: false },
+    { name: tr("Won"), probability: 100, is_won: true, is_lost: false },
+    { name: tr("Lost"), probability: 0, is_won: false, is_lost: true },
+  ];
+}
+
+/** Admin: create a pipeline (with default stages) or rename one. */
+export async function savePipelineAction(input: unknown) {
+  return runAction(async () => {
+    const { ctx } = await getRepoContext();
+    assertCan(ctx.actor, "manage", "pipeline_stage");
+    const { id, name } = pipelineInput.parse(input);
+    const repo = getRepositories().pipelines;
+    const saved = id ? await repo.rename(ctx, id, name) : await repo.create(ctx, { name, stages: defaultStages() });
+    await recordSecurity({ type: "pipeline.stages_changed", payload: { target: { type: "pipeline", id: saved.id }, change: id ? "pipeline_renamed" : "pipeline_created", name } });
+    revalidatePath("/settings/pipeline");
+    revalidatePath("/pipeline");
+    return { id: saved.id };
+  });
+}
+
+/** Admin: delete an empty pipeline. */
+export async function deletePipelineAction(input: unknown) {
+  return runAction(async () => {
+    const { ctx } = await getRepoContext();
+    assertCan(ctx.actor, "manage", "pipeline_stage");
+    const { id } = deletePipelineInput.parse(input);
+    await getRepositories().pipelines.remove(ctx, id);
+    await recordSecurity({ type: "pipeline.stages_changed", payload: { target: { type: "pipeline", id }, change: "pipeline_deleted" } });
+    revalidatePath("/settings/pipeline");
+    revalidatePath("/pipeline");
     return undefined;
   });
 }

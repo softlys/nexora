@@ -35,10 +35,11 @@ import {
 import { findVisible, nowOf, requireCan, type ServiceContext } from "./context";
 import { byId } from "./records";
 import { recentActivities } from "./tasks";
+import type { Pipeline } from "@/domain/entities";
 
 async function metricsInput(ctx: ServiceContext) {
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
-    const [deals, orders, tasks, stages, allPayments, history, companies, profiles] = await Promise.all([
+    const [deals, orders, tasks, stages, allPayments, history, companies, profiles, pipelines] = await Promise.all([
       findVisible(tx, ctx, "deals", "deal", (r) => r.owner_id),
       findVisible(tx, ctx, "orders", "order", (r) => r.owner_id),
       findVisible(tx, ctx, "tasks", "task", (r) => r.assignee_id),
@@ -47,11 +48,12 @@ async function metricsInput(ctx: ServiceContext) {
       tx.find("deal_stage_history"),
       tx.find("companies"),
       tx.find("profiles"),
+      tx.find("pipelines", { archived_at: null }),
     ]);
     const orderIds = new Set(orders.map((o) => o.id));
     const dealIds = new Set(deals.map((d) => d.id));
     const input: MetricsInput = { deals, orders, tasks, stages, payments: allPayments.filter((p) => orderIds.has(p.order_id)) };
-    return { input, history: history.filter((h) => dealIds.has(h.deal_id)), companies: byId(companies), profiles: byId(profiles) };
+    return { input, history: history.filter((h) => dealIds.has(h.deal_id)), companies: byId(companies), profiles: byId(profiles), pipelines: pipelines.sort((a, b) => a.position - b.position) };
   });
 }
 
@@ -62,9 +64,16 @@ const kpi = (current: number | null, previous: number | null): Kpi => ({
   change: current === null || previous === null ? null : change(current, previous),
 });
 
-export async function getDashboard(ctx: ServiceContext, period: Period) {
+/** Stage charts (by stage, funnel, distribution) are per pipeline: the chosen one, or the default. */
+function pipelineScope(input: MetricsInput, pipelines: Pipeline[], pipelineId?: string) {
+  const pipeline = pipelines.find((p) => p.id === pipelineId) ?? pipelines[0] ?? null;
+  return { pipeline, input: { ...input, stages: input.stages.filter((s) => s.pipeline_id === pipeline?.id) } };
+}
+
+export async function getDashboard(ctx: ServiceContext, period: Period, pipelineId?: string) {
   requireCan(ctx, "view", "analytics");
-  const { input, companies, profiles } = await metricsInput(ctx);
+  const { input, companies, profiles, pipelines } = await metricsInput(ctx);
+  const scoped = pipelineScope(input, pipelines, pipelineId);
   const prev = previousPeriod(period);
   const now = nowOf(ctx);
   const nowIso = now.toISOString();
@@ -97,7 +106,9 @@ export async function getDashboard(ctx: ServiceContext, period: Period) {
     },
     revenue: revenueSeries(input, period),
     bucket: bucketFor(period),
-    byStage: dealsByStage(input, period),
+    byStage: dealsByStage(scoped.input, period),
+    pipelines,
+    pipeline: scoped.pipeline,
     recentActivities: (await recentActivities(ctx, 6)).map((a) => ({ id: a.id, subject: a.subject, type: a.type, actor: a.actor_name, at: a.occurred_at, related: a.related })),
     upcomingTasks: upcoming,
     recentOrders,
@@ -105,9 +116,10 @@ export async function getDashboard(ctx: ServiceContext, period: Period) {
   };
 }
 
-export async function getAnalytics(ctx: ServiceContext, period: Period) {
+export async function getAnalytics(ctx: ServiceContext, period: Period, pipelineId?: string) {
   requireCan(ctx, "view", "analytics");
-  const { input, history, profiles } = await metricsInput(ctx);
+  const { input, history, profiles, pipelines } = await metricsInput(ctx);
+  const scoped = pipelineScope(input, pipelines, pipelineId);
   const now = nowOf(ctx);
   const completion = taskCompletionRate(input, period);
   const tasksDue = input.tasks.filter((t) => !t.archived_at && t.status !== "cancelled" && t.due_at && t.due_at >= periodBounds(period).start && t.due_at <= periodBounds(period).end);
@@ -127,10 +139,12 @@ export async function getAnalytics(ctx: ServiceContext, period: Period) {
       overdueTasks: overdueTasks(input, period, now),
     },
     revenue: revenueSeries(input, period),
-    funnel: conversionFunnel(input, history, period),
+    funnel: conversionFunnel(scoped.input, history, period),
     byOwner: salesByOwner(input, period).map((r) => ({ ...r, owner: profiles.get(r.owner_id)?.full_name ?? "Former member" })),
     bySource: salesBySource(input, period),
-    distribution: pipelineDistribution(input, period),
+    distribution: pipelineDistribution(scoped.input, period),
+    pipelines,
+    pipeline: scoped.pipeline,
     ordersByStatus: ordersByStatus(input, period),
     ageing: receivablesAgeing(input, period),
     taskCompletion: {

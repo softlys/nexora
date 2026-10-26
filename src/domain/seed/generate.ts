@@ -6,30 +6,7 @@
  * `now`, so the demo never looks stale. The same dataset feeds the demo store and
  * the Supabase seed script.
  */
-import {
-  type Activity,
-  type Comment,
-  type Company,
-  type Contact,
-  type Dataset,
-  type Deal,
-  type DealStageHistory,
-  type Lead,
-  type LeadSource,
-  type Notification,
-  type Order,
-  type OrderItem,
-  type OrderStatus,
-  type Organization,
-  type Payment,
-  type PipelineStage,
-  type Product,
-  type Profile,
-  type Task,
-  type TaskPriority,
-  type TaskStatus,
-  LEAD_SOURCES,
-} from "../entities";
+import { LEAD_SOURCES, Pipeline, type Activity, type Comment, type Company, type Contact, type Dataset, type Deal, type DealStageHistory, type Lead, type LeadSource, type Notification, type Order, type OrderItem, type OrderStatus, type Organization, type Payment, type PipelineStage, type Product, type Profile, type Task, type TaskPriority, type TaskStatus } from "../entities";
 import { computeLineTotals, computeOrderTotals, roundMoney } from "../orders/totals";
 import { derivePaymentStatus } from "../orders/payment-status";
 import { seedAutomation } from "./automation";
@@ -49,6 +26,12 @@ import {
 } from "./fixtures";
 
 export const SEED_NUMBER = 20261018;
+
+/** The demo organization's pipelines: the default sales pipeline and an empty tenders pipeline. */
+export const DEMO_PIPELINE_IDS = {
+  sales: "00000000-0000-4000-8000-000000000201",
+  tenders: "00000000-0000-4000-8000-000000000202",
+} as const;
 
 export const DEMO_ORG_ID = "00000000-0000-4000-8000-000000000001";
 
@@ -167,9 +150,15 @@ export function generateSeed(now: Date = new Date()): Dataset {
     ["Won", 100, true, false],
     ["Lost", 0, false, true],
   ];
+  // Fixed ids (not from the PRNG), so adding pipelines leaves every other seeded value unchanged.
+  const pipelines: Pipeline[] = [
+    { id: DEMO_PIPELINE_IDS.sales, organization_id: org, name: "Sales", position: 0, created_at: orgCreated, updated_at: orgCreated, archived_at: null },
+    { id: DEMO_PIPELINE_IDS.tenders, organization_id: org, name: "Tenders", position: 1, created_at: orgCreated, updated_at: orgCreated, archived_at: null },
+  ];
   const pipeline_stages: PipelineStage[] = stageDefs.map(([name, probability, is_won, is_lost], position) => ({
     id: rng.uuid(),
     organization_id: org,
+    pipeline_id: DEMO_PIPELINE_IDS.sales,
     name,
     position,
     probability,
@@ -178,9 +167,20 @@ export function generateSeed(now: Date = new Date()): Dataset {
     created_at: orgCreated,
     updated_at: orgCreated,
   }));
-  const openStages = pipeline_stages.filter((s) => !s.is_won && !s.is_lost);
-  const wonStage = pipeline_stages.find((s) => s.is_won)!;
-  const lostStage = pipeline_stages.find((s) => s.is_lost)!;
+  const tenderStages: Array<[string, number, boolean, boolean]> = [
+    ["Tender found", 10, false, false],
+    ["Documents prepared", 30, false, false],
+    ["Bid submitted", 50, false, false],
+    ["Won", 100, true, false],
+    ["Lost", 0, false, true],
+  ];
+  tenderStages.forEach(([name, probability, is_won, is_lost], position) =>
+    pipeline_stages.push({ id: `00000000-0000-4000-8000-0000000003${String(position).padStart(2, "0")}`, organization_id: org, pipeline_id: DEMO_PIPELINE_IDS.tenders, name, position, probability, is_won, is_lost, created_at: orgCreated, updated_at: orgCreated }),
+  );
+  const salesStages = pipeline_stages.filter((s) => s.pipeline_id === DEMO_PIPELINE_IDS.sales);
+  const openStages = salesStages.filter((s) => !s.is_won && !s.is_lost);
+  const wonStage = salesStages.find((s) => s.is_won)!;
+  const lostStage = salesStages.find((s) => s.is_lost)!;
 
   // -------------------------------------------------------------------------
   // Companies and contacts
@@ -803,6 +803,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     companies,
     contacts,
     leads,
+    pipelines,
     pipeline_stages,
     deals,
     deal_stage_history,

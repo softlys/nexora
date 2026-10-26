@@ -15,7 +15,8 @@ import { cn } from "@/lib/utils";
 import { parseDealFilters } from "@/server/deal-filters";
 import { requirePermission } from "@/server/guards";
 import { dealFormOptions, loadPage, peopleFor, permissionsFor } from "@/server/page-data";
-import { getPipelineBoard, listDeals } from "@/server/services/deals";
+import { getPipelineBoard, listDeals, pipelineOptions } from "@/server/services/deals";
+import { PipelineTabs } from "@/components/crm/pipeline-tabs";
 import { PipelineBoard } from "./pipeline-board";
 import { tr } from "@/lib/i18n";
 
@@ -29,12 +30,14 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
   const query = parseListQuery(params);
   const { board, table, people, perms, options } = await loadPage(async (ctx) => ({
     board: view === "board" ? await getPipelineBoard(ctx, { ...filters, q: query.q }) : null,
-    table: view === "table" ? await listDeals(ctx, query, filters) : null,
+    table: view === "table" ? await listDeals(ctx, query, { ...filters, pipeline: filters.pipeline ?? (await pipelineOptions(ctx))[0]?.id }) : null,
     people: await peopleFor(ctx, "deal"),
     perms: permissionsFor(ctx, "deal"),
     options: await dealFormOptions(ctx),
   }));
   const stages = board?.stages ?? table!.stages;
+  const pipelines = board?.pipelines ?? table!.pipelines;
+  const currentPipeline = board?.pipeline.id ?? filters.pipeline ?? pipelines[0]?.id ?? null;
 
   return (
     <div className="space-y-5">
@@ -56,10 +59,11 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
                 </Link>
               ))}
             </div>
-            {perms.canCreate && <DealFormButton options={options} />}
+            {perms.canCreate && <DealFormButton options={options} defaultPipelineId={currentPipeline ?? undefined} />}
           </>
         }
       />
+      <PipelineTabs pipelines={pipelines} current={currentPipeline} path="/pipeline" params={params} />
       <ListToolbar
         searchPlaceholder={tr("Search deals…")}
         showArchivedToggle={false}

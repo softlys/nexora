@@ -43,7 +43,7 @@ import {
 const ORG = "org";
 const ts = "2026-01-01T00:00:00.000Z";
 const stage = (id: string, name: string, position: number, probability: number, is_won = false, is_lost = false): PipelineStage => ({
-  id, organization_id: ORG, name, position, probability, is_won, is_lost, created_at: ts, updated_at: ts,
+  id, organization_id: ORG, pipeline_id: "p1", name, position, probability, is_won, is_lost, created_at: ts, updated_at: ts,
 });
 const stages = [stage("qual", "Qualification", 0, 20), stage("prop", "Proposal", 1, 50), stage("won", "Won", 2, 100, true), stage("lost", "Lost", 3, 0, false, true)];
 

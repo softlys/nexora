@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import type { AuditLog, Dataset, PipelineStage } from "@/domain/entities";
+import type { AuditLog, Dataset, Pipeline, PipelineStage } from "@/domain/entities";
 import { visibleOwnerIds, type Resource } from "@/domain/permissions";
 import { demoDataPath } from "@/server/env";
 import { DemoStore } from "@/server/demo/file-store";
@@ -46,8 +46,16 @@ function auditRow(ctx: RepoContext, entry: Pick<AuditLog, "action" | "target_typ
   };
 }
 
-function sortedStages(data: Dataset, ctx: RepoContext): PipelineStage[] {
-  return inOrg(ctx, data.pipeline_stages).sort((a, b) => a.position - b.position);
+function sortedPipelines(data: Dataset, ctx: RepoContext): Pipeline[] {
+  return inOrg(ctx, data.pipelines).filter((p) => !p.archived_at).sort((a, b) => a.position - b.position);
+}
+
+/** Stages of one pipeline, or of all pipelines (in pipeline order), by position. */
+function sortedStages(data: Dataset, ctx: RepoContext, pipelineId?: string): PipelineStage[] {
+  const order = new Map(sortedPipelines(data, ctx).map((p, i) => [p.id, i]));
+  return inOrg(ctx, data.pipeline_stages)
+    .filter((s) => (pipelineId ? s.pipeline_id === pipelineId : order.has(s.pipeline_id)))
+    .sort((a, b) => (order.get(a.pipeline_id) ?? 0) - (order.get(b.pipeline_id) ?? 0) || a.position - b.position);
 }
 
 /** Only one won and one lost stage are allowed so conversions and metrics stay unambiguous. */
@@ -153,13 +161,60 @@ export function createDemoRepositories(): Repositories {
       },
     },
 
+    pipelines: {
+      async list(ctx) {
+        return sortedPipelines(await store.read(), ctx);
+      },
+      async create(ctx, input) {
+        return store.mutate((data) => {
+          const existing = sortedPipelines(data, ctx);
+          if (existing.some((p) => p.name.toLowerCase() === input.name.toLowerCase())) throw new DomainError("A pipeline with this name already exists.", "conflict");
+          assertSingleTerminalStages(input.stages as PipelineStage[]);
+          const at = nowIso();
+          const pipeline: Pipeline = { id: randomUUID(), organization_id: ctx.actor.organization_id, name: input.name, position: existing.length, created_at: at, updated_at: at, archived_at: null };
+          data.pipelines.push(pipeline);
+          // Open stages first, then won and lost.
+          const ordered = [...input.stages.filter((s) => !s.is_won && !s.is_lost), ...input.stages.filter((s) => s.is_won), ...input.stages.filter((s) => s.is_lost)];
+          ordered.forEach((s, position) => data.pipeline_stages.push({ id: randomUUID(), organization_id: ctx.actor.organization_id, pipeline_id: pipeline.id, ...s, position, created_at: at, updated_at: at }));
+          data.audit_logs.push(auditRow(ctx, { action: "pipeline.created", target_type: "pipeline", target_id: pipeline.id, changes: { after: { name: input.name, stages: ordered.map((s) => s.name) } } }));
+          return pipeline;
+        });
+      },
+      async rename(ctx, id, name) {
+        return store.mutate((data) => {
+          const pipelines = sortedPipelines(data, ctx);
+          const pipeline = pipelines.find((p) => p.id === id);
+          if (!pipeline) throw new DomainError("Pipeline not found.", "not_found");
+          if (pipelines.some((p) => p.id !== id && p.name.toLowerCase() === name.toLowerCase())) throw new DomainError("A pipeline with this name already exists.", "conflict");
+          const before = pipeline.name;
+          Object.assign(pipeline, { name, updated_at: nowIso() });
+          data.audit_logs.push(auditRow(ctx, { action: "pipeline.renamed", target_type: "pipeline", target_id: id, changes: { before: { name: before }, after: { name } } }));
+          return pipeline;
+        });
+      },
+      async remove(ctx, id) {
+        await store.mutate((data) => {
+          const pipelines = sortedPipelines(data, ctx);
+          const pipeline = pipelines.find((p) => p.id === id);
+          if (!pipeline) throw new DomainError("Pipeline not found.", "not_found");
+          if (pipelines.length === 1) throw new DomainError("The last pipeline cannot be deleted.", "conflict");
+          const stageIds = new Set(sortedStages(data, ctx, id).map((s) => s.id));
+          if (inOrg(ctx, data.deals).some((d) => stageIds.has(d.stage_id))) throw new DomainError("Move or delete the pipeline's deals first.", "conflict");
+          data.pipeline_stages = data.pipeline_stages.filter((s) => !stageIds.has(s.id));
+          data.pipelines = data.pipelines.filter((p) => p.id !== id);
+          data.audit_logs.push(auditRow(ctx, { action: "pipeline.deleted", target_type: "pipeline", target_id: id, changes: { before: { name: pipeline.name } } }));
+        });
+      },
+    },
+
     pipelineStages: {
       async list(ctx) {
         return sortedStages(await store.read(), ctx);
       },
-      async create(ctx, input) {
+      async create(ctx, pipelineId, input) {
         return store.mutate((data) => {
-          const stages = sortedStages(data, ctx);
+          if (!sortedPipelines(data, ctx).some((p) => p.id === pipelineId)) throw new DomainError("Pipeline not found.", "not_found");
+          const stages = sortedStages(data, ctx, pipelineId);
           if (stages.some((s) => s.name.toLowerCase() === input.name.toLowerCase())) {
             throw new DomainError("A stage with this name already exists.", "conflict");
           }
@@ -170,6 +225,7 @@ export function createDemoRepositories(): Repositories {
           const stage: PipelineStage = {
             id: randomUUID(),
             organization_id: ctx.actor.organization_id,
+            pipeline_id: pipelineId,
             ...input,
             position: insertAt,
             created_at: at,
@@ -185,7 +241,8 @@ export function createDemoRepositories(): Repositories {
       },
       async update(ctx, id, input) {
         return store.mutate((data) => {
-          const stages = sortedStages(data, ctx);
+          const pipelineId = inOrg(ctx, data.pipeline_stages).find((s) => s.id === id)?.pipeline_id;
+          const stages = sortedStages(data, ctx, pipelineId);
           const stage = stages.find((s) => s.id === id);
           if (!stage) throw new DomainError("Stage not found.", "not_found");
           if (stages.some((s) => s.id !== id && s.name.toLowerCase() === input.name.toLowerCase())) {
@@ -199,9 +256,9 @@ export function createDemoRepositories(): Repositories {
           return stage;
         });
       },
-      async reorder(ctx, orderedIds) {
+      async reorder(ctx, pipelineId, orderedIds) {
         return store.mutate((data) => {
-          const stages = sortedStages(data, ctx);
+          const stages = sortedStages(data, ctx, pipelineId);
           const known = new Set(stages.map((s) => s.id));
           if (orderedIds.length !== stages.length || new Set(orderedIds).size !== orderedIds.length || orderedIds.some((i) => !known.has(i))) {
             throw new DomainError("The new order must contain every stage exactly once.", "invalid");
@@ -213,7 +270,7 @@ export function createDemoRepositories(): Repositories {
             s.position = position;
             s.updated_at = at;
           });
-          const after = sortedStages(data, ctx);
+          const after = sortedStages(data, ctx, pipelineId);
           data.audit_logs.push(
             auditRow(ctx, { action: "pipeline.stages_reordered", target_type: "pipeline_stage", target_id: null, changes: { before, after: after.map((s) => s.name) } }),
           );

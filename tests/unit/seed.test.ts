@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { entitySchemas, TABLES, type Dataset } from "@/domain/entities";
 import { computeOrderTotals } from "@/domain/orders/totals";
-import { generateSeed } from "@/domain/seed/generate";
+import { generateSeed, DEMO_PIPELINE_IDS } from "@/domain/seed/generate";
 
 const NOW = new Date("2026-10-19T12:00:00Z");
 const seed = generateSeed(NOW);
@@ -147,7 +147,9 @@ describe("seed data", () => {
   });
 
   it("covers every stage, order status and an overdue case", () => {
-    expect(new Set(seed.deals.map((d) => d.stage_id)).size).toBe(seed.pipeline_stages.length);
+    // Every stage of the default sales pipeline has deals; the tenders pipeline starts empty.
+    const sales = seed.pipeline_stages.filter((s) => s.pipeline_id === DEMO_PIPELINE_IDS.sales);
+    expect(new Set(seed.deals.map((d) => d.stage_id)).size).toBe(sales.length);
     expect(new Set(seed.orders.map((o) => o.status))).toEqual(new Set(["draft", "confirmed", "processing", "shipped", "delivered", "cancelled"]));
     expect(seed.orders.some((o) => o.payment_status === "overdue")).toBe(true);
     const nowIso = NOW.toISOString();

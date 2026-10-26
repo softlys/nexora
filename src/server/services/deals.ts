@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { AuditLog, Deal, DealStageHistory, PipelineStage } from "@/domain/entities";
+import type { AuditLog, Deal, DealStageHistory, Pipeline, PipelineStage } from "@/domain/entities";
 import { diffFields } from "@/domain/diff";
 import type { dealInput, dealQuickEditInput, dealUpdateInput, moveStageInput } from "@/domain/inputs";
 import { applyListQuery, type ListQuery } from "@/domain/list";
@@ -12,8 +12,19 @@ import { assertLinksVisible, byId, getOwned } from "./records";
 import { PermissionError } from "@/domain/permissions";
 import { companyForName } from "./companies";
 
-export async function sortedStages(tx: Tx): Promise<PipelineStage[]> {
-  return (await tx.find("pipeline_stages")).sort((a, b) => a.position - b.position);
+export async function sortedPipelines(tx: Tx): Promise<Pipeline[]> {
+  return (await tx.find("pipelines", { archived_at: null })).sort((a, b) => a.position - b.position);
+}
+
+/**
+ * Stages of one pipeline, or of every pipeline in pipeline order (the default pipeline first), so
+ * firstOpenStage() of all stages is the default pipeline's first stage.
+ */
+export async function sortedStages(tx: Tx, pipelineId?: string): Promise<PipelineStage[]> {
+  const order = new Map((await sortedPipelines(tx)).map((p, i) => [p.id, i]));
+  return (await tx.find("pipeline_stages"))
+    .filter((s) => (pipelineId ? s.pipeline_id === pipelineId : order.has(s.pipeline_id)))
+    .sort((a, b) => (order.get(a.pipeline_id) ?? 0) - (order.get(b.pipeline_id) ?? 0) || a.position - b.position);
 }
 
 export function firstOpenStage(stages: PipelineStage[]): PipelineStage {
@@ -23,6 +34,8 @@ export function firstOpenStage(stages: PipelineStage[]): PipelineStage {
 }
 
 export type DealFilters = {
+  /** Deals whose stage belongs to this pipeline. */
+  pipeline?: string;
   stage?: string;
   owner?: string;
   from?: string;
@@ -40,13 +53,15 @@ export type DealFilters = {
 
 /** Visible, non-archived deals enriched for lists and the board, with all filters applied. */
 async function filteredDeals(tx: Tx, ctx: ServiceContext, filters: DealFilters, archived = false) {
-  const [deals, stages, companies, profiles] = await Promise.all([
+  const [deals, stages, companies, profiles, pipelines] = await Promise.all([
     findVisible(tx, ctx, "deals", "deal", (r) => r.owner_id),
-    sortedStages(tx),
+    sortedStages(tx, filters.pipeline),
     tx.find("companies"),
     tx.find("profiles"),
+    sortedPipelines(tx),
   ]);
   const stageById = byId(stages);
+  const pipelineById = byId(pipelines);
   const companyById = byId(companies);
   const profileById = byId(profiles);
   const now = nowOf(ctx);
@@ -56,6 +71,7 @@ async function filteredDeals(tx: Tx, ctx: ServiceContext, filters: DealFilters, 
       const stage = stageById.get(d.stage_id);
       const status = stage?.is_won ? "won" : stage?.is_lost ? "lost" : "open";
       return (
+        (!filters.pipeline || stage !== undefined) &&
         (!filters.stage || d.stage_id === filters.stage) &&
         (!filters.owner || d.owner_id === filters.owner) &&
         (!filters.company || d.company_id === filters.company) &&
@@ -73,20 +89,22 @@ async function filteredDeals(tx: Tx, ctx: ServiceContext, filters: DealFilters, 
     .map((d) => ({
       ...d,
       stage_name: stageById.get(d.stage_id)?.name ?? "Unknown",
+      pipeline_id: stageById.get(d.stage_id)?.pipeline_id ?? null,
+      pipeline_name: pipelineById.get(stageById.get(d.stage_id)?.pipeline_id ?? "")?.name ?? "",
       is_won: stageById.get(d.stage_id)?.is_won ?? false,
       is_lost: stageById.get(d.stage_id)?.is_lost ?? false,
       company_name: companyById.get(d.company_id)?.name ?? "Unknown company",
       owner_name: profileById.get(d.owner_id)?.full_name ?? "Unknown",
       days_in_stage: daysInStage(d, now),
     }));
-  return { rows, stages };
+  return { rows, stages, pipelines };
 }
 
 export type DealRow = Awaited<ReturnType<typeof filteredDeals>>["rows"][number];
 
 export async function listDeals(ctx: ServiceContext, query: ListQuery, filters: DealFilters) {
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
-    const { rows, stages } = await filteredDeals(tx, ctx, filters, query.archived === "1");
+    const { rows, stages, pipelines } = await filteredDeals(tx, ctx, filters, query.archived === "1");
     const page = applyListQuery(rows, query, {
       searchText: (d) => `${d.name} ${d.company_name} ${d.owner_name}`,
       sorters: {
@@ -100,14 +118,17 @@ export async function listDeals(ctx: ServiceContext, query: ListQuery, filters: 
       defaultSort: { key: "close", dir: "asc" },
     });
     await trackRead(ctx, "deal", page.rows.length);
-    return { ...page, stages };
+    return { ...page, stages, pipelines };
   });
 }
 
-/** Board data: stages with their deals, per-stage totals, weighted forecast and stage durations. */
+/** Board data for one pipeline (the default one unless chosen): stages with their deals, totals, forecast and durations. */
 export async function getPipelineBoard(ctx: ServiceContext, filters: DealFilters & { q?: string }) {
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
-    const { rows, stages } = await filteredDeals(tx, ctx, filters);
+    const pipelines = await sortedPipelines(tx);
+    const pipeline = pipelines.find((p) => p.id === filters.pipeline) ?? pipelines[0];
+    if (!pipeline) throw new DomainError("The pipeline has no open stage.", "conflict");
+    const { rows, stages } = await filteredDeals(tx, ctx, { ...filters, pipeline: pipeline.id });
     const q = filters.q?.toLowerCase().trim();
     const deals = q ? rows.filter((d) => `${d.name} ${d.company_name} ${d.owner_name}`.toLowerCase().includes(q)) : rows;
     // Average time the deals shown in each column have been in it: the same numbers as the
@@ -123,14 +144,14 @@ export async function getPipelineBoard(ctx: ServiceContext, filters: DealFilters
         medianDays: days.length % 2 ? days[mid]! : (days[mid - 1]! + days[mid]!) / 2,
       };
     }
-    return { stages, deals, summary: summarizeStages(stages, deals), durations };
+    return { pipelines, pipeline, stages, deals, summary: summarizeStages(stages, deals), durations };
   });
 }
 
 export async function getDeal(ctx: ServiceContext, id: string) {
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
     const deal = await getOwned(tx, ctx, "deals", id);
-    const [stages, company, contact, history, activities, tasks, comments, audit, order, profiles] = await Promise.all([
+    const [stages, company, contact, history, activities, tasks, comments, audit, order, profiles, pipelines] = await Promise.all([
       sortedStages(tx),
       tx.get("companies", deal.company_id),
       deal.primary_contact_id ? tx.get("contacts", deal.primary_contact_id) : Promise.resolve(null),
@@ -141,11 +162,13 @@ export async function getDeal(ctx: ServiceContext, id: string) {
       tx.find("audit_logs", { target_type: "deal", target_id: id }),
       tx.find("orders", { source_deal_id: id }),
       tx.find("profiles"),
+      sortedPipelines(tx),
     ]);
     return {
       deal,
       stage: stages.find((s) => s.id === deal.stage_id) ?? null,
       stages,
+      pipelines,
       company,
       contact,
       order: order[0] ?? null,
@@ -201,7 +224,7 @@ export async function createDeal(ctx: ServiceContext, input: z.output<typeof dea
   const run = async (t: Tx) => {
     const companyId = input.company_id ?? (await companyForName(t, ctx, input.new_company!));
     await assertLinksVisible(t, ctx, { company_id: companyId, contact_id: input.primary_contact_id });
-    const stages = await sortedStages(t);
+    const stages = await sortedStages(t, input.stage_id ? undefined : input.pipeline_id);
     const stage = input.stage_id ? stages.find((s) => s.id === input.stage_id) : firstOpenStage(stages);
     if (!stage || stage.is_won || stage.is_lost) throw new DomainError("New deals start in an open stage.");
     const owner = (await resolveOwner(t, ctx, "deal", input.owner_id ?? ctx.actor.id, ctx.actor.id, null))!;
@@ -312,4 +335,8 @@ export async function moveDealStage(ctx: ServiceContext, input: z.output<typeof 
 
 export async function stageOptions(ctx: ServiceContext) {
   return ctx.db.read(ctx.actor.organization_id, (tx) => sortedStages(tx));
+}
+
+export async function pipelineOptions(ctx: ServiceContext) {
+  return ctx.db.read(ctx.actor.organization_id, (tx) => sortedPipelines(tx));
 }
