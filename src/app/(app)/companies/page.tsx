@@ -1,4 +1,4 @@
-import { Building2 } from "lucide-react";
+import { Building2, CopyCheck } from "lucide-react";
 import Link from "next/link";
 import { CompanyFormButton } from "@/components/crm/company-form";
 import { ListTable } from "@/components/list/list-table";
@@ -14,6 +14,7 @@ import { requirePermission } from "@/server/guards";
 import { listCompanies } from "@/server/services/companies";
 import { ExportButton, ImportButton } from "@/components/list/export-import";
 import { tr } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
 
 export const metadata = { title: tr("Companies") };
 
@@ -43,6 +44,12 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
         description={tr("Accounts you sell to, with their contacts, deals, orders and history.")}
         actions={
           <>
+            <Button variant="outline" asChild>
+              <Link href="/duplicates?entity=company">
+                <CopyCheck aria-hidden />
+                {tr("Duplicates")}
+              </Link>
+            </Button>
             <ExportButton entity="companies" query={exportQuery} />
             {perms.canCreate && <ImportButton entity="companies" />}
             {perms.canCreate && <CompanyFormButton fields={people.fields} owners={people.assignable} autoOpen={first(params.new) === "1"} />}

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ComboboxField, SelectField, TextField } from "@/components/forms/fields";
@@ -15,6 +15,7 @@ import { applyServerErrors } from "@/lib/forms";
 import { MESSENGER_CHANNELS, MESSENGERS, type MessengerChannel } from "@/lib/messengers";
 import { createContactAction, updateContactAction } from "@/server/actions/crm";
 import { tr } from "@/lib/i18n";
+import { DuplicateWarning } from "./duplicate-warning";
 import { CustomFieldsSection, customFormValues, type CustomFormValues } from "./custom-fields";
 import type { CustomFieldDef } from "@/domain/custom-fields";
 
@@ -80,6 +81,7 @@ export function ContactFormButton({
     resolver: zodResolver(formSchema) as unknown as Resolver<Values>,
     defaultValues: defaults,
   });
+  const [firstName, lastName, companyId, email, phone] = useWatch({ control, name: ["first_name", "last_name", "company_id", "email", "phone"] });
 
   const onSubmit = handleSubmit(async (values) => {
     const payload = { ...values, tags: toTags(values.tags) };
@@ -124,6 +126,7 @@ export function ContactFormButton({
           <TextField control={control} name="email" label={tr("Email")} type="email" inputMode="email" autoComplete="email" />
           <TextField control={control} name="phone" label={tr("Phone")} type="tel" inputMode="tel" autoComplete="tel" />
         </div>
+        {!contact && open && <DuplicateWarning probe={{ entity: "contact", first_name: firstName, last_name: lastName, company_id: companyId, email, phone }} />}
         <fieldset className="space-y-3">
           <legend className="text-sm font-medium">{tr("Messengers and social")}</legend>
           <p className="text-xs text-text-muted">{tr("Saved handles become one-click \"write\" links on the contact. Phone numbers in international format, e.g. +7 999 123-45-67.")}</p>

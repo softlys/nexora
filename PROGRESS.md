@@ -28,6 +28,18 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Duplicates (2026-10-26)
+
+- **Match keys.** Records are compared by the company name without legal forms and quotes ("ООО «Ромашка»" = "Ромашка, LLC"), the website host, the last 10 digits of a phone number and the e-mail. A contact's name only matches within the same company (`src/domain/duplicates.ts`).
+- **Warning while creating.** The new company, contact and lead forms list look-alike records with the reason and a link, half a second after typing stops. Saving stays possible. New leads are compared with leads and contacts (e-mail, phone) and companies (company name).
+- **Duplicates page** (`/duplicates`, linked from the company and contact lists): groups of possible duplicate companies or contacts.
+- **Merge** (admins only, like a permanent delete, because links owned by other users move too):
+  - Choose the record to keep (the oldest by default) and the ones to merge.
+  - Contacts, leads, deals, orders, tasks, activities, comments and integration links move to the kept record; for contacts also deals' primary contact.
+  - Empty fields are filled from the merged records; notes are combined; tags, messengers and custom values are joined (the kept record wins).
+  - The merged records are archived, not deleted. A "Duplicates merged" activity and the usual record events record what happened.
+- **Tests.** Keys and grouping, warnings, company and contact merges with links, permissions (unit); e2e: warning, create, merge.
+
 ## Custom fields (2026-10-26)
 
 - **Settings → Fields.** Admins add their own fields to companies, contacts, leads and deals, for example ИНН, customer type or a contract date.

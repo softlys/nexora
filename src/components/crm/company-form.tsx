@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 import { ComboboxField, SelectField, TextareaField, TextField } from "@/components/forms/fields";
 import { RecordSheet, useAutoOpen } from "@/components/forms/record-sheet";
@@ -15,6 +15,7 @@ import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { applyServerErrors } from "@/lib/forms";
 import { createCompanyAction, updateCompanyAction } from "@/server/actions/crm";
 import { tr } from "@/lib/i18n";
+import { DuplicateWarning } from "./duplicate-warning";
 import { CustomFieldsSection, customFormValues, type CustomFormValues } from "./custom-fields";
 import type { CustomFieldDef } from "@/domain/custom-fields";
 
@@ -71,6 +72,7 @@ export function CompanyFormButton({
   };
   const form = useForm<Values>({ resolver: zodResolver(companyInput) as unknown as Resolver<Values>, defaultValues: defaults });
   const { control, handleSubmit, formState, setError, reset } = form;
+  const [name, website, phone] = useWatch({ control, name: ["name", "website", "phone"] });
 
   const onSubmit = handleSubmit(async (values) => {
     const result = company ? await updateCompanyAction({ id: company.id, ...values }) : await createCompanyAction(values);
@@ -105,6 +107,7 @@ export function CompanyFormButton({
         submitLabel={company ? tr("Save changes") : tr("Create company")}
       >
         <TextField control={control} name="name" label={tr("Name")} autoComplete="organization" />
+        {!company && open && <DuplicateWarning probe={{ entity: "company", name, website, phone }} />}
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField control={control} name="industry" label={tr("Industry")} placeholder={tr("e.g. Food Processing")} />
           <SelectField control={control} name="size" label={tr("Employees")} options={COMPANY_SIZES.map((s) => ({ value: s, label: s }))} />

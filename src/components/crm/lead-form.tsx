@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 import { ComboboxField, SelectField, TextField } from "@/components/forms/fields";
 import { RecordSheet, useAutoOpen } from "@/components/forms/record-sheet";
@@ -15,6 +15,7 @@ import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { applyServerErrors } from "@/lib/forms";
 import { createLeadAction, updateLeadAction } from "@/server/actions/crm";
 import { tr } from "@/lib/i18n";
+import { DuplicateWarning } from "./duplicate-warning";
 import { CustomFieldsSection, customFormValues, type CustomFormValues } from "./custom-fields";
 import type { CustomFieldDef } from "@/domain/custom-fields";
 
@@ -90,6 +91,7 @@ export function LeadFormButton({ lead, owners, fields, variant = lead ? "outline
     },
     defaultValues: defaults,
   });
+  const [companyName, email, phone] = useWatch({ control, name: ["company_name", "email", "phone"] });
 
   const onSubmit = handleSubmit(async (values) => {
     const payload = { ...values, ...(values.owner_id !== undefined && { owner_id: toPayloadOwner(values.owner_id) }), next_action_at: fromDateInput(values.next_action_at) };
@@ -121,6 +123,7 @@ export function LeadFormButton({ lead, owners, fields, variant = lead ? "outline
           <TextField control={control} name="contact_name" label={tr("Contact name")} />
           <TextField control={control} name="email" label={tr("Email")} type="email" inputMode="email" />
           <TextField control={control} name="phone" label={tr("Phone")} type="tel" inputMode="tel" />
+          {!lead && open && <DuplicateWarning className="sm:col-span-2" probe={{ entity: "lead", company_name: companyName, email, phone }} />}
           <ComboboxField control={control} name="country" label={tr("Country")} options={COUNTRY_OPTIONS} placeholder={tr("Unknown")} />
           <SelectField control={control} name="source" label={tr("Source")} options={LEAD_SOURCES.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
           <SelectField control={control} name="status" label={tr("Status")} options={(["new", "contacted", "qualified", "unqualified"] as const).map((s) => ({ value: s, label: humanizeStatus(s) }))} />
