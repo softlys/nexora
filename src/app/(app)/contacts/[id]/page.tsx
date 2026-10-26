@@ -16,6 +16,8 @@ import { tr } from "@/lib/i18n";
 import { EmailComposerButton } from "@/components/crm/email-composer";
 import { emailComposer } from "@/server/services/email";
 import { emailConfigured } from "@/server/services/integrations";
+import { CallButton } from "@/components/crm/call-button";
+import { callSetup } from "@/server/services/calls";
 
 export async function generateMetadata({ params }: PageProps<"/contacts/[id]">) {
   const { id } = await params;
@@ -25,10 +27,11 @@ export async function generateMetadata({ params }: PageProps<"/contacts/[id]">) 
 export default async function ContactPage({ params }: PageProps<"/contacts/[id]">) {
   const { user } = await requirePermission("view", "contact");
   const { id } = await params;
-  const { data, people, companies, composer } = await loadPage(async (ctx) => ({
+  const { data, people, companies, composer, calls } = await loadPage(async (ctx) => ({
     data: await getContact(ctx, id),
     people: await peopleFor(ctx, "contact"),
     composer: await emailComposer(ctx, { contact_id: id }, emailConfigured()),
+    calls: await callSetup(ctx),
     companies: (await companyOptions(ctx)).map((c) => ({ value: c.id, label: c.name })),
   }));
   const { contact, company, deals, tasks, timeline, last_interaction } = data;
@@ -53,6 +56,7 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
             canDelete={can(user.actor, "delete", "contact", record)}
             listPath="/contacts"
           >
+            {!contact.archived_at && contact.phone && <CallButton entity="contact" id={contact.id} phone={contact.phone} callback={calls.callback} />}
             {!contact.archived_at && <EmailComposerButton composer={composer} />}
             {can(user.actor, "update", "contact", record) && !contact.archived_at && (
               <ContactFormButton fields={people.fields} contact={contact} owners={people.assignable} companies={companies} />

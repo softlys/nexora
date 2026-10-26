@@ -18,6 +18,8 @@ import { tr } from "@/lib/i18n";
 import { EmailComposerButton } from "@/components/crm/email-composer";
 import { emailComposer } from "@/server/services/email";
 import { emailConfigured } from "@/server/services/integrations";
+import { CallButton } from "@/components/crm/call-button";
+import { callSetup } from "@/server/services/calls";
 
 export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
@@ -27,10 +29,11 @@ export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
 export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   const { user } = await requirePermission("view", "lead");
   const { id } = await params;
-  const { data, people, companies, contacts, composer } = await loadPage(async (ctx) => ({
+  const { data, people, companies, contacts, composer, calls } = await loadPage(async (ctx) => ({
     data: await getLead(ctx, id),
     people: await peopleFor(ctx, "lead"),
     composer: await emailComposer(ctx, { lead_id: id }, emailConfigured()),
+    calls: await callSetup(ctx),
     companies: (await companyOptions(ctx)).map((c) => ({ value: c.id, label: c.name })),
     contacts: (await contactOptions(ctx)).map((c) => ({ value: c.id, label: c.name, company_id: c.company_id })),
   }));
@@ -62,6 +65,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
             canDelete={can(user.actor, "delete", "lead", record)}
             listPath="/leads"
           >
+            {!lead.archived_at && lead.phone && <CallButton entity="lead" id={lead.id} phone={lead.phone} callback={calls.callback} />}
             {!lead.archived_at && composer.recipients.length > 0 && <EmailComposerButton composer={composer} />}
             {canEdit && !converted && <LeadFormButton fields={people.fields} lead={lead} owners={people.assignable} />}
             {canEdit && !converted && lead.status !== "unqualified" && can(user.actor, "create", "deal") && (

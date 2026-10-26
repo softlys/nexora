@@ -1,12 +1,13 @@
 "use client";
 
-import { Copy, RefreshCw, UploadCloud } from "lucide-react";
+import { Copy, RefreshCw, UploadCloud, PhoneIncoming } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { resetCalendarFeedAction, syncVaultNowAction } from "@/server/actions/integrations";
 import { tr } from "@/lib/i18n";
+import { simulateIncomingCallAction } from "@/server/actions/calls";
 
 export function CopyField({ value, label }: { value: string; label: string }) {
   return (
@@ -69,6 +70,28 @@ export function SyncVaultButton() {
     >
       <UploadCloud aria-hidden />
       {pending ? tr("Uploading…") : tr("Sync to Yandex Disk now")}
+    </Button>
+  );
+}
+
+/** Demo mode: a customer "calls" you, so the caller's card can be shown without a PBX. */
+export function SimulateCallButton() {
+  const [pending, start] = useTransition();
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={pending}
+      data-testid="simulate-call"
+      onClick={() =>
+        start(async () => {
+          const r = await simulateIncomingCallAction({});
+          if (!r.ok) toast.error(r.error);
+        })
+      }
+    >
+      <PhoneIncoming aria-hidden />
+      {tr("Simulate an incoming call")}
     </Button>
   );
 }

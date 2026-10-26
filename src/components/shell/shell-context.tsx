@@ -15,6 +15,8 @@ export type ShellData = {
   demoUsers: Array<{ id: string; full_name: string; role: Role; title: string }>;
   quickCreate: Array<{ label: string; href: string; icon: "company" | "contact" | "lead" | "deal" | "order" | "task" | "stage" }>;
   sidebarCollapsed: boolean;
+  /** Poll for incoming call cards (a telephony provider is connected, or demo mode can simulate calls). */
+  incomingCalls: boolean;
 };
 
 const ShellContext = createContext<ShellData | null>(null);

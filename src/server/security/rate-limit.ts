@@ -17,6 +17,8 @@ export const RATE_LIMITS = {
   api_auth: { limit: 20, windowSeconds: 60 },
   /** AI assistant requests, per user (each one is a paid model call). */
   ai: { limit: 10, windowSeconds: 60 },
+  /** Background checks by the app shell (the incoming call pop-up polls every few seconds), per user. */
+  poll: { limit: 40, windowSeconds: 60 },
   /** Demo access code attempts, per client IP. */
   demo_access: { limit: 10, windowSeconds: 600 },
 } satisfies Record<string, RateLimitRule>;

@@ -1,7 +1,7 @@
 import "server-only";
 import { finishInbound, inboundContext, inboundMeta, secretMatches } from "../inbound";
 import { publicBaseUrl } from "../public-url";
-import { mangoSignatureValid, processCall, telephonyConfig, twilioSignature, type CallEvent, zadarmaSignatureValid } from "../telephony";
+import { mangoSignatureValid, processCall, processRinging, telephonyConfig, twilioSignature, type CallEvent, type RingEvent, zadarmaSignatureValid } from "../telephony";
 import { HookError, json, text, type HookHandler } from "./common";
 
 async function save(request: Request, call: CallEvent) {
@@ -9,6 +9,13 @@ async function save(request: Request, call: CallEvent) {
   const result = await processCall(ctx, call);
   await finishInbound(ctx);
   return result;
+}
+
+/** A ringing call: shows the caller's card to the people it concerns. */
+async function ringing(request: Request, ring: RingEvent) {
+  const ctx = await inboundContext(inboundMeta(request));
+  await processRinging(ctx, ring);
+  await finishInbound(ctx);
 }
 
 const iso = (value: string | number | undefined) => {
@@ -20,7 +27,8 @@ const iso = (value: string | number | undefined) => {
 
 /**
  * Mango Office VPBX: set the integration URL to https://<host>/api/hooks/mango; Mango appends the event
- * path (/events/summary, /events/call, …). Calls are recorded from /events/summary.
+ * path (/events/summary, /events/call, …). Calls are recorded from /events/summary; /events/call with
+ * call_state "Appeared" on an employee's extension shows the caller's card.
  */
 export const mangoHook: HookHandler = {
   async POST({ request, rest, rawBody }) {
@@ -29,6 +37,11 @@ export const mangoHook: HookHandler = {
     const form = new URLSearchParams(rawBody);
     const payload = form.get("json") ?? "";
     if (form.get("vpbx_api_key") !== config.key || !mangoSignatureValid(config.key, config.salt, payload, form.get("sign") ?? "")) throw new HookError(401, "Bad signature");
+    if (rest.join("/") === "events/call") {
+      const e = JSON.parse(payload) as { entry_id?: string; call_state?: string; from?: { number?: string; extension?: string }; to?: { number?: string; extension?: string } };
+      if (e.call_state === "Appeared" && !e.from?.extension && e.from?.number && e.entry_id) await ringing(request, { provider: "mango", id: e.entry_id, customer: e.from.number, extension: e.to?.extension ?? null });
+      return text("ok");
+    }
     if (rest.join("/") !== "events/summary") return text("ok");
     const e = JSON.parse(payload) as { entry_id?: string; call_direction?: number; from?: { number?: string; extension?: string }; to?: { number?: string; extension?: string }; create_time?: number; talk_time?: number; end_time?: number; entry_result?: number };
     const inbound = e.call_direction === 1;
@@ -49,7 +62,8 @@ export const mangoHook: HookHandler = {
 
 /**
  * Zadarma: notifications URL https://<host>/api/hooks/zadarma (Settings → Integrations → API). The
- * verification GET with zd_echo is answered; NOTIFY_END and NOTIFY_OUT_END are recorded.
+ * verification GET with zd_echo is answered; NOTIFY_END and NOTIFY_OUT_END are recorded; NOTIFY_START
+ * and NOTIFY_INTERNAL (ringing, the latter with the extension) show the caller's card.
  */
 export const zadarmaHook: HookHandler = {
   async GET({ request }) {
@@ -61,6 +75,10 @@ export const zadarmaHook: HookHandler = {
     if (!config) throw new HookError(503, "Zadarma is not configured");
     const fields = Object.fromEntries(new URLSearchParams(rawBody));
     if (!zadarmaSignatureValid(config.secret, fields, request.headers.get("signature") ?? "")) throw new HookError(401, "Bad signature");
+    if ((fields.event === "NOTIFY_START" || fields.event === "NOTIFY_INTERNAL") && fields.caller_id) {
+      await ringing(request, { provider: "zadarma", id: fields.pbx_call_id ?? `${fields.call_start}-${fields.caller_id}`, customer: fields.caller_id, extension: fields.event === "NOTIFY_INTERNAL" ? (fields.internal ?? null) : null });
+      return text("ok");
+    }
     const inbound = fields.event === "NOTIFY_END";
     if (fields.event !== "NOTIFY_END" && fields.event !== "NOTIFY_OUT_END") return text("ok");
     await save(request, {
@@ -78,7 +96,7 @@ export const zadarmaHook: HookHandler = {
   },
 };
 
-/** Twilio: set the call Status Callback URL to https://<host>/api/hooks/twilio (event: completed). */
+/** Twilio: set the call Status Callback URL to https://<host>/api/hooks/twilio (events: ringing, completed). */
 export const twilioHook: HookHandler = {
   async POST({ request, rawBody }) {
     const config = telephonyConfig().twilio;
@@ -89,6 +107,10 @@ export const twilioHook: HookHandler = {
     const signature = request.headers.get("x-twilio-signature") ?? "";
     if (!secretMatches(signature, twilioSignature(config.token, fullUrl, params))) throw new HookError(401, "Bad signature");
     const status = params.CallStatus ?? "";
+    if (status === "ringing" && params.Direction === "inbound" && params.From) {
+      await ringing(request, { provider: "twilio", id: params.CallSid ?? crypto.randomUUID(), customer: params.From, extension: null });
+      return json({ ok: true });
+    }
     if (!["completed", "no-answer", "busy", "failed", "canceled"].includes(status)) return json({ ok: true });
     const inbound = params.Direction === "inbound";
     await save(request, {

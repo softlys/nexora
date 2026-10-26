@@ -95,6 +95,7 @@ erDiagram
 | `20261026000001_pipelines.sql` | `pipelines`, `pipeline_stages.pipeline_id`, per-pipeline stage functions, `create_pipeline()` / `rename_pipeline()` / `delete_pipeline()` |
 | `20261026000002_custom_fields.sql` | `custom_fields` with RLS, `custom jsonb` (object) on companies, contacts, leads and deals |
 | `20261026000003_email_templates.sql` | `email_templates` with RLS and the default templates for existing organizations |
+| `20261026000004_telephony.sql` | `profiles.phone_extension` (internal PBX number) and its column grant |
 | `20261021000001_security_events_and_automation.sql` | `security_events` (hash chain, unique `(organization_id, sequence)`, insert-only), `automation_executions.resume_at` / `resume_step_id` for delayed runs, `set_profile_active()` for disabling users |
 
 ## Derived values

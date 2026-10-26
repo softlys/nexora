@@ -10,6 +10,7 @@ import { Breadcrumbs } from "./breadcrumbs";
 import { CommandPalette, CommandPaletteButton } from "./command-palette";
 import { HelpMenu } from "./help-menu";
 import { NotificationsMenu } from "./notifications-menu";
+import { IncomingCallPopup } from "./incoming-call";
 import { QuickCreate } from "./quick-create";
 import { ShellProvider, type ShellData } from "./shell-context";
 import { SidebarNav } from "./sidebar-nav";
@@ -105,6 +106,7 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
           </main>
         </div>
         <CommandPalette />
+        {data.incomingCalls && <IncomingCallPopup />}
       </div>
     </ShellProvider>
   );

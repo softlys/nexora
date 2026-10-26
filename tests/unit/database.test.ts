@@ -188,6 +188,13 @@ describe("row-level security matches the permission matrix", () => {
     expect(byAdmin).toBe(1);
   });
 
+  it("lets users set their own internal phone number, digits only", async () => {
+    const own = "update public.profiles set phone_extension = $1 where id = $2";
+    const changed = await asUser(db, DEMO_USER_IDS.repDaniel, async (tx) => (await tx.query(own, ["101", DEMO_USER_IDS.repDaniel])).affectedRows);
+    expect(changed).toBe(1);
+    await expect(asUser(db, DEMO_USER_IDS.repDaniel, (tx) => tx.query(own, ["10a", DEMO_USER_IDS.repDaniel]))).rejects.toThrow(/check constraint/);
+  });
+
   it("does not expose API key hashes to the client role", async () => {
     await expect(asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select key_hash from public.api_keys"))).rejects.toThrow(/permission denied/);
   });

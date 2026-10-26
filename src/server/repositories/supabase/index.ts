@@ -102,7 +102,7 @@ export function createSupabaseRepositories(): Repositories {
         const db = await client();
         const { data, error } = await db
           .from("profiles")
-          .update({ full_name: patch.full_name, title: patch.title })
+          .update({ full_name: patch.full_name, title: patch.title, ...(patch.phone_extension !== undefined && { phone_extension: patch.phone_extension }) })
           .eq("organization_id", ctx.actor.organization_id)
           .eq("id", ctx.actor.id)
           .select("*")

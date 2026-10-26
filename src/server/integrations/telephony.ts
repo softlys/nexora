@@ -5,6 +5,7 @@ import { leadInput } from "@/domain/inputs";
 import { insertLead } from "@/server/services/leads";
 import { emit, newId, type ServiceContext } from "@/server/services/context";
 import { claimExternal, findParty, linkExternal, openDealOf, recordActivity } from "./inbound";
+import { tr } from "@/lib/i18n";
 
 /**
  * Calls from cloud telephony (Mango Office, Zadarma, Twilio) become call activities on the contact
@@ -143,4 +144,92 @@ export function zadarmaSignatureValid(secret: string, fields: Record<string, str
 export function twilioSignature(token: string, url: string, params: Record<string, string>): string {
   const data = url + Object.keys(params).sort().map((k) => k + params[k]).join("");
   return createHmac("sha1", token).update(data).digest("base64");
+}
+
+// --- Incoming call cards -----------------------------------------------------------
+
+export type RingEvent = { provider: CallEvent["provider"] | "demo"; id: string; customer: string; /** The extension or number being called, when the provider says. */ extension: string | null; /** Demo simulation: show the card to this user. */ forUser?: string };
+
+/**
+ * A call is ringing: the people it concerns get an "incoming_call" notification carrying the caller's
+ * card (name, company, open deal, link), which the app shows as a pop-up. Recipients: users whose
+ * internal number is being called; otherwise the owner of the caller's record; otherwise everyone.
+ */
+export async function processRinging(ctx: ServiceContext, ring: RingEvent): Promise<number> {
+  return ctx.db.write(ctx.actor.organization_id, async (tx) => {
+    const party = await findParty(tx, { phone: ring.customer });
+    const profiles = (await tx.find("profiles")).filter((p) => p.is_active && !p.archived_at);
+    const owner = party.contact?.owner_id ?? party.lead?.owner_id ?? null;
+    const byExtension = ring.extension ? profiles.filter((p) => p.phone_extension && p.phone_extension === ring.extension) : [];
+    const recipients = ring.forUser ? profiles.filter((p) => p.id === ring.forUser) : byExtension.length ? byExtension : owner && profiles.some((p) => p.id === owner) ? profiles.filter((p) => p.id === owner) : profiles;
+
+    let title: string;
+    let body: string;
+    let link: string | null = null;
+    if (party.contact) {
+      const c = party.contact;
+      const company = c.company_id ? await tx.get("companies", c.company_id) : null;
+      const dealId = await openDealOf(tx, c.id);
+      const deal = dealId ? await tx.get("deals", dealId) : null;
+      title = tr("Incoming call: {p0}", { p0: `${c.first_name} ${c.last_name}` });
+      body = [company?.name, c.job_title, deal ? tr("Deal: {p0}", { p0: deal.name }) : null, ring.customer].filter(Boolean).join(" · ");
+      link = `/contacts/${c.id}`;
+    } else if (party.lead) {
+      title = tr("Incoming call: {p0}", { p0: party.lead.contact_name || party.lead.title });
+      body = [party.lead.company_name, tr("Lead: {p0}", { p0: party.lead.title }), ring.customer].filter(Boolean).join(" · ");
+      link = `/leads/${party.lead.id}`;
+    } else {
+      title = tr("Incoming call: {p0}", { p0: ring.customer });
+      body = tr("Unknown number. A lead is created when the call ends.");
+    }
+    let created = 0;
+    for (const p of recipients) {
+      const dedupe = `call:${ring.provider}:${ring.id}:${p.id}`.slice(0, 200);
+      if ((await tx.find("notifications", { dedupe_key: dedupe })).length) continue;
+      await tx.insert("notifications", { id: newId(), organization_id: ctx.actor.organization_id, recipient_id: p.id, type: "incoming_call", title: title.slice(0, 200), body: body.slice(0, 1000), link, read_at: null, dedupe_key: dedupe, created_at: new Date().toISOString() });
+      created++;
+    }
+    return created;
+  });
+}
+
+// --- Click-to-call -------------------------------------------------------------------
+
+export type CallbackConfig = { mango: { key: string; salt: string } | null; zadarma: { key: string; secret: string } | null };
+
+/** Providers that can start a call from NEXORA (the PBX rings the user's phone, then the customer). */
+export function callbackConfig(env: NodeJS.ProcessEnv = process.env): CallbackConfig {
+  const t = telephonyConfig(env);
+  return { mango: t.mango, zadarma: t.zadarma && env.ZADARMA_API_KEY?.trim() ? { key: env.ZADARMA_API_KEY.trim(), secret: t.zadarma.secret } : null };
+}
+
+/** Digits of a number for the PBX ("+7 (999) 123-45-67" → "79991234567"). */
+export const dialable = (phone: string) => phone.replace(/[^\d]/g, "");
+
+/** Zadarma API: Authorization "key:base64(hex(hmac_sha1(method + params + md5(params), secret)))". */
+export function zadarmaAuthorization(key: string, secret: string, method: string, params: Record<string, string>): string {
+  const query = new URLSearchParams(Object.entries(params).sort(([a], [b]) => a.localeCompare(b))).toString();
+  return `${key}:${zadarmaSignature(secret, method + query + createHash("md5").update(query).digest("hex"))}`;
+}
+
+/** Starts a callback: the PBX calls `extension`, and when it is answered, calls `phone`. */
+export async function startCallback(config: CallbackConfig, extension: string, phone: string, fetchImpl: typeof fetch = fetch): Promise<{ provider: "mango" | "zadarma" }> {
+  const to = dialable(phone);
+  if (to.length < 5) throw new Error("The phone number is too short to dial.");
+  if (config.mango) {
+    const json = JSON.stringify({ command_id: `nexora-${Date.now()}`, from: { extension }, to_number: to });
+    const body = new URLSearchParams({ vpbx_api_key: config.mango.key, sign: createHash("sha256").update(config.mango.key + json + config.mango.salt).digest("hex"), json });
+    const res = await fetchImpl("https://app.mango-office.ru/vpbx/commands/callback", { method: "POST", body, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`Mango Office returned ${res.status}`);
+    return { provider: "mango" };
+  }
+  if (config.zadarma) {
+    const method = "/v1/request/callback/";
+    const params = { from: extension, to };
+    const res = await fetchImpl(`https://api.zadarma.com${method}?${new URLSearchParams(params)}`, { headers: { Authorization: zadarmaAuthorization(config.zadarma.key, config.zadarma.secret, method, params) }, signal: AbortSignal.timeout(8000) });
+    const data = (await res.json().catch(() => ({}))) as { status?: string; message?: string };
+    if (!res.ok || data.status !== "success") throw new Error(`Zadarma: ${data.message ?? res.status}`);
+    return { provider: "zadarma" };
+  }
+  throw new Error("No telephony provider can start calls.");
 }

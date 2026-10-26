@@ -43,6 +43,9 @@ export function ProfileForm({ defaults, email, roleLabel }: { defaults: Values; 
           <FormField id="title" label={tr("Job title")} error={formState.errors.title?.message}>
             <Input id="title" autoComplete="organization-title" aria-invalid={!!formState.errors.title} {...register("title")} />
           </FormField>
+          <FormField id="phone_extension" label={tr("Internal phone number")} hint={tr("Your extension on the office PBX (Mango Office, Zadarma): calls from NEXORA ring this phone first, and incoming calls to it show the caller's card.")} error={formState.errors.phone_extension?.message}>
+            <Input id="phone_extension" inputMode="numeric" autoComplete="off" placeholder="101" aria-invalid={!!formState.errors.phone_extension} {...register("phone_extension")} />
+          </FormField>
           <FormField id="email" label={tr("Email")} hint={tr("Managed by your sign-in provider.")}>
             <Input id="email" value={email} readOnly disabled />
           </FormField>

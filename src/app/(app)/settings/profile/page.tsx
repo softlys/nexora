@@ -9,7 +9,7 @@ export default async function ProfileSettingsPage() {
   const { user } = await requirePermission("update", "profile");
   return (
     <ProfileForm
-      defaults={{ full_name: user.profile.full_name, title: user.profile.title }}
+      defaults={{ full_name: user.profile.full_name, title: user.profile.title, phone_extension: user.profile.phone_extension ?? "" }}
       email={user.profile.email}
       roleLabel={ROLE_LABELS[user.profile.role]!}
     />

@@ -102,6 +102,8 @@ export const profileSchema = z.object({
   title: shortText(120),
   manager_id: id.nullable(),
   is_active: z.boolean(),
+  /** Internal number on the office PBX, for click-to-call and routing incoming calls. Older rows lack it. */
+  phone_extension: z.string().regex(/^[0-9]{1,10}$/).nullable().optional(),
 });
 export type Profile = z.infer<typeof profileSchema>;
 
@@ -663,6 +665,7 @@ export const updateProfileInput = z
   .object({
     full_name: requiredText(120),
     title: shortText(120),
+    phone_extension: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : typeof v === "string" ? v.trim() : v), z.string().regex(/^[0-9]{1,10}$/, "Digits only, up to 10").nullable()).optional(),
   })
   .strict();
 

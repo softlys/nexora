@@ -28,6 +28,19 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Click-to-call and caller card (2026-10-26)
+
+- **Internal number.** Each user sets their extension on the office PBX in Settings → Profile (`profiles.phone_extension`, digits only).
+- **Call button** on contacts, leads and companies with a phone number.
+  - With Mango Office or Zadarma connected (Zadarma also needs `ZADARMA_API_KEY`) and an extension set, NEXORA asks the PBX for a callback: the user's phone rings first, then the customer's number. The call is logged by the PBX's usual call notification.
+  - Otherwise the button is a `tel:` link that opens the device's phone app.
+  - The record must be visible to the user; the number is taken from the record on the server.
+- **Caller card.** While a customer's call rings (Mango `events/call` "Appeared", Zadarma `NOTIFY_START`/`NOTIFY_INTERNAL`, Twilio `ringing`), the people it concerns get a pop-up: name, company, open deal or lead, number, and "Open card". It goes to the user whose extension rings, otherwise the record's owner, otherwise everyone. Unknown numbers are announced too; the lead is created when the call ends, as before.
+  - The pop-up checks every 5 seconds while the tab is visible (own rate-limit bucket `poll`), only when a telephony provider is connected or in demo mode.
+  - Demo mode: "Simulate an incoming call" on the Mango Office, Zadarma and Twilio pages.
+- **Data.** Migration `20261026000004_telephony.sql` (`phone_extension` with a column grant so users can set their own).
+- **Tests.** Signed Mango and Zadarma callback requests, preconditions and visibility, card routing and dedupe, simulation (unit); extension check constraint and grant (PGlite); e2e: simulated call, pop-up, open card, `tel:` link.
+
 ## E-mail from record pages (2026-10-26)
 
 - **Write e-mail** on contacts, deals, leads and companies (companies: when a contact has an address).

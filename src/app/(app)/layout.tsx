@@ -6,6 +6,7 @@ import { can } from "@/domain/permissions";
 import { getRepoContext } from "@/server/auth";
 import { getRepositories } from "@/server/repositories";
 import { tr } from "@/lib/i18n";
+import { telephonyConfig } from "@/server/integrations/telephony";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const { user, ctx } = await getRepoContext();
@@ -47,6 +48,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     demoUsers: profiles.filter((p) => p.is_active).map((p) => ({ id: p.id, full_name: p.full_name, role: p.role, title: p.title })),
     quickCreate,
     sidebarCollapsed: cookieStore.get(SIDEBAR_COOKIE)?.value === "collapsed",
+    incomingCalls: user.mode === "demo" || Object.values(telephonyConfig()).some(Boolean),
   };
 
   return <AppShell data={data}>{children}</AppShell>;

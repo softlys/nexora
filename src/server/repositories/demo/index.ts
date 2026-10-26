@@ -117,6 +117,7 @@ export function createDemoRepositories(): Repositories {
           if (!me) throw new DomainError("Profile not found.", "not_found");
           me.full_name = patch.full_name;
           me.title = patch.title;
+          if (patch.phone_extension !== undefined) me.phone_extension = patch.phone_extension;
           me.updated_at = nowIso();
           return me;
         });

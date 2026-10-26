@@ -12,7 +12,8 @@ import { connectorCatalog } from "@/server/integrations/catalog";
 import { jobStatus } from "@/server/integrations/jobs";
 import { currentBaseUrl } from "@/server/integrations/public-url";
 import { loadPage } from "@/server/page-data";
-import { CopyField, ResetCalendarButton, SyncVaultButton } from "./connector-widgets";
+import { CopyField, ResetCalendarButton, SimulateCallButton, SyncVaultButton } from "./connector-widgets";
+import { getDataMode } from "@/server/env";
 import { tr, trNode } from "@/lib/i18n";
 
 const STATE_LABEL = { configured: tr("Configured"), not_configured: tr("Not configured"), error: tr("Misconfigured"), available: tr("Available") } as const;
@@ -66,6 +67,12 @@ export default async function ConnectorPage({ params }: PageProps<"/integrations
           </div>
         )}
         {connector.id === "yandex_disk" && connector.state === "configured" && isAdmin && <SyncVaultButton />}
+        {["mango", "zadarma", "twilio"].includes(connector.id) && getDataMode() === "demo" && (
+          <div className="space-y-2">
+            <p className="text-sm text-text-muted">{tr("Demo: see the caller's card without a PBX. A contact with a phone number calls you.")}</p>
+            <SimulateCallButton />
+          </div>
+        )}
         {calendarUrl && (
           <div className="space-y-2" data-testid="calendar-feed">
             <p className="text-sm font-medium">{tr("Your personal calendar link")}</p>
