@@ -6,6 +6,7 @@ import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescript
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { tr, trNode } from "@/lib/i18n";
 
 
 /**
@@ -88,8 +89,8 @@ export function RecordSheet({
       <SheetContent className={cn("flex w-full flex-col gap-0 p-0 sm:max-w-lg", wide && "sm:max-w-3xl")}>
         <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
           <SheetHeader className="border-b border-border px-5 py-4">
-            <SheetTitle>{title}</SheetTitle>
-            {description ? <SheetDescription>{description}</SheetDescription> : <SheetDescription className="sr-only">{title}</SheetDescription>}
+            <SheetTitle>{trNode(title)}</SheetTitle>
+            {description ? <SheetDescription>{trNode(description)}</SheetDescription> : <SheetDescription className="sr-only">{trNode(title)}</SheetDescription>}
           </SheetHeader>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">{children}</div>
           {error && (
@@ -98,11 +99,9 @@ export function RecordSheet({
             </p>
           )}
           <SheetFooter className="flex-row justify-end gap-2 border-t border-border px-5 py-3">
-            <Button type="button" variant="outline" onClick={() => requestClose(false)}>
-              Cancel
-            </Button>
+            <Button type="button" variant="outline" onClick={() => requestClose(false)}>{tr("Cancel")}</Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : submitLabel}
+              {submitting ? tr("Saving…") : submitLabel}
             </Button>
           </SheetFooter>
         </form>
@@ -110,20 +109,18 @@ export function RecordSheet({
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-            <AlertDialogDescription>Your edits in this form will be lost.</AlertDialogDescription>
+            <AlertDialogTitle>{tr("Discard unsaved changes?")}</AlertDialogTitle>
+            <AlertDialogDescription>{tr("Your edits in this form will be lost.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogCancel>{tr("Keep editing")}</AlertDialogCancel>
             <Button
               variant="danger"
               onClick={() => {
                 setConfirming(false);
                 onOpenChange(false);
               }}
-            >
-              Discard changes
-            </Button>
+            >{tr("Discard changes")}</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -11,8 +11,9 @@ import { formatMoney, formatPercent } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
 import { loadPage } from "@/server/page-data";
 import { getAnalytics } from "@/server/services/analytics";
+import { plural, tr } from "@/lib/i18n";
 
-export const metadata = { title: "Analytics" };
+export const metadata = { title: tr("Analytics") };
 
 export default async function AnalyticsPage({ searchParams }: PageProps<"/analytics">) {
   await requirePermission("view", "analytics");
@@ -29,25 +30,25 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Analytics"
-        description="Revenue, conversion, pipeline, receivables and work, computed from your data. Definitions: docs/metrics.md."
+        title={tr("Analytics")}
+        description={tr("Revenue, conversion, pipeline, receivables and work, computed from your data. Definitions: docs/metrics.md.")}
         actions={<RangeFilter preset={preset} from={period.from} to={period.to} />}
       />
 
-      <section aria-label="Totals" className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiCard label="Won deal value" value={formatMoney(t.wonDealValue, currency)} href={`/deals?status=won&${closed}`} hint="Deals closed won" />
-        <KpiCard label="Order value" value={formatMoney(t.orderValue, currency)} href="/orders" hint="Non-cancelled orders" />
-        <KpiCard label="Collected" value={formatMoney(t.collected, currency)} href="/orders?payment=paid" hint="Simulated payments" />
-        <KpiCard label="Outstanding receivables" value={formatMoney(t.outstanding, currency)} href="/orders?receivable=1" hint="At period end" />
-        <KpiCard label="Average deal size" value={t.averageDealSize === null ? "—" : formatMoney(t.averageDealSize, currency)} href={`/deals?status=won&${closed}`} hint="Won deals" />
-        <KpiCard label="Sales cycle" value={t.salesCycleDays === null ? "—" : `${t.salesCycleDays} days`} href={`/deals?status=won&${closed}`} hint="Created to won" />
-        <KpiCard label="Conversion rate" value={t.conversionRate === null ? "—" : formatPercent(t.conversionRate)} href={`/deals?status=closed&${closed}`} hint="Won ÷ (won + lost)" />
-        <KpiCard label="Weighted pipeline" value={formatMoney(t.weightedPipeline, currency)} href="/pipeline" hint={`Open ${formatMoney(t.openPipeline, currency)}`} />
+      <section aria-label={tr("Totals")} className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KpiCard label={tr("Won deal value")} value={formatMoney(t.wonDealValue, currency)} href={`/deals?status=won&${closed}`} hint={tr("Deals closed won")} />
+        <KpiCard label={tr("Order value")} value={formatMoney(t.orderValue, currency)} href="/orders" hint={tr("Non-cancelled orders")} />
+        <KpiCard label={tr("Collected")} value={formatMoney(t.collected, currency)} href="/orders?payment=paid" hint={tr("Simulated payments")} />
+        <KpiCard label={tr("Outstanding receivables")} value={formatMoney(t.outstanding, currency)} href="/orders?receivable=1" hint={tr("At period end")} />
+        <KpiCard label={tr("Average deal size")} value={t.averageDealSize === null ? "—" : formatMoney(t.averageDealSize, currency)} href={`/deals?status=won&${closed}`} hint={tr("Won deals")} />
+        <KpiCard label={tr("Sales cycle")} value={t.salesCycleDays === null ? "—" : plural(t.salesCycleDays, "day")} href={`/deals?status=won&${closed}`} hint={tr("Created to won")} />
+        <KpiCard label={tr("Conversion rate")} value={t.conversionRate === null ? "—" : formatPercent(t.conversionRate)} href={`/deals?status=closed&${closed}`} hint={tr("Won ÷ (won + lost)")} />
+        <KpiCard label={tr("Weighted pipeline")} value={formatMoney(t.weightedPipeline, currency)} href="/pipeline" hint={tr("Open {p0}", { p0: formatMoney(t.openPipeline, currency) })} />
       </section>
 
       <RevenueChart
-        title="Revenue over time"
-        description="Won deal value and collected payments are different numbers: a won deal becomes cash only when its order is paid. Payments are simulated."
+        title={tr("Revenue over time")}
+        description={tr("Won deal value and collected payments are different numbers: a won deal becomes cash only when its order is paid. Payments are simulated.")}
         data={a.revenue}
         bucket={a.bucket}
         currency={currency}
@@ -56,80 +57,79 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
 
       <div className="grid gap-4 lg:grid-cols-2">
         <BarsChart
-          title="Conversion funnel"
-          description="Deals created in the period that reached each stage or later, and how many were won."
-          data={a.funnel.map((s) => ({ label: s.stage, value: s.count, href: `/deals?stage=${s.stage_id}&${created}` }))}
+          title={tr("Conversion funnel")}
+          description={tr("Deals created in the period that reached each stage or later, and how many were won.")}
+          data={a.funnel.map((s) => ({ label: tr(s.stage), value: s.count, href: `/deals?stage=${s.stage_id}&${created}` }))}
           format="count"
-          valueLabel="Deals"
+          valueLabel={tr("Deals")}
           layout="horizontal"
-          emptyText="No deals were created in this period."
+          emptyText={tr("No deals were created in this period.")}
         />
         <PairedBarsChart
-          title="Pipeline distribution"
-          description="Open deals at the end of the period: amount and weighted amount per stage."
-          data={a.distribution.map((s) => ({ label: s.stage, a: s.amount, b: s.weighted, href: `/deals?stage=${s.stage_id}&status=open` }))}
-          series={["Amount", "Weighted"]}
+          title={tr("Pipeline distribution")}
+          description={tr("Open deals at the end of the period: amount and weighted amount per stage.")}
+          data={a.distribution.map((s) => ({ label: tr(s.stage), a: s.amount, b: s.weighted, href: `/deals?stage=${s.stage_id}&status=open` }))}
+          series={[tr("Amount"), tr("Weighted")]}
           currency={currency}
         />
         <BarsChart
-          title="Sales by owner"
-          description="Won deal value per owner."
+          title={tr("Sales by owner")}
+          description={tr("Won deal value per owner.")}
           data={a.byOwner.map((o) => ({ label: o.owner, value: o.won, href: `/deals?status=won&owner=${o.owner_id}&${closed}` }))}
           format="money"
           currency={currency}
-          valueLabel="Won value"
+          valueLabel={tr("Won value")}
           layout="horizontal"
           colorIndex={0}
-          emptyText="No deals were won in this period."
+          emptyText={tr("No deals were won in this period.")}
         />
         <BarsChart
-          title="Sales by source"
-          description="Won deal value per lead source."
+          title={tr("Sales by source")}
+          description={tr("Won deal value per lead source.")}
           data={a.bySource.map((s) => ({ label: humanizeStatus(s.source), value: s.won, href: `/deals?status=won&${closed}` }))}
           format="money"
           currency={currency}
-          valueLabel="Won value"
+          valueLabel={tr("Won value")}
           layout="horizontal"
-          emptyText="No deals were won in this period."
+          emptyText={tr("No deals were won in this period.")}
         />
         <BarsChart
-          title="Orders by status"
-          description="Orders dated in the period."
+          title={tr("Orders by status")}
+          description={tr("Orders dated in the period.")}
           data={Object.entries(a.ordersByStatus).map(([status, count]) => ({ label: humanizeStatus(status), value: count, href: `/orders?status=${status}`, muted: status === "cancelled" }))}
           format="count"
-          valueLabel="Orders"
-          emptyText="No orders in this period."
+          valueLabel={tr("Orders")}
+          emptyText={tr("No orders in this period.")}
         />
         <BarsChart
-          title="Receivables ageing"
-          description="Outstanding amounts at the end of the period by days past the payment due date."
-          data={AGEING_BUCKETS.map((b) => ({ label: `${b} days`, value: a.ageing[b].amount, href: b === "0-30" ? "/orders?receivable=1" : "/orders?payment=overdue" }))}
+          title={tr("Receivables ageing")}
+          description={tr("Outstanding amounts at the end of the period by days past the payment due date.")}
+          data={AGEING_BUCKETS.map((b) => ({ label: tr("{p0} days", { p0: b }), value: a.ageing[b].amount, href: b === "0-30" ? "/orders?receivable=1" : "/orders?payment=overdue" }))}
           format="money"
           currency={currency}
-          valueLabel="Outstanding"
-          emptyText="Nothing is outstanding."
+          valueLabel={tr("Outstanding")}
+          emptyText={tr("Nothing is outstanding.")}
         />
       </div>
 
-      <Panel title="Task completion" actions={<span className="text-xs text-text-muted">Tasks due in the period, excluding cancelled</span>}>
+      <Panel title={tr("Task completion")} actions={<span className="text-xs text-text-muted">{tr("Tasks due in the period, excluding cancelled")}</span>}>
         {a.taskCompletion.due === 0 ? (
-          <p className="text-sm text-text-muted">No tasks were due in this period.</p>
+          <p className="text-sm text-text-muted">{tr("No tasks were due in this period.")}</p>
         ) : (
           <div className="space-y-3">
             <p className="text-sm">
               <span className="text-2xl font-semibold tabular-nums">{formatPercent(a.taskCompletion.rate ?? 0)}</span>
               <span className="ml-2 text-text-muted">
-                {a.taskCompletion.done} of {a.taskCompletion.due} completed · {t.overdueTasks} overdue now
-              </span>
+                {a.taskCompletion.done} {tr("of")} {a.taskCompletion.due} {tr("completed ·")} {t.overdueTasks} {tr("overdue now")}</span>
             </p>
             <table className="w-full text-sm">
-              <caption className="sr-only">Task completion by assignee</caption>
+              <caption className="sr-only">{tr("Task completion by assignee")}</caption>
               <thead className="text-xs text-text-muted">
                 <tr className="border-b border-border">
-                  <th scope="col" className="py-1.5 text-left font-medium">Assignee</th>
-                  <th scope="col" className="py-1.5 text-right font-medium">Due</th>
-                  <th scope="col" className="py-1.5 text-right font-medium">Done</th>
-                  <th scope="col" className="py-1.5 text-right font-medium">Rate</th>
+                  <th scope="col" className="py-1.5 text-left font-medium">{tr("Assignee")}</th>
+                  <th scope="col" className="py-1.5 text-right font-medium">{tr("Due")}</th>
+                  <th scope="col" className="py-1.5 text-right font-medium">{tr("Done")}</th>
+                  <th scope="col" className="py-1.5 text-right font-medium">{tr("Rate")}</th>
                 </tr>
               </thead>
               <tbody>

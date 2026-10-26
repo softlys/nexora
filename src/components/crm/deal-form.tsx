@@ -18,6 +18,7 @@ import { dealFields, newCompanyInput } from "@/domain/inputs";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { applyServerErrors } from "@/lib/forms";
 import { createDealAction, updateDealAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 type Option = { value: string; label: string };
 
@@ -39,7 +40,7 @@ type Values = {
 
 const formSchema = z
   .object({ ...dealFields, company_id: z.string(), new_company: newCompanyInput.nullable(), probability: z.union([z.literal(""), z.coerce.number().int().min(0).max(100)]) })
-  .refine((d) => d.company_id || d.new_company, { path: ["company_id"], message: "Choose a company or type a new name" });
+  .refine((d) => d.company_id || d.new_company, { path: ["company_id"], message: tr("Choose a company or type a new name") });
 
 export type DealFormOptions = {
   owners: Option[];
@@ -101,7 +102,7 @@ export function DealFormButton({
     const payload = { ...rest, ...(company_id ? { company_id } : new_company && { new_company }), ...(probability !== "" && { probability }) };
     const result = deal ? await updateDealAction({ id: deal.id, ...payload }) : await createDealAction(payload);
     if (!result.ok) return applyServerErrors(result, setError);
-    toast.success(deal ? "Deal updated" : "Deal created");
+    toast.success(deal ? tr("Deal updated") : tr("Deal created"));
     reset(values);
     setOpen(false);
     if (deal) router.refresh();
@@ -116,16 +117,16 @@ export function DealFormButton({
           onClick={() => setOpen(true)}
         >
           {deal ? <Pencil aria-hidden /> : <Plus aria-hidden />}
-          {deal ? "Edit" : "New deal"}
+          {deal ? tr("Edit") : tr("New deal")}
         </Button>
       )}
-      <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={deal ? `Edit ${deal.name}` : "New deal"} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={deal ? "Save changes" : "Create deal"}>
-        <TextField control={control} name="name" label="Deal name" />
+      <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={deal ? tr("Edit {p0}", { p0: deal.name }) : tr("New deal")} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={deal ? tr("Save changes") : tr("Create deal")}>
+        <TextField control={control} name="name" label={tr("Deal name")} />
         <Controller
           control={control}
           name="company_id"
           render={({ field, fieldState }) => (
-            <FormField id="field-company_id" label="Company" hint="Pick a company, or type any name to add a new one." error={fieldState.error?.message}>
+            <FormField id="field-company_id" label={tr("Company")} hint={tr("Pick a company, or type any name to add a new one.")} error={fieldState.error?.message}>
               <Combobox
                 id="field-company_id"
                 options={options.companies}
@@ -141,7 +142,7 @@ export function DealFormButton({
                   setValue("primary_contact_id", null);
                 }}
                 createdLabel={newCompany ? `${newCompany.name} (new)` : null}
-                placeholder="Choose or type a company"
+                placeholder={tr("Choose or type a company")}
                 invalid={!!fieldState.error}
               />
             </FormField>
@@ -150,32 +151,31 @@ export function DealFormButton({
         {newCompany && (
           <div className="grid gap-4 rounded-md border border-dashed border-border p-3 sm:grid-cols-2" data-testid="new-company">
             <p className="text-xs text-text-muted sm:col-span-2">
-              “{newCompany.name}” is not in your companies yet. It is added as a prospect when you save the deal; fill in the rest on its page later.
-            </p>
-            <TextField control={control} name="new_company.industry" label="Industry" hint="Optional" />
-            <ComboboxField control={control} name="new_company.country" label="Country" options={COUNTRY_OPTIONS} placeholder="Choose country" />
+              “{newCompany.name}{tr("” is not in your companies yet. It is added as a prospect when you save the deal; fill in the rest on its page later.")}</p>
+            <TextField control={control} name="new_company.industry" label={tr("Industry")} hint={tr("Optional")} />
+            <ComboboxField control={control} name="new_company.country" label={tr("Country")} options={COUNTRY_OPTIONS} placeholder={tr("Choose country")} />
           </div>
         )}
         <ComboboxField
           control={control}
           name="primary_contact_id"
-          label="Primary contact"
+          label={tr("Primary contact")}
           options={options.contacts.filter((c) => c.company_id === companyId)}
-          placeholder={companyId ? "No contact" : newCompany ? "Add contacts to the new company later" : "Choose a company first"}
+          placeholder={companyId ? tr("No contact") : newCompany ? tr("Add contacts to the new company later") : tr("Choose a company first")}
           disabled={!companyId}
         />
         <div className="grid gap-4 sm:grid-cols-3">
-          <TextField control={control} name="amount" label="Amount" inputMode="decimal" className="sm:col-span-2" />
-          <TextField control={control} name="currency" label="Currency" />
+          <TextField control={control} name="amount" label={tr("Amount")} inputMode="decimal" className="sm:col-span-2" />
+          <TextField control={control} name="currency" label={tr("Currency")} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField control={control} name="probability" label="Probability (%)" inputMode="numeric" hint={deal ? "Reset to the stage default when the stage changes." : "Leave empty to use the stage default."} />
-          <DateField control={control} name="expected_close_date" label="Expected close" />
-          <SelectField control={control} name="source" label="Source" options={LEAD_SOURCES.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
-          {options.owners.length > 0 && <SelectField control={control} name="owner_id" label="Owner" options={options.owners} />}
+          <TextField control={control} name="probability" label={tr("Probability (%)")} inputMode="numeric" hint={deal ? tr("Reset to the stage default when the stage changes.") : tr("Leave empty to use the stage default.")} />
+          <DateField control={control} name="expected_close_date" label={tr("Expected close")} />
+          <SelectField control={control} name="source" label={tr("Source")} options={LEAD_SOURCES.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
+          {options.owners.length > 0 && <SelectField control={control} name="owner_id" label={tr("Owner")} options={options.owners} />}
         </div>
-        <TextField control={control} name="next_activity" label="Next activity" />
-        <TextareaField control={control} name="notes" label="Notes" />
+        <TextField control={control} name="next_activity" label={tr("Next activity")} />
+        <TextareaField control={control} name="notes" label={tr("Notes")} />
       </RecordSheet>
     </>
   );

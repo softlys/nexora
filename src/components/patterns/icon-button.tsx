@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import { forwardRef, type ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { trNode } from "@/lib/i18n";
 
 type IconButtonProps = Omit<ComponentProps<typeof Button>, "children" | "size"> & {
   icon: LucideIcon;
@@ -28,7 +29,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
+      <TooltipContent>{trNode(label)}</TooltipContent>
     </Tooltip>
   );
 });

@@ -15,6 +15,7 @@ import { ShellProvider, type ShellData } from "./shell-context";
 import { SidebarNav } from "./sidebar-nav";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
+import { tr } from "@/lib/i18n";
 
 export const SIDEBAR_COOKIE = "nx_sidebar";
 
@@ -32,9 +33,7 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
   return (
     <ShellProvider value={data}>
       <div className="flex min-h-dvh bg-background">
-        <a href="#main" className="sr-only z-50 rounded-md bg-surface px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:shadow-md">
-          Skip to content
-        </a>
+        <a href="#main" className="sr-only z-50 rounded-md bg-surface px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:shadow-md">{tr("Skip to content")}</a>
 
         {/* Desktop sidebar */}
         <aside
@@ -55,11 +54,11 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
               variant="ghost"
               size={collapsed ? "icon" : "sm"}
               onClick={toggleCollapsed}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={collapsed ? tr("Expand sidebar") : tr("Collapse sidebar")}
               className={cn("text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground", !collapsed && "w-full justify-start")}
             >
               {collapsed ? <PanelLeftOpen aria-hidden /> : <PanelLeftClose aria-hidden />}
-              {!collapsed && "Collapse"}
+              {!collapsed && tr("Collapse")}
             </Button>
           </div>
         </aside>
@@ -73,7 +72,7 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
                   <Brand orgName={data.organization.name} />
                 </div>
               </SheetTitle>
-              <SheetDescription className="sr-only">Main navigation</SheetDescription>
+              <SheetDescription className="sr-only">{tr("Main navigation")}</SheetDescription>
             </SheetHeader>
             <div className="overflow-y-auto px-3 py-3">
               <SidebarNav groups={data.navGroups} onNavigate={() => setMobileOpen(false)} />
@@ -83,7 +82,7 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-surface/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-surface/80 sm:px-6">
-            <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>
+            <Button variant="ghost" size="icon" className="lg:hidden" aria-label={tr("Open navigation")} onClick={() => setMobileOpen(true)}>
               <Menu aria-hidden />
             </Button>
             <div className="min-w-0 flex-1">
@@ -99,9 +98,7 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
             </div>
           </header>
           {data.mode === "demo" && (
-            <div className="border-b border-warning-border bg-warning-bg px-4 py-1.5 text-xs text-warning">
-              Demo mode: fictional data stored on this server. Payments are simulated. Switch users from the menu in the top right.
-            </div>
+            <div className="border-b border-warning-border bg-warning-bg px-4 py-1.5 text-xs text-warning">{tr("Demo mode: fictional data stored on this server. Payments are simulated. Switch users from the menu in the top right.")}</div>
           )}
           <main id="main" className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-8">
             {children}

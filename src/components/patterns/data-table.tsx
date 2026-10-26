@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 export type SortDirection = "asc" | "desc";
 
@@ -144,7 +145,7 @@ export function DataTable<T>({
               value={state.search}
               onChange={(e) => update({ search: e.target.value.slice(0, 100), page: 0 })}
               placeholder={searchPlaceholder}
-              aria-label="Search table"
+              aria-label={tr("Search table")}
               className="pl-8"
             />
           </div>
@@ -153,12 +154,10 @@ export function DataTable<T>({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
-              <Columns3 aria-hidden />
-              Columns
-            </Button>
+              <Columns3 aria-hidden />{tr("Columns")}</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Visible columns</DropdownMenuLabel>
+            <DropdownMenuLabel>{tr("Visible columns")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {columns.map((c, i) => (
               <DropdownMenuCheckboxItem
@@ -220,7 +219,7 @@ export function DataTable<T>({
             {pageRows.length === 0 ? (
               <tr>
                 <td colSpan={visibleColumns.length} className="p-0">
-                  {emptyState ?? <p className="px-3 py-10 text-center text-sm text-text-muted">{state.search ? "No rows match your search." : "No records yet."}</p>}
+                  {emptyState ?? <p className="px-3 py-10 text-center text-sm text-text-muted">{state.search ? tr("No rows match your search.") : tr("No records yet.")}</p>}
                 </td>
               </tr>
             ) : (
@@ -253,16 +252,15 @@ export function DataTable<T>({
       {rows.length > pageSize && (
         <div className="flex items-center justify-between text-sm text-text-muted">
           <span className="tabular-nums">
-            {page * pageSize + 1}–{Math.min(rows.length, (page + 1) * pageSize)} of {rows.length}
+            {page * pageSize + 1}–{Math.min(rows.length, (page + 1) * pageSize)} {tr("of")} {rows.length}
           </span>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon-sm" aria-label="Previous page" disabled={page === 0} onClick={() => update({ page: page - 1 })}>
+            <Button variant="outline" size="icon-sm" aria-label={tr("Previous page")} disabled={page === 0} onClick={() => update({ page: page - 1 })}>
               <ChevronLeft aria-hidden />
             </Button>
-            <span className="px-2 tabular-nums">
-              Page {page + 1} of {pageCount}
+            <span className="px-2 tabular-nums">{tr("Page")} {page + 1} {tr("of")} {pageCount}
             </span>
-            <Button variant="outline" size="icon-sm" aria-label="Next page" disabled={page >= pageCount - 1} onClick={() => update({ page: page + 1 })}>
+            <Button variant="outline" size="icon-sm" aria-label={tr("Next page")} disabled={page >= pageCount - 1} onClick={() => update({ page: page + 1 })}>
               <ChevronRight aria-hidden />
             </Button>
           </div>

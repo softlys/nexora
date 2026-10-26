@@ -30,7 +30,8 @@ export const importInput = z
 export type ImportResult = { rows: number; valid: number; errors: Array<{ row: number; message: string }>; created: number };
 
 const norm = (h: string) => h.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-const COUNTRY_BY_NAME = new Map<string, string>(COUNTRY_CODES.map((c) => [countryName(c).toLowerCase(), c]));
+// Names in English and Russian, so files from either interface language import.
+const COUNTRY_BY_NAME = new Map<string, string>(COUNTRY_CODES.flatMap((c) => [[countryName(c, "en").toLowerCase(), c] as const, [countryName(c, "ru").toLowerCase(), c] as const]));
 
 /** Accepts "RU", "ru" or "Russia". */
 function countryCode(value: string): string {

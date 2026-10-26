@@ -17,14 +17,15 @@ import { requirePermission } from "@/server/guards";
 import { loadPage, peopleFor, permissionsFor, taskFormOptions } from "@/server/page-data";
 import { listTasks, recentActivities } from "@/server/services/tasks";
 import { calendarRange, TaskCalendar } from "./task-calendar";
+import { tr, trNode } from "@/lib/i18n";
 
-export const metadata = { title: "Tasks & Activities" };
+export const metadata = { title: tr("Tasks & Activities") };
 
 const VIEWS = [
-  ["list", "List", List],
-  ["month", "Month", CalendarDays],
-  ["week", "Week", CalendarRange],
-  ["activity", "Activity feed", MessagesSquare],
+  ["list", tr("List"), List],
+  ["month", tr("Month"), CalendarDays],
+  ["week", tr("Week"), CalendarRange],
+  ["activity", tr("Activity feed"), MessagesSquare],
 ] as const;
 
 export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
@@ -59,11 +60,11 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Tasks & Activities"
-        description="Your follow-ups and the history of customer interactions."
+        title={tr("Tasks & Activities")}
+        description={tr("Your follow-ups and the history of customer interactions.")}
         actions={perms.canCreate && <TaskFormButton options={options} autoOpen={autoOpen} />}
       />
-      <nav aria-label="Views" className="flex flex-wrap gap-1 border-b border-border">
+      <nav aria-label={tr("Views")} className="flex flex-wrap gap-1 border-b border-border">
         {VIEWS.map(([v, label, Icon]) => (
           <Link
             key={v}
@@ -72,46 +73,46 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
             className={cn("-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm", view === v ? "border-brand font-medium text-foreground" : "border-transparent text-text-muted hover:text-foreground")}
           >
             <Icon className="size-4" aria-hidden />
-            {label}
+            {trNode(label)}
           </Link>
         ))}
       </nav>
 
       {view !== "activity" && (
         <ListToolbar
-          searchPlaceholder="Search tasks…"
+          searchPlaceholder={tr("Search tasks…")}
           showArchivedToggle={view === "list"}
           filters={[
             {
               key: "status",
-              label: "Statuses",
+              label: tr("Statuses"),
               options: [
-                { value: "open", label: "Open" },
-                { value: "overdue", label: "Overdue" },
-                { value: "todo", label: "To do" },
-                { value: "in_progress", label: "In progress" },
-                { value: "done", label: "Done" },
-                { value: "cancelled", label: "Cancelled" },
+                { value: "open", label: tr("Open") },
+                { value: "overdue", label: tr("Overdue") },
+                { value: "todo", label: tr("To do") },
+                { value: "in_progress", label: tr("In progress") },
+                { value: "done", label: tr("Done") },
+                { value: "cancelled", label: tr("Cancelled") },
               ],
             },
-            { key: "priority", label: "Priorities", options: TASK_PRIORITIES.map((p) => ({ value: p, label: humanizeStatus(p) })) },
-            ...(people.assignable.length > 1 ? [{ key: "owner", label: "Assignees", options: people.assignable }] : []),
+            { key: "priority", label: tr("Priorities"), options: TASK_PRIORITIES.map((p) => ({ value: p, label: humanizeStatus(p) })) },
+            ...(people.assignable.length > 1 ? [{ key: "owner", label: tr("Assignees"), options: people.assignable }] : []),
           ]}
         />
       )}
 
       {view === "list" && page && (
         <ListTable
-          caption="Tasks"
+          caption={tr("Tasks")}
           basePath="/tasks"
           params={params}
           {...page}
           rowKey={(t) => t.id}
           columns={[
-            { id: "done", header: "Done", className: "w-12", cell: (t) => <TaskCheck id={t.id} title={t.title} done={t.status === "done"} disabled={!canEdit(t.assignee_id) || !!t.archived_at} /> },
+            { id: "done", header: tr("Done"), className: "w-12", cell: (t) => <TaskCheck id={t.id} title={t.title} done={t.status === "done"} disabled={!canEdit(t.assignee_id) || !!t.archived_at} /> },
             {
               id: "title",
-              header: "Task",
+              header: tr("Task"),
               sort: "title",
               cell: (t) => (
                 <div className="min-w-0">
@@ -121,7 +122,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
                   {t.related && (
                     <div className="truncate text-xs text-text-muted">
                       <Link href={`/${t.related.kind === "company" ? "companies" : `${t.related.kind}s`}/${t.related.id}`} className="hover:underline">
-                        {t.related.label}
+                        {trNode(t.related.label)}
                       </Link>
                     </div>
                   )}
@@ -130,28 +131,28 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
             },
             {
               id: "due",
-              header: "Due",
+              header: tr("Due"),
               sort: "due",
               cell: (t) =>
                 t.due_at ? (
                   <span className={cn("whitespace-nowrap", t.overdue ? "font-medium text-danger" : "text-text-subtle")}>
-                    {t.overdue && <span className="sr-only">Overdue: </span>}
+                    {t.overdue && <span className="sr-only">{tr("Overdue:")} </span>}
                     {formatDate(t.due_at)}
-                    {t.overdue && <span className="ml-1 text-xs">overdue</span>}
+                    {t.overdue && <span className="ml-1 text-xs">{tr("overdue")}</span>}
                   </span>
                 ) : (
-                  <span className="text-text-muted">No date</span>
+                  <span className="text-text-muted">{tr("No date")}</span>
                 ),
             },
-            { id: "priority", header: "Priority", sort: "priority", hideBelow: "sm", cell: (t) => <StatusBadge status={t.priority} /> },
-            { id: "status", header: "Status", sort: "status", hideBelow: "md", cell: (t) => <StatusBadge status={t.status} /> },
-            { id: "assignee", header: "Assignee", sort: "assignee", hideBelow: "lg", cell: (t) => <span className="text-text-subtle">{t.assignee_name}</span> },
+            { id: "priority", header: tr("Priority"), sort: "priority", hideBelow: "sm", cell: (t) => <StatusBadge status={t.priority} /> },
+            { id: "status", header: tr("Status"), sort: "status", hideBelow: "md", cell: (t) => <StatusBadge status={t.status} /> },
+            { id: "assignee", header: tr("Assignee"), sort: "assignee", hideBelow: "lg", cell: (t) => <span className="text-text-subtle">{t.assignee_name}</span> },
           ]}
           empty={
             <EmptyState
               icon={ListChecks}
-              title="No tasks here"
-              description={filters.status === "open" ? "Nothing open. Change the status filter to see completed tasks." : "Try a different filter."}
+              title={tr("No tasks here")}
+              description={filters.status === "open" ? tr("Nothing open. Change the status filter to see completed tasks.") : tr("Try a different filter.")}
               className="m-4 border-0 bg-transparent"
             />
           }
@@ -169,7 +170,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
 
       {activities && (
         <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
-          {activities.length === 0 && <li className="p-6 text-center text-sm text-text-muted">No activities yet.</li>}
+          {activities.length === 0 && <li className="p-6 text-center text-sm text-text-muted">{tr("No activities yet.")}</li>}
           {activities.map((a) => (
             <li key={a.id} className="flex flex-col gap-0.5 px-4 py-3 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-4">
               <div className="min-w-0">
@@ -180,7 +181,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/tasks">) {
                 {a.body && <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-text-subtle">{a.body}</p>}
                 {a.related && (
                   <Link href={a.related.href} className="mt-0.5 inline-block text-xs text-brand hover:underline">
-                    {a.related.label}
+                    {trNode(a.related.label)}
                   </Link>
                 )}
               </div>

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useShell } from "./shell-context";
+import { tr, trNode } from "@/lib/i18n";
 
 const ICONS = { company: Building2, contact: Users, lead: Target, deal: Handshake, order: Package, task: ListChecks, stage: SquareKanban };
 
@@ -22,13 +23,13 @@ export function QuickCreate() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" aria-label="Create new">
+        <Button size="sm" aria-label={tr("Create new")}>
           <Plus aria-hidden />
-          <span className="hidden sm:inline">New</span>
+          <span className="hidden sm:inline">{tr("New")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel>Create</DropdownMenuLabel>
+        <DropdownMenuLabel>{tr("Create")}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {quickCreate.map((item) => {
           const Icon = ICONS[item.icon];
@@ -36,7 +37,7 @@ export function QuickCreate() {
             <DropdownMenuItem key={item.href} asChild>
               <Link href={item.href}>
                 <Icon aria-hidden />
-                {item.label}
+                {trNode(item.label)}
               </Link>
             </DropdownMenuItem>
           );

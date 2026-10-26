@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { convertDealToOrderAction, moveDealStageAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 export type StageOption = { id: string; name: string; is_won: boolean; is_lost: boolean };
 
@@ -28,19 +29,15 @@ export function LostReasonDialog({ open, dealName, onSubmit, onCancel }: { open:
           className="grid gap-4"
         >
           <DialogHeader>
-            <DialogTitle>Why was this deal lost?</DialogTitle>
+            <DialogTitle>{tr("Why was this deal lost?")}</DialogTitle>
             <DialogDescription>{dealName}</DialogDescription>
           </DialogHeader>
-          <FormField id="lost-reason" label="Lost reason" hint="Used in win/loss analysis.">
-            <Textarea id="lost-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={255} autoFocus placeholder="e.g. Lost to competitor on price" />
+          <FormField id="lost-reason" label={tr("Lost reason")} hint={tr("Used in win/loss analysis.")}>
+            <Textarea id="lost-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={255} autoFocus placeholder={tr("e.g. Lost to competitor on price")} />
           </FormField>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={!reason.trim()}>
-              Mark as lost
-            </Button>
+            <Button type="button" variant="outline" onClick={onCancel}>{tr("Cancel")}</Button>
+            <Button type="submit" disabled={!reason.trim()}>{tr("Mark as lost")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -61,7 +58,7 @@ export function StageSelect({ dealId, dealName, stageId, stages, disabled }: { d
         toast.error(result.error);
         return;
       }
-      toast.success(`Moved to ${stages.find((s) => s.id === target)?.name}`);
+      toast.success(tr("Moved to {p0}", { p0: stages.find((s) => s.id === target)?.name }));
       router.refresh();
     });
 
@@ -75,13 +72,13 @@ export function StageSelect({ dealId, dealName, stageId, stages, disabled }: { d
           else move(target);
         }}
       >
-        <SelectTrigger className="w-44" aria-label="Deal stage">
+        <SelectTrigger className="w-44" aria-label={tr("Deal stage")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {stages.map((s) => (
             <SelectItem key={s.id} value={s.id}>
-              {s.name}
+              {tr(s.name)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -108,8 +105,7 @@ export function CreateOrderButton({ dealId, existing }: { dealId: string; existi
     return (
       <Button asChild variant="outline">
         <Link href={`/orders/${existing.id}`}>
-          <PackagePlus aria-hidden />
-          Order {existing.order_number}
+          <PackagePlus aria-hidden />{tr("Order")} {existing.order_number}
         </Link>
       </Button>
     );
@@ -123,13 +119,13 @@ export function CreateOrderButton({ dealId, existing }: { dealId: string; existi
             toast.error(result.error);
             return;
           }
-          toast.success(result.data.created ? `Order ${result.data.order_number} created` : `Order ${result.data.order_number} already exists`);
+          toast.success(result.data.created ? tr("Order {p0} created", { p0: result.data.order_number }) : tr("Order {p0} already exists", { p0: result.data.order_number }));
           router.push(`/orders/${result.data.order_id}`);
         })
       }
     >
       <PackagePlus aria-hidden />
-      {pending ? "Creating…" : "Create order"}
+      {pending ? tr("Creating…") : tr("Create order")}
     </Button>
   );
 }

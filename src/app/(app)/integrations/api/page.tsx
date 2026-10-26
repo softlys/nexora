@@ -4,18 +4,19 @@ import { PageHeader } from "@/components/patterns/page-header";
 import { ENDPOINTS } from "@/domain/api/contract";
 import { API_SCOPES, SCOPE_DESCRIPTIONS } from "@/domain/api/keys";
 import { requirePermission } from "@/server/guards";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "API reference" };
+export const metadata = { title: tr("API reference") };
 
 const ERRORS: Array<[string, string, string]> = [
-  ["400", "validation_failed / invalid_json", "Body or query does not match the schema; details lists each field."],
-  ["401", "unauthorized", "Missing, malformed, unknown or revoked key, or the key's creator was disabled."],
-  ["401", "signature_invalid", "X-Nexora-Integration was sent but X-Nexora-Signature does not verify."],
-  ["403", "insufficient_scope / forbidden", "The key lacks the scope, or its creator's role does not allow the action."],
-  ["404", "not_found", "The record does not exist or is outside the key owner's scope."],
-  ["409", "idempotency_key_reused / conflict", "Same Idempotency-Key with a different body, or a conflicting state."],
-  ["413", "payload_too_large", "Body larger than 64 KB."],
-  ["429", "rate_limited", "120 requests per minute per key; see Retry-After."],
+  ["400", tr("validation_failed / invalid_json"), tr("Body or query does not match the schema; details lists each field.")],
+  ["401", "unauthorized", tr("Missing, malformed, unknown or revoked key, or the key's creator was disabled.")],
+  ["401", "signature_invalid", tr("X-Nexora-Integration was sent but X-Nexora-Signature does not verify.")],
+  ["403", tr("insufficient_scope / forbidden"), tr("The key lacks the scope, or its creator's role does not allow the action.")],
+  ["404", "not_found", tr("The record does not exist or is outside the key owner's scope.")],
+  ["409", tr("idempotency_key_reused / conflict"), tr("Same Idempotency-Key with a different body, or a conflicting state.")],
+  ["413", "payload_too_large", tr("Body larger than 64 KB.")],
+  ["429", "rate_limited", tr("120 requests per minute per key; see Retry-After.")],
 ];
 
 function curl(e: (typeof ENDPOINTS)[number]): string {
@@ -34,12 +35,10 @@ export default async function ApiReferencePage() {
   return (
     <div className="space-y-6">
       <Link href="/integrations" className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-foreground">
-        <ArrowLeft className="size-4" aria-hidden />
-        Integrations
-      </Link>
+        <ArrowLeft className="size-4" aria-hidden />{tr("Integrations")}</Link>
       <PageHeader
-        title="API reference"
-        description="REST API at /api/v1. Generated from the same schemas the server validates with; the machine-readable version is the OpenAPI 3.1 document."
+        title={tr("API reference")}
+        description={tr("REST API at /api/v1. Generated from the same schemas the server validates with; the machine-readable version is the OpenAPI 3.1 document.")}
         actions={
           <a href="/api/v1/openapi.json" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-sm hover:bg-muted">
             <FileJson className="size-4" aria-hidden />
@@ -50,10 +49,8 @@ export default async function ApiReferencePage() {
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="min-w-0 space-y-2 rounded-lg border border-border bg-surface p-5 text-sm shadow-xs">
-          <h2 className="text-md font-semibold">Authentication</h2>
-          <p className="text-text-muted">
-            Create a key in <Link className="underline" href="/settings/api-keys">Settings → API keys</Link> and send it as <code className="font-mono text-xs">Authorization: Bearer nxk_…</code>. Keys are shown once and stored as SHA-256 hashes. A key acts with the permissions of the admin who created it, limited by its scopes.
-          </p>
+          <h2 className="text-md font-semibold">{tr("Authentication")}</h2>
+          <p className="text-text-muted">{tr("Create a key in")} <Link className="underline" href="/settings/api-keys">{tr("Settings → API keys")}</Link> {tr("and send it as")} <code className="font-mono text-xs">{tr("Authorization: Bearer nxk_…")}</code>{tr(". Keys are shown once and stored as SHA-256 hashes. A key acts with the permissions of the admin who created it, limited by its scopes.")}</p>
           <ul className="space-y-1">
             {API_SCOPES.map((s) => (
               <li key={s}>
@@ -61,27 +58,23 @@ export default async function ApiReferencePage() {
               </li>
             ))}
           </ul>
-          <p className="text-xs text-text-muted">Integration keys and SIEM keys are separate kinds: an integration key can never hold a security scope.</p>
+          <p className="text-xs text-text-muted">{tr("Integration keys and SIEM keys are separate kinds: an integration key can never hold a security scope.")}</p>
         </div>
         <div className="min-w-0 space-y-2 rounded-lg border border-border bg-surface p-5 text-sm shadow-xs">
-          <h2 className="text-md font-semibold">Conventions</h2>
+          <h2 className="text-md font-semibold">{tr("Conventions")}</h2>
           <ul className="list-disc space-y-1 pl-5 text-text-muted">
-            <li>
-              Success: <code className="font-mono text-xs">{"{ data, meta? }"}</code>. Errors: <code className="font-mono text-xs">{"{ error: { code, message, details?, request_id } }"}</code>.
+            <li>{tr("Success:")} <code className="font-mono text-xs">{tr("{ data, meta? }")}</code>{tr(". Errors:")} <code className="font-mono text-xs">{tr("{ error: { code, message, details?, request_id } }")}</code>.
             </li>
-            <li>
-              POST endpoints accept <code className="font-mono text-xs">Idempotency-Key</code>: the same key and body return the stored response for 24 hours (header <code className="font-mono text-xs">Idempotent-Replayed: true</code>).
+            <li>{tr("POST endpoints accept")} <code className="font-mono text-xs">{tr("Idempotency-Key")}</code>{tr(": the same key and body return the stored response for 24 hours (header")} <code className="font-mono text-xs">{tr("Idempotent-Replayed: true")}</code>).
             </li>
-            <li>Unknown fields are rejected. Bodies are limited to 64 KB.</li>
-            <li>Every response carries X-Request-Id; quote it when reporting a problem.</li>
+            <li>{tr("Unknown fields are rejected. Bodies are limited to 64 KB.")}</li>
+            <li>{tr("Every response carries X-Request-Id; quote it when reporting a problem.")}</li>
           </ul>
         </div>
       </section>
 
       <section aria-labelledby="endpoints-heading" className="space-y-3">
-        <h2 id="endpoints-heading" className="text-md font-semibold">
-          Endpoints
-        </h2>
+        <h2 id="endpoints-heading" className="text-md font-semibold">{tr("Endpoints")}</h2>
         {ENDPOINTS.map((e) => (
           <article key={`${e.method} ${e.path}`} className="min-w-0 space-y-3 rounded-lg border border-border bg-surface p-4 shadow-xs" id={`${e.method}-${e.path}`.replace(/[^a-z0-9-]/gi, "-")}>
             <div className="flex flex-wrap items-center gap-2">
@@ -93,12 +86,12 @@ export default async function ApiReferencePage() {
             <p className="text-sm text-text-muted">{e.description}</p>
             <div className="grid gap-3 lg:grid-cols-2">
               <div className="min-w-0">
-                <h3 className="mb-1 text-xs font-medium text-text-muted">Request</h3>
+                <h3 className="mb-1 text-xs font-medium text-text-muted">{tr("Request")}</h3>
                 <pre className="overflow-x-auto rounded bg-surface-muted p-3 font-mono text-[11px]">{curl(e)}</pre>
               </div>
               <div className="min-w-0">
-                <h3 className="mb-1 text-xs font-medium text-text-muted">Response {e.status}</h3>
-                <pre className="max-h-64 overflow-auto rounded bg-surface-muted p-3 font-mono text-[11px]">{e.example ? JSON.stringify(e.example.response, null, 2) : "See openapi.json for the full schema."}</pre>
+                <h3 className="mb-1 text-xs font-medium text-text-muted">{tr("Response")} {e.status}</h3>
+                <pre className="max-h-64 overflow-auto rounded bg-surface-muted p-3 font-mono text-[11px]">{e.example ? JSON.stringify(e.example.response, null, 2) : tr("See openapi.json for the full schema.")}</pre>
               </div>
             </div>
           </article>
@@ -106,16 +99,14 @@ export default async function ApiReferencePage() {
       </section>
 
       <section aria-labelledby="errors-heading" className="space-y-2">
-        <h2 id="errors-heading" className="text-md font-semibold">
-          Errors
-        </h2>
+        <h2 id="errors-heading" className="text-md font-semibold">{tr("Errors")}</h2>
         <div className="relative overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-surface-subtle text-xs text-text-muted">
               <tr>
-                <th scope="col" className="h-9 px-3 text-left font-medium">HTTP</th>
-                <th scope="col" className="h-9 px-3 text-left font-medium">Code</th>
-                <th scope="col" className="h-9 px-3 text-left font-medium">Meaning</th>
+                <th scope="col" className="h-9 px-3 text-left font-medium">{tr("HTTP")}</th>
+                <th scope="col" className="h-9 px-3 text-left font-medium">{tr("Code")}</th>
+                <th scope="col" className="h-9 px-3 text-left font-medium">{tr("Meaning")}</th>
               </tr>
             </thead>
             <tbody>

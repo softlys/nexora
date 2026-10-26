@@ -18,6 +18,7 @@ import { OUTBOUND_EVENT_DESCRIPTIONS, OUTBOUND_EVENTS, type OutboundEvent } from
 import { formatDate, formatRelative } from "@/lib/format";
 import { disconnectIntegrationAction, rotateSecretAction, saveIntegrationAction, sendTestEventAction } from "@/server/actions/integrations";
 import { SecretDialog } from "./secret-dialog";
+import { tr } from "@/lib/i18n";
 
 export type IntegrationFormValue = {
   provider: "make" | "n8n" | "generic_webhook";
@@ -53,7 +54,7 @@ export function IntegrationForm({ value, canManage, urlHint }: { value: Integrat
         setError(result.fieldErrors ? Object.values(result.fieldErrors).flat()[0] ?? result.error : result.error);
         return;
       }
-      toast.success("Integration saved");
+      toast.success(tr("Integration saved"));
       if (result.data.secret) setSecret(result.data.secret);
       router.refresh();
     });
@@ -62,8 +63,8 @@ export function IntegrationForm({ value, canManage, urlHint }: { value: Integrat
     startTransition(async () => {
       const result = await sendTestEventAction({ provider: value.provider });
       if (!result.ok) return void toast.error(result.error);
-      if (result.data.status === "success") toast.success(`Test event delivered (HTTP ${result.data.status_code}, ${result.data.duration_ms} ms)`);
-      else toast.error(`Test event failed: ${result.data.error ?? "unknown error"}`);
+      if (result.data.status === "success") toast.success(tr("Test event delivered (HTTP {p0}, {p1} ms)", { p0: result.data.status_code, p1: result.data.duration_ms }));
+      else toast.error(tr("Test event failed: {p0}", { p0: result.data.error ?? "unknown error" }));
       router.refresh();
     });
 
@@ -83,7 +84,7 @@ export function IntegrationForm({ value, canManage, urlHint }: { value: Integrat
       toast.error(result.error);
       return false;
     }
-    toast.success("Disconnected");
+    toast.success(tr("Disconnected"));
     setUrl("");
     setEnabled(false);
     router.refresh();
@@ -93,16 +94,13 @@ export function IntegrationForm({ value, canManage, urlHint }: { value: Integrat
     <section className="min-w-0 space-y-5 rounded-lg border border-border bg-surface p-5 shadow-xs" aria-labelledby="connection-heading">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id="connection-heading" className="text-md font-semibold">
-            Connection
-          </h2>
+          <h2 id="connection-heading" className="text-md font-semibold">{tr("Connection")}</h2>
           <p className="text-sm text-text-muted">{STATUS_HINTS[value.status]}</p>
         </div>
         <div className="text-right">
           <StatusBadge status={value.status} label={STATUS_LABELS[value.status]} dot />
           {value.last_tested_at && (
-            <p className="mt-1 text-xs text-text-muted" title={formatDate(value.last_tested_at)}>
-              Last test {formatRelative(value.last_tested_at)}
+            <p className="mt-1 text-xs text-text-muted" title={formatDate(value.last_tested_at)}>{tr("Last test")} {formatRelative(value.last_tested_at)}
             </p>
           )}
         </div>
@@ -113,24 +111,24 @@ export function IntegrationForm({ value, canManage, urlHint }: { value: Integrat
         </p>
       )}
 
-      <FormField id="webhook-url" label="Webhook URL" hint={urlHint} error={error ?? undefined}>
+      <FormField id="webhook-url" label={tr("Webhook URL")} hint={urlHint} error={error ?? undefined}>
         <Input id="webhook-url" type="url" inputMode="url" placeholder="https://" value={url} disabled={!canManage} onChange={(e) => setUrl(e.target.value)} aria-invalid={error ? true : undefined} />
       </FormField>
 
-      <FormField id="auth-mode" label="Authentication" hint="Every request carries an X-Nexora-Signature HMAC header. Header token also sends the secret in X-Nexora-Token for receivers that can only compare a header.">
+      <FormField id="auth-mode" label={tr("Authentication")} hint={tr("Every request carries an X-Nexora-Signature HMAC header. Header token also sends the secret in X-Nexora-Token for receivers that can only compare a header.")}>
         <Select value={authMode} onValueChange={(v) => setAuthMode(v as typeof authMode)} disabled={!canManage}>
           <SelectTrigger id="auth-mode" className="w-full sm:w-80">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="signature">HMAC signature (recommended)</SelectItem>
-            <SelectItem value="header_token">HMAC signature + header token</SelectItem>
+            <SelectItem value="signature">{tr("HMAC signature (recommended)")}</SelectItem>
+            <SelectItem value="header_token">{tr("HMAC signature + header token")}</SelectItem>
           </SelectContent>
         </Select>
       </FormField>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Events to send</legend>
+        <legend className="text-sm font-medium">{tr("Events to send")}</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {OUTBOUND_EVENTS.map((e) => (
             <label key={e} className="flex cursor-pointer gap-2.5 rounded-md border border-border p-2.5 has-[button:focus-visible]:ring-3 has-[button:focus-visible]:ring-ring/40">
@@ -146,58 +144,52 @@ export function IntegrationForm({ value, canManage, urlHint }: { value: Integrat
 
       <div className="flex items-center gap-2">
         <Switch id="integration-enabled" checked={enabled} onCheckedChange={setEnabled} disabled={!canManage} />
-        <Label htmlFor="integration-enabled">Send events to this endpoint</Label>
+        <Label htmlFor="integration-enabled">{tr("Send events to this endpoint")}</Label>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
         {canManage && (
           <Button onClick={save} disabled={pending || url.trim() === ""}>
-            {pending ? "Saving…" : configured ? "Save changes" : "Save and create secret"}
+            {pending ? tr("Saving…") : configured ? tr("Save changes") : tr("Save and create secret")}
           </Button>
         )}
         {canManage && configured && (
           <Button variant="outline" onClick={test} disabled={pending}>
-            <Send aria-hidden />
-            Send test event
-          </Button>
+            <Send aria-hidden />{tr("Send test event")}</Button>
         )}
-        {value.secret_preview && <span className="text-xs text-text-muted">Signing secret ends in …{value.secret_preview}</span>}
+        {value.secret_preview && <span className="text-xs text-text-muted">{tr("Signing secret ends in …")}{value.secret_preview}</span>}
         <span className="flex-1" />
         {canManage && configured && (
           <>
             <ConfirmDialog
               trigger={
                 <Button variant="ghost" size="sm">
-                  <KeyRound aria-hidden />
-                  Rotate secret
-                </Button>
+                  <KeyRound aria-hidden />{tr("Rotate secret")}</Button>
               }
-              title="Rotate the signing secret?"
-              description="The current secret stops working immediately. Update the receiver with the new secret, then send a test event."
-              confirmLabel="Rotate"
+              title={tr("Rotate the signing secret?")}
+              description={tr("The current secret stops working immediately. Update the receiver with the new secret, then send a test event.")}
+              confirmLabel={tr("Rotate")}
               onConfirm={rotate}
             />
             <ConfirmDialog
               trigger={
                 <Button variant="ghost" size="sm">
-                  <Unplug aria-hidden />
-                  Disconnect
-                </Button>
+                  <Unplug aria-hidden />{tr("Disconnect")}</Button>
               }
-              title="Disconnect this integration?"
-              description="The URL and signing secret are removed and no more events are sent. The delivery log is kept."
-              confirmLabel="Disconnect"
+              title={tr("Disconnect this integration?")}
+              description={tr("The URL and signing secret are removed and no more events are sent. The delivery log is kept.")}
+              confirmLabel={tr("Disconnect")}
               destructive
               onConfirm={disconnect}
             />
           </>
         )}
       </div>
-      {!canManage && <p className="text-xs text-text-muted">Only admins can change integrations.</p>}
+      {!canManage && <p className="text-xs text-text-muted">{tr("Only admins can change integrations.")}</p>}
 
       <SecretDialog
-        title="Signing secret"
-        description="Use it in the receiver to verify X-Nexora-Signature (HMAC-SHA256 of “timestamp.body”)."
+        title={tr("Signing secret")}
+        description={tr("Use it in the receiver to verify X-Nexora-Signature (HMAC-SHA256 of “timestamp.body”).")}
         secret={secret}
         onClose={() => setSecret(null)}
       />

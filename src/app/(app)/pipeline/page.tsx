@@ -17,8 +17,9 @@ import { requirePermission } from "@/server/guards";
 import { dealFormOptions, loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { getPipelineBoard, listDeals } from "@/server/services/deals";
 import { PipelineBoard } from "./pipeline-board";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Sales Pipeline" };
+export const metadata = { title: tr("Sales Pipeline") };
 
 export default async function PipelinePage({ searchParams }: PageProps<"/pipeline">) {
   const { user } = await requirePermission("view", "deal");
@@ -38,11 +39,11 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Sales Pipeline"
-        description="Drag deals between stages. Totals and the weighted forecast update as you go."
+        title={tr("Sales Pipeline")}
+        description={tr("Drag deals between stages. Totals and the weighted forecast update as you go.")}
         actions={
           <>
-            <div className="flex rounded-md border border-border p-0.5" role="group" aria-label="View">
+            <div className="flex rounded-md border border-border p-0.5" role="group" aria-label={tr("View")}>
               {(["board", "table"] as const).map((v) => (
                 <Link
                   key={v}
@@ -51,7 +52,7 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
                   className={cn("flex items-center gap-1.5 rounded px-2 py-1 text-sm", view === v ? "bg-surface-muted font-medium text-foreground" : "text-text-muted hover:text-foreground")}
                 >
                   {v === "board" ? <KanbanSquare className="size-4" aria-hidden /> : <Table2 className="size-4" aria-hidden />}
-                  {v === "board" ? "Board" : "Table"}
+                  {v === "board" ? tr("Board") : tr("Table")}
                 </Link>
               ))}
             </div>
@@ -60,11 +61,11 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
         }
       />
       <ListToolbar
-        searchPlaceholder="Search deals…"
+        searchPlaceholder={tr("Search deals…")}
         showArchivedToggle={false}
         filters={[
-          { key: "stage", label: "Stages", options: stages.map((s) => ({ value: s.id, label: s.name })) },
-          ...(people.assignable.length > 1 ? [{ key: "owner", label: "Owners", options: people.assignable }] : []),
+          { key: "stage", label: tr("Stages"), options: stages.map((s) => ({ value: s.id, label: tr(s.name) })) },
+          ...(people.assignable.length > 1 ? [{ key: "owner", label: tr("Owners"), options: people.assignable }] : []),
         ]}
       >
         <RangeFilters />
@@ -81,23 +82,23 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
       )}
       {table && (
         <ListTable
-          caption="Deals in the pipeline"
+          caption={tr("Deals in the pipeline")}
           basePath="/pipeline"
           params={params}
           {...table}
           rowKey={(d) => d.id}
           rowHref={(d) => `/deals/${d.id}`}
           columns={[
-            { id: "name", header: "Deal", sort: "name", cell: (d) => <span className="font-medium">{d.name}</span> },
-            { id: "company", header: "Company", sort: "company", hideBelow: "md", cell: (d) => <span className="text-text-subtle">{d.company_name}</span> },
-            { id: "stage", header: "Stage", sort: "stage", cell: (d) => <StatusBadge label={d.stage_name} tone={d.is_won ? "success" : d.is_lost ? "neutral" : "accent"} /> },
-            { id: "amount", header: "Amount", sort: "amount", align: "right", cell: (d) => formatMoney(d.amount, d.currency) },
-            { id: "weighted", header: "Weighted", align: "right", hideBelow: "lg", cell: (d) => formatMoney((d.amount * d.probability) / 100, d.currency) },
-            { id: "close", header: "Close", sort: "close", hideBelow: "sm", cell: (d) => <span className="text-text-subtle">{formatDate(d.expected_close_date)}</span> },
-            { id: "days", header: "Days in stage", align: "right", hideBelow: "lg", cell: (d) => d.days_in_stage },
-            { id: "owner", header: "Owner", sort: "owner", hideBelow: "md", cell: (d) => <span className="text-text-subtle">{d.owner_name}</span> },
+            { id: "name", header: tr("Deal"), sort: "name", cell: (d) => <span className="font-medium">{d.name}</span> },
+            { id: "company", header: tr("Company"), sort: "company", hideBelow: "md", cell: (d) => <span className="text-text-subtle">{d.company_name}</span> },
+            { id: "stage", header: tr("Stage"), sort: "stage", cell: (d) => <StatusBadge label={d.stage_name} tone={d.is_won ? "success" : d.is_lost ? "neutral" : "accent"} /> },
+            { id: "amount", header: tr("Amount"), sort: "amount", align: "right", cell: (d) => formatMoney(d.amount, d.currency) },
+            { id: "weighted", header: tr("Weighted"), align: "right", hideBelow: "lg", cell: (d) => formatMoney((d.amount * d.probability) / 100, d.currency) },
+            { id: "close", header: tr("Close"), sort: "close", hideBelow: "sm", cell: (d) => <span className="text-text-subtle">{formatDate(d.expected_close_date)}</span> },
+            { id: "days", header: tr("Days in stage"), align: "right", hideBelow: "lg", cell: (d) => d.days_in_stage },
+            { id: "owner", header: tr("Owner"), sort: "owner", hideBelow: "md", cell: (d) => <span className="text-text-subtle">{d.owner_name}</span> },
           ]}
-          empty={<EmptyState title="No deals match these filters" description="Try a different search or clear the filters." className="m-4 border-0 bg-transparent" />}
+          empty={<EmptyState title={tr("No deals match these filters")} description={tr("Try a different search or clear the filters.")} className="m-4 border-0 bg-transparent" />}
         />
       )}
     </div>

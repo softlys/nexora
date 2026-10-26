@@ -33,6 +33,7 @@ import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 import { archiveWorkflowAction, testRunAction, updateWorkflowAction } from "@/server/actions/automation";
 import { EnabledToggle } from "../studio-controls";
+import { tr, trNode } from "@/lib/i18n";
 
 type Json = Record<string, unknown>;
 type StepJson = Json & { id: string; type: StepType; name?: string; next?: string };
@@ -42,16 +43,16 @@ type Option = { value: string; label: string };
 const STEP_DEFAULTS: Record<StepType, Json> = {
   condition: { match: "all", conditions: [{ field: "", op: "eq", value: "" }], then: "end", else: "end" },
   assign_owner: { rule: "round_robin", only_if_unassigned: true, country_map: {} },
-  create_task: { title: "Follow up", task_type: "follow_up", priority: "medium", due_in_business_days: 1, assignee: "record_owner" },
+  create_task: { title: tr("Follow up"), task_type: "follow_up", priority: "medium", due_in_business_days: 1, assignee: "record_owner" },
   update_record: { fields: {} },
-  create_activity: { activity_type: "note", subject: "Automation note", body: "" },
-  create_notification: { recipients: ["record_owner"], title: "Update", body: "", link: "record", once_per_record: true },
+  create_activity: { activity_type: "note", subject: tr("Automation note"), body: "" },
+  create_notification: { recipients: ["record_owner"], title: tr("Update"), body: "", link: "record", once_per_record: true },
   convert_deal_to_order: {},
-  send_email: { to: "record_owner", subject: "Update", body: "" },
+  send_email: { to: "record_owner", subject: tr("Update"), body: "" },
   send_telegram: { text: "New lead: {{lead.title}} ({{lead.company_name}})" },
   send_whatsapp: { text: "Здравствуйте! Спасибо за обращение, мы свяжемся с вами в ближайшее время.", template_name: "", template_language: "ru" },
   send_slack: { text: "New lead: {{lead.title}} ({{lead.company_name}})" },
-  create_notion_page: { title: "{{deal.name}}", body: "Deal brief created by NEXORA." },
+  create_notion_page: { title: "{{deal.name}}", body: tr("Deal brief created by NEXORA.") },
   send_webhook: { event_type: "custom.event" },
   delay: { hours: 24 },
 };
@@ -98,7 +99,7 @@ export function WorkflowEditor({
   const addStep = (type: StepType) => {
     let n = def.steps.length + 1;
     while (stepIds.includes(`step-${n}`)) n++;
-    const step = { id: `step-${n}`, name: STEP_LABELS[type], type, ...STEP_DEFAULTS[type] } as StepJson;
+    const step = { id: `step-${n}`, name: tr(STEP_LABELS[type]), type, ...STEP_DEFAULTS[type] } as StepJson;
     setDef((d) => ({ ...d, steps: [...d.steps, step] }));
     setSelected(step.id);
   };
@@ -125,11 +126,11 @@ export function WorkflowEditor({
       }
       if ("issues" in result.data) {
         setServerIssues(result.data.issues);
-        toast.error("The workflow has validation errors");
+        toast.error(tr("The workflow has validation errors"));
         return;
       }
       setServerIssues([]);
-      toast.success(`Saved as version ${result.data.version}`);
+      toast.success(tr("Saved as version {p0}", { p0: result.data.version }));
       setEditing(false);
       router.refresh();
     });
@@ -142,12 +143,12 @@ export function WorkflowEditor({
         return;
       }
       const statusText = result.data.status === "failed" ? `failed: ${result.data.error}` : result.data.status;
-      toast.success(`Test run ${statusText}`, { description: "No records were changed. Details are in the run history." });
+      toast.success(tr("Test run {p0}", { p0: statusText }), { description: tr("No records were changed. Details are in the run history.") });
       router.refresh();
     });
 
   const selectedStep = def.steps.find((s) => s.id === selected);
-  const targetOptions = (fromIndex: number): Option[] => [...def.steps.slice(fromIndex + 1).map((s) => ({ value: s.id, label: s.name || s.id })), { value: "end", label: "End the run" }];
+  const targetOptions = (fromIndex: number): Option[] => [...def.steps.slice(fromIndex + 1).map((s) => ({ value: s.id, label: s.name || s.id })), { value: "end", label: tr("End the run") }];
 
   return (
     <div className="space-y-4">
@@ -155,16 +156,14 @@ export function WorkflowEditor({
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="flex items-center gap-2">
             <EnabledToggle id={workflow.id} name={workflow.name} enabled={workflow.enabled} disabled={!canManage || dirty} />
-            {workflow.enabled ? "Enabled" : "Disabled"}
+            {workflow.enabled ? tr("Enabled") : tr("Disabled")}
           </span>
-          <span className="text-text-muted">Version {workflow.version}</span>
+          <span className="text-text-muted">{tr("Version")} {workflow.version}</span>
           {!validation.ok && <StatusBadge status="failed" label={`${validation.issues.length} issue${validation.issues.length === 1 ? "" : "s"}`} />}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {canEdit && !editing && (
-            <Button variant="outline" onClick={() => setEditing(true)}>
-              Edit
-            </Button>
+            <Button variant="outline" onClick={() => setEditing(true)}>{tr("Edit")}</Button>
           )}
           {editing && (
             <>
@@ -179,12 +178,10 @@ export function WorkflowEditor({
                   setEditing(false);
                 }}
               >
-                <Undo2 aria-hidden />
-                Discard
-              </Button>
+                <Undo2 aria-hidden />{tr("Discard")}</Button>
               <Button onClick={save} disabled={pending || !dirty || !validation.ok}>
                 <Save aria-hidden />
-                {pending ? "Saving…" : "Save new version"}
+                {pending ? tr("Saving…") : tr("Save new version")}
               </Button>
             </>
           )}
@@ -192,25 +189,23 @@ export function WorkflowEditor({
             <div className="flex items-center gap-2">
               {testRecords.length > 0 && (
                 <div className="w-56">
-                  <Combobox options={testRecords} value={testRecord} onChange={setTestRecord} placeholder="Sample record" />
+                  <Combobox options={testRecords} value={testRecord} onChange={setTestRecord} placeholder={tr("Sample record")} />
                 </div>
               )}
               <Button variant="outline" onClick={testRun} disabled={pending || !validation.ok}>
-                <FlaskConical aria-hidden />
-                Test run
-              </Button>
+                <FlaskConical aria-hidden />{tr("Test run")}</Button>
             </div>
           )}
           {canManage && !editing && (
             <ConfirmDialog
               trigger={
-                <Button variant="ghost" size="icon" aria-label="Archive workflow">
+                <Button variant="ghost" size="icon" aria-label={tr("Archive workflow")}>
                   <Trash2 aria-hidden />
                 </Button>
               }
-              title="Archive this workflow?"
-              description="It stops running and disappears from the list. Its run history is kept."
-              confirmLabel="Archive"
+              title={tr("Archive this workflow?")}
+              description={tr("It stops running and disappears from the list. Its run history is kept.")}
+              confirmLabel={tr("Archive")}
               destructive
               onConfirm={async () => {
                 const result = await archiveWorkflowAction({ id: workflow.id });
@@ -218,7 +213,7 @@ export function WorkflowEditor({
                   toast.error(result.error);
                   return false;
                 }
-                toast.success("Workflow archived");
+                toast.success(tr("Workflow archived"));
                 router.push("/automation");
               }}
             />
@@ -228,10 +223,10 @@ export function WorkflowEditor({
 
       {editing && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="wf-name" label="Name">
+          <FormField id="wf-name" label={tr("Name")}>
             <Input id="wf-name" value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />
           </FormField>
-          <FormField id="wf-desc" label="Description">
+          <FormField id="wf-desc" label={tr("Description")}>
             <Input id="wf-desc" value={description} maxLength={1000} onChange={(e) => setDescription(e.target.value)} />
           </FormField>
         </div>
@@ -240,9 +235,7 @@ export function WorkflowEditor({
       {issues.length > 0 && (
         <div role="alert" className="rounded-md border border-danger-border bg-danger-bg p-3 text-sm text-danger">
           <p className="mb-1 flex items-center gap-1.5 font-medium">
-            <CircleAlert className="size-4" aria-hidden />
-            Fix these before saving or enabling
-          </p>
+            <CircleAlert className="size-4" aria-hidden />{tr("Fix these before saving or enabling")}</p>
           <ul className="list-disc space-y-0.5 pl-5">
             {issues.slice(0, 8).map((i, idx) => (
               <li key={idx}>
@@ -255,10 +248,10 @@ export function WorkflowEditor({
 
       <div className="grid gap-4 lg:grid-cols-5">
         {/* Flow view */}
-        <section aria-label="Workflow steps" className="space-y-0 lg:col-span-2">
+        <section aria-label={tr("Workflow steps")} className="space-y-0 lg:col-span-2">
           <FlowNode
             icon={<Zap className="size-4" aria-hidden />}
-            title={TRIGGER_LABELS[def.trigger.type as keyof typeof TRIGGER_LABELS] ?? def.trigger.type}
+            title={tr(TRIGGER_LABELS[def.trigger.type as keyof typeof TRIGGER_LABELS] ?? def.trigger.type)}
             subtitle={`on ${def.trigger.entity}`}
             selected={selected === "trigger"}
             invalid={issuesFor("trigger").length > 0}
@@ -270,20 +263,20 @@ export function WorkflowEditor({
             const branches =
               step.type === "condition"
                 ? [
-                    { label: "Yes", to: String(step.then) },
-                    { label: "No", to: String(step.else) },
+                    { label: tr("Yes"), to: String(step.then) },
+                    { label: tr("No"), to: String(step.else) },
                   ]
                 : step.next && step.next !== following
-                  ? [{ label: "Then", to: step.next }]
+                  ? [{ label: tr("Then"), to: step.next }]
                   : [];
-            const nameOf = (id: string) => (id === "end" ? "End" : (def.steps.find((s) => s.id === id)?.name ?? id));
+            const nameOf = (id: string) => (id === "end" ? tr("End") : (def.steps.find((s) => s.id === id)?.name ?? id));
             return (
               <div key={step.id}>
                 <Connector />
                 <FlowNode
                   icon={step.type === "condition" ? <GitBranch className="size-4" aria-hidden /> : <Play className="size-3.5" aria-hidden />}
-                  title={step.name || STEP_LABELS[step.type]}
-                  subtitle={STEP_LABELS[step.type]}
+                  title={step.name || tr(STEP_LABELS[step.type])}
+                  subtitle={tr(STEP_LABELS[step.type])}
                   selected={selected === step.id}
                   invalid={issuesFor(`steps.${index}`).length > 0}
                   onSelect={() => setSelected(step.id)}
@@ -292,13 +285,13 @@ export function WorkflowEditor({
                   controls={
                     editing ? (
                       <span className="flex">
-                        <Button variant="ghost" size="icon-xs" aria-label={`Move ${step.name || step.id} up`} disabled={index === 0} onClick={() => moveStep(step.id, -1)}>
+                        <Button variant="ghost" size="icon-xs" aria-label={tr("Move {p0} up", { p0: step.name || step.id })} disabled={index === 0} onClick={() => moveStep(step.id, -1)}>
                           <ArrowUp aria-hidden />
                         </Button>
-                        <Button variant="ghost" size="icon-xs" aria-label={`Move ${step.name || step.id} down`} disabled={index === def.steps.length - 1} onClick={() => moveStep(step.id, 1)}>
+                        <Button variant="ghost" size="icon-xs" aria-label={tr("Move {p0} down", { p0: step.name || step.id })} disabled={index === def.steps.length - 1} onClick={() => moveStep(step.id, 1)}>
                           <ArrowDown aria-hidden />
                         </Button>
-                        <Button variant="ghost" size="icon-xs" aria-label={`Remove ${step.name || step.id}`} disabled={def.steps.length === 1} onClick={() => removeStep(step.id)}>
+                        <Button variant="ghost" size="icon-xs" aria-label={tr("Remove {p0}", { p0: step.name || step.id })} disabled={def.steps.length === 1} onClick={() => removeStep(step.id)}>
                           <Trash2 aria-hidden />
                         </Button>
                       </span>
@@ -314,14 +307,12 @@ export function WorkflowEditor({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-full border-dashed">
-                    <Plus aria-hidden />
-                    Add step
-                  </Button>
+                    <Plus aria-hidden />{tr("Add step")}</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
                   {STEP_TYPES.map((t) => (
                     <DropdownMenuItem key={t} onSelect={() => addStep(t)}>
-                      {STEP_LABELS[t]}
+                      {tr(STEP_LABELS[t])}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -331,7 +322,7 @@ export function WorkflowEditor({
         </section>
 
         {/* Configuration panel */}
-        <section aria-label="Step configuration" className="rounded-lg border border-border bg-surface p-4 lg:col-span-3">
+        <section aria-label={tr("Step configuration")} className="rounded-lg border border-border bg-surface p-4 lg:col-span-3">
           <fieldset disabled={!editing} className="space-y-4">
             {selected === "trigger" ? (
               <TriggerPanel trigger={def.trigger} onChange={setTrigger} />
@@ -345,12 +336,12 @@ export function WorkflowEditor({
                 onChange={(patch) => updateStep(selectedStep.id, patch)}
               />
             ) : (
-              <p className="text-sm text-text-muted">Select a step.</p>
+              <p className="text-sm text-text-muted">{tr("Select a step.")}</p>
             )}
-            {!editing && canEdit && <p className="text-xs text-text-muted">Click Edit to change this workflow. Saving creates a new version.</p>}
+            {!editing && canEdit && <p className="text-xs text-text-muted">{tr("Click Edit to change this workflow. Saving creates a new version.")}</p>}
           </fieldset>
           <details className="mt-5 text-xs text-text-muted">
-            <summary className="cursor-pointer">Variables available in text fields</summary>
+            <summary className="cursor-pointer">{tr("Variables available in text fields")}</summary>
             <p className="mt-2 flex flex-wrap gap-1">
               {vars.map((v) => (
                 <code key={v} className="rounded bg-surface-muted px-1 py-0.5 font-mono">{`{{${v}}}`}</code>
@@ -406,19 +397,19 @@ function FlowNode({
           {icon}
         </span>
         <span className="min-w-0">
-          <span className="block truncate text-sm font-medium">{title}</span>
-          <span className="block truncate text-xs text-text-muted">{subtitle}</span>
+          <span className="block truncate text-sm font-medium">{trNode(title)}</span>
+          <span className="block truncate text-xs text-text-muted">{trNode(subtitle)}</span>
           {branches.length > 0 && (
             <span className="mt-1 flex flex-wrap gap-1">
               {branches.map((b) => (
                 <span key={b.label} className="rounded border border-border px-1.5 text-[11px] text-text-subtle">
-                  {b.label} → {b.to}
+                  {trNode(b.label)} → {b.to}
                 </span>
               ))}
             </span>
           )}
         </span>
-        {invalid && <CircleAlert className="ml-auto size-4 shrink-0 text-danger" aria-label="Has issues" />}
+        {invalid && <CircleAlert className="ml-auto size-4 shrink-0 text-danger" aria-label={tr("Has issues")} />}
       </button>
       {controls}
     </div>
@@ -457,12 +448,12 @@ function TriggerPanel({ trigger, onChange }: { trigger: Definition["trigger"]; o
   const type = trigger.type;
   return (
     <div className="space-y-4">
-      <h2 className="text-md font-semibold">Trigger</h2>
-      <Field label="When">
+      <h2 className="text-md font-semibold">{tr("Trigger")}</h2>
+      <Field label={tr("When")}>
         <SelectBox
-          label="Trigger type"
+          label={tr("Trigger type")}
           value={type}
-          options={TRIGGER_TYPES.map((t) => ({ value: t, label: TRIGGER_LABELS[t] }))}
+          options={TRIGGER_TYPES.map((t) => ({ value: t, label: tr(TRIGGER_LABELS[t]) }))}
           onChange={(t) => {
             if (t === "deal.stage_changed") onChange({ type: t, entity: "deal", to: "won", fields: undefined, task_type: undefined, field: undefined, event_type: undefined });
             else if (t === "date.reached") onChange({ type: t, entity: "task", field: "due_at", task_type: "any", to: undefined, fields: undefined, event_type: undefined });
@@ -473,27 +464,27 @@ function TriggerPanel({ trigger, onChange }: { trigger: Definition["trigger"]; o
         />
       </Field>
       {(type === "record.created" || type === "record.updated" || type === "webhook.received") && (
-        <Field label="Record type">
-          <SelectBox label="Record type" value={trigger.entity} options={opt(TRIGGER_ENTITIES)} onChange={(v) => onChange({ entity: v })} />
+        <Field label={tr("Record type")}>
+          <SelectBox label={tr("Record type")} value={trigger.entity} options={opt(TRIGGER_ENTITIES)} onChange={(v) => onChange({ entity: v })} />
         </Field>
       )}
       {type === "record.updated" && (
-        <Field label="Only when these fields change" hint="Comma-separated field names; empty means any change.">
+        <Field label={tr("Only when these fields change")} hint={tr("Comma-separated field names; empty means any change.")}>
           <Input value={((trigger.fields as string[]) ?? []).join(", ")} onChange={(e) => onChange({ fields: e.target.value.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 10) })} />
         </Field>
       )}
       {type === "deal.stage_changed" && (
-        <Field label="Moved to">
-          <SelectBox label="Moved to" value={String(trigger.to)} options={[{ value: "won", label: "A won stage" }, { value: "lost", label: "A lost stage" }, { value: "any", label: "Any stage" }]} onChange={(v) => onChange({ to: v })} />
+        <Field label={tr("Moved to")}>
+          <SelectBox label={tr("Moved to")} value={String(trigger.to)} options={[{ value: "won", label: tr("A won stage") }, { value: "lost", label: tr("A lost stage") }, { value: "any", label: tr("Any stage") }]} onChange={(v) => onChange({ to: v })} />
         </Field>
       )}
       {type === "date.reached" && (
-        <Field label="Task type" hint="Fires once per task when its due date passes (checked by the scheduler).">
-          <SelectBox label="Task type" value={String(trigger.task_type ?? "any")} options={opt(["any", "follow_up", "call", "email", "meeting", "todo"])} onChange={(v) => onChange({ task_type: v })} />
+        <Field label={tr("Task type")} hint={tr("Fires once per task when its due date passes (checked by the scheduler).")}>
+          <SelectBox label={tr("Task type")} value={String(trigger.task_type ?? "any")} options={opt(["any", "follow_up", "call", "email", "meeting", "todo"])} onChange={(v) => onChange({ task_type: v })} />
         </Field>
       )}
       {type === "webhook.received" && (
-        <Field label="Event type" hint="Inbound events arrive through the API (phase 4).">
+        <Field label={tr("Event type")} hint={tr("Inbound events arrive through the API (phase 4).")}>
           <Input value={String(trigger.event_type ?? "")} onChange={(e) => onChange({ event_type: e.target.value })} />
         </Field>
       )}
@@ -530,26 +521,26 @@ function StepPanel({
       <SelectBox label={label} value={String(step[key] ?? "")} options={options} onChange={(v) => onChange({ [key]: v })} />
     </Field>
   );
-  const nextOptions = [{ value: "__default", label: "Following step" }, ...targets];
+  const nextOptions = [{ value: "__default", label: tr("Following step") }, ...targets];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-md font-semibold">{STEP_LABELS[step.type]}</h2>
+        <h2 className="text-md font-semibold">{tr(STEP_LABELS[step.type])}</h2>
         <code className="text-xs text-text-muted">{step.id}</code>
       </div>
       {text("name", "Step name")}
 
       {step.type === "condition" && (
         <>
-          {select("match", "Match", [{ value: "all", label: "All conditions" }, { value: "any", label: "Any condition" }])}
+          {select("match", "Match", [{ value: "all", label: tr("All conditions") }, { value: "any", label: tr("Any condition") }])}
           <div className="space-y-2">
             {((step.conditions as Json[]) ?? []).map((c, i) => (
               <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
-                <SelectBox label={`Condition ${i + 1} field`} value={String(c.field ?? "")} options={vars.map((v) => ({ value: v, label: v }))} onChange={(v) => onChange({ conditions: (step.conditions as Json[]).map((x, j) => (j === i ? { ...x, field: v } : x)) })} />
-                <SelectBox label={`Condition ${i + 1} operator`} value={String(c.op ?? "eq")} options={opt(CONDITION_OPS)} onChange={(v) => onChange({ conditions: (step.conditions as Json[]).map((x, j) => (j === i ? { ...x, op: v } : x)) })} />
+                <SelectBox label={tr("Condition {p0} field", { p0: i + 1 })} value={String(c.field ?? "")} options={vars.map((v) => ({ value: v, label: v }))} onChange={(v) => onChange({ conditions: (step.conditions as Json[]).map((x, j) => (j === i ? { ...x, field: v } : x)) })} />
+                <SelectBox label={tr("Condition {p0} operator", { p0: i + 1 })} value={String(c.op ?? "eq")} options={opt(CONDITION_OPS)} onChange={(v) => onChange({ conditions: (step.conditions as Json[]).map((x, j) => (j === i ? { ...x, op: v } : x)) })} />
                 <Input
-                  aria-label={`Condition ${i + 1} value`}
+                  aria-label={tr("Condition {p0} value", { p0: i + 1 })}
                   value={Array.isArray(c.value) ? (c.value as string[]).join(", ") : String(c.value ?? "")}
                   disabled={c.op === "is_empty" || c.op === "not_empty"}
                   onChange={(e) => {
@@ -558,15 +549,13 @@ function StepPanel({
                     onChange({ conditions: (step.conditions as Json[]).map((x, j) => (j === i ? { ...x, value } : x)) });
                   }}
                 />
-                <Button variant="ghost" size="icon-sm" aria-label={`Remove condition ${i + 1}`} disabled={(step.conditions as Json[]).length === 1} onClick={() => onChange({ conditions: (step.conditions as Json[]).filter((_, j) => j !== i) })}>
+                <Button variant="ghost" size="icon-sm" aria-label={tr("Remove condition {p0}", { p0: i + 1 })} disabled={(step.conditions as Json[]).length === 1} onClick={() => onChange({ conditions: (step.conditions as Json[]).filter((_, j) => j !== i) })}>
                   <Trash2 aria-hidden />
                 </Button>
               </div>
             ))}
             <Button variant="outline" size="sm" onClick={() => onChange({ conditions: [...((step.conditions as Json[]) ?? []), { field: vars[0], op: "eq", value: "" }] })}>
-              <Plus aria-hidden />
-              Add condition
-            </Button>
+              <Plus aria-hidden />{tr("Add condition")}</Button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {select("then", "If yes, go to", targets)}
@@ -577,22 +566,20 @@ function StepPanel({
 
       {step.type === "assign_owner" && (
         <>
-          {select("rule", "Rule", [{ value: "by_country", label: "By country, otherwise round robin" }, { value: "round_robin", label: "Round robin among sales reps" }])}
+          {select("rule", "Rule", [{ value: "by_country", label: tr("By country, otherwise round robin") }, { value: "round_robin", label: tr("Round robin among sales reps") }])}
           <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={Boolean(step.only_if_unassigned)} onCheckedChange={(v) => onChange({ only_if_unassigned: v === true })} />
-            Only when the lead has no owner
-          </label>
+            <Checkbox checked={Boolean(step.only_if_unassigned)} onCheckedChange={(v) => onChange({ only_if_unassigned: v === true })} />{tr("Only when the lead has no owner")}</label>
           {step.rule === "by_country" && (
             <div className="space-y-2">
-              <p className="text-xs text-text-muted">Country map</p>
+              <p className="text-xs text-text-muted">{tr("Country map")}</p>
               {Object.entries((step.country_map as Record<string, string>) ?? {}).map(([cc, rep]) => (
                 <div key={cc} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                  <Input value={cc} readOnly aria-label="Country code" />
-                  <SelectBox label={`Rep for ${cc}`} value={rep} options={reps} onChange={(v) => onChange({ country_map: { ...(step.country_map as Json), [cc]: v } })} />
+                  <Input value={cc} readOnly aria-label={tr("Country code")} />
+                  <SelectBox label={tr("Rep for {p0}", { p0: cc })} value={rep} options={reps} onChange={(v) => onChange({ country_map: { ...(step.country_map as Json), [cc]: v } })} />
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Remove ${cc}`}
+                    aria-label={tr("Remove {p0}", { p0: cc })}
                     onClick={() => {
                       const next = { ...(step.country_map as Record<string, string>) };
                       delete next[cc];
@@ -608,7 +595,7 @@ function StepPanel({
                   options={COUNTRY_OPTIONS.filter((c) => !((step.country_map as Json) ?? {})[c.value])}
                   value={null}
                   onChange={(cc) => cc && onChange({ country_map: { ...(step.country_map as Json), [cc]: reps[0]!.value } })}
-                  placeholder="Add a country…"
+                  placeholder={tr("Add a country…")}
                 />
               )}
             </div>
@@ -622,10 +609,10 @@ function StepPanel({
           <div className="grid gap-4 sm:grid-cols-2">
             {select("task_type", "Type", opt(["follow_up", "call", "email", "meeting", "todo"]))}
             {select("priority", "Priority", opt(["low", "medium", "high", "urgent"]))}
-            <Field label="Due in business days">
+            <Field label={tr("Due in business days")}>
               <Input inputMode="numeric" value={String(step.due_in_business_days ?? 1)} onChange={(e) => onChange({ due_in_business_days: Number(e.target.value.replace(/\D/g, "") || 0) })} />
             </Field>
-            {select("assignee", "Assign to", entity === "task" ? opt(["record_owner", "assignee"]) : [{ value: "record_owner", label: "Record owner" }])}
+            {select("assignee", "Assign to", entity === "task" ? opt(["record_owner", "assignee"]) : [{ value: "record_owner", label: tr("Record owner") }])}
           </div>
         </>
       )}
@@ -651,7 +638,7 @@ function StepPanel({
                     {field.replace(/_/g, " ")}
                   </label>
                   <Input
-                    aria-label={`Value for ${field}`}
+                    aria-label={tr("Value for {p0}", { p0: field })}
                     disabled={!on}
                     value={on ? String(fields[field] ?? "") : ""}
                     onChange={(e) => onChange({ fields: { ...fields, [field]: field === "probability" ? Number(e.target.value || 0) : e.target.value } })}
@@ -660,9 +647,9 @@ function StepPanel({
               );
             })
           ) : (
-            <p className="text-sm text-text-muted">Automations cannot update {entity} records.</p>
+            <p className="text-sm text-text-muted">{tr("Automations cannot update")} {entity} records.</p>
           )}
-          <p className="text-xs text-text-muted">Only these fields can be changed by automations. Roles, owners, API keys and integration settings never can.</p>
+          <p className="text-xs text-text-muted">{tr("Only these fields can be changed by automations. Roles, owners, API keys and integration settings never can.")}</p>
         </div>
       )}
 
@@ -677,7 +664,7 @@ function StepPanel({
       {step.type === "create_notification" && (
         <>
           <fieldset className="space-y-1.5">
-            <legend className="text-sm font-medium">Recipients</legend>
+            <legend className="text-sm font-medium">{tr("Recipients")}</legend>
             {RECIPIENTS.filter((r) => r !== "assignee" || entity === "task").map((r) => {
               const list = (step.recipients as string[]) ?? [];
               return (
@@ -691,29 +678,27 @@ function StepPanel({
           {text("title", "Title")}
           {text("body", "Message", true)}
           <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={Boolean(step.once_per_record)} onCheckedChange={(v) => onChange({ once_per_record: v === true })} />
-            Notify each person only once per record
-          </label>
+            <Checkbox checked={Boolean(step.once_per_record)} onCheckedChange={(v) => onChange({ once_per_record: v === true })} />{tr("Notify each person only once per record")}</label>
         </>
       )}
 
       {step.type === "convert_deal_to_order" && (
-        <p className="text-sm text-text-muted">Creates the order for the deal using the organization&apos;s conversion mode (draft or confirmed). If an order already exists for the deal, it is reused.</p>
+        <p className="text-sm text-text-muted">{tr("Creates the order for the deal using the organization's conversion mode (draft or confirmed). If an order already exists for the deal, it is reused.")}</p>
       )}
 
       {step.type === "send_email" && (
         <>
-          {select("to", "To", entity === "task" ? opt(["record_owner", "assignee"]) : [{ value: "record_owner", label: "Record owner" }])}
+          {select("to", "To", entity === "task" ? opt(["record_owner", "assignee"]) : [{ value: "record_owner", label: tr("Record owner") }])}
           {text("subject", "Subject")}
           {text("body", "Body", true)}
-          <p className="text-xs text-text-muted">Sent only when an email provider is configured; otherwise the step is logged as skipped.</p>
+          <p className="text-xs text-text-muted">{tr("Sent only when an email provider is configured; otherwise the step is logged as skipped.")}</p>
         </>
       )}
 
       {step.type === "send_telegram" && (
         <>
           {text("text", "Message", true)}
-          <p className="text-xs text-text-muted">Plain text to the team chat set in Integrations → Telegram. Placeholders like {"{{lead.title}}"} are filled in. Without a configured bot the step is logged as skipped.</p>
+          <p className="text-xs text-text-muted">{tr("Plain text to the team chat set in Integrations → Telegram. Placeholders like")} {"{{lead.title}}"} {tr("are filled in. Without a configured bot the step is logged as skipped.")}</p>
         </>
       )}
 
@@ -722,16 +707,14 @@ function StepPanel({
           {text("text", "Message", true)}
           {text("template_name", "Template name (optional)")}
           {text("template_language", "Template language")}
-          <p className="text-xs text-text-muted">
-            Goes to the record&apos;s WhatsApp number (or phone; for deals, the primary contact&apos;s). Free text is allowed only within 24 hours of the customer&apos;s last message; to start a conversation, use an approved template whose {"{{1}}"} gets this text. Without WhatsApp configured the step is logged as skipped.
-          </p>
+          <p className="text-xs text-text-muted">{tr("Goes to the record's WhatsApp number (or phone; for deals, the primary contact's). Free text is allowed only within 24 hours of the customer's last message; to start a conversation, use an approved template whose")} {"{{1}}"} {tr("gets this text. Without WhatsApp configured the step is logged as skipped.")}</p>
         </>
       )}
 
       {step.type === "send_slack" && (
         <>
           {text("text", "Message", true)}
-          <p className="text-xs text-text-muted">Posted to the Slack channel of SLACK_WEBHOOK_URL. Without it the step is logged as skipped.</p>
+          <p className="text-xs text-text-muted">{tr("Posted to the Slack channel of SLACK_WEBHOOK_URL. Without it the step is logged as skipped.")}</p>
         </>
       )}
 
@@ -739,26 +722,26 @@ function StepPanel({
         <>
           {text("title", "Page title")}
           {text("body", "Page text", true)}
-          <p className="text-xs text-text-muted">Creates a page in the Notion database NOTION_DATABASE_ID with a link back to the record. Without Notion configured the step is logged as skipped.</p>
+          <p className="text-xs text-text-muted">{tr("Creates a page in the Notion database NOTION_DATABASE_ID with a link back to the record. Without Notion configured the step is logged as skipped.")}</p>
         </>
       )}
 
       {step.type === "send_webhook" && (
         <>
           {text("event_type", "Event type")}
-          <p className="text-xs text-text-muted">Delivered as workflow.webhook to every enabled integration that subscribes to it (Make, n8n, generic webhook).</p>
+          <p className="text-xs text-text-muted">{tr("Delivered as workflow.webhook to every enabled integration that subscribes to it (Make, n8n, generic webhook).")}</p>
         </>
       )}
 
       {step.type === "delay" && (
-        <Field label="Wait (hours)" hint="Up to 30 days. The scheduler continues the run afterwards.">
+        <Field label={tr("Wait (hours)")} hint={tr("Up to 30 days. The scheduler continues the run afterwards.")}>
           <Input inputMode="numeric" value={String(step.hours ?? 1)} onChange={(e) => onChange({ hours: Number(e.target.value.replace(/\D/g, "") || 1) })} />
         </Field>
       )}
 
       {step.type !== "condition" && (
-        <Field label="Then go to">
-          <SelectBox label="Then go to" value={step.next ? String(step.next) : "__default"} options={nextOptions} onChange={(v) => onChange({ next: v === "__default" ? undefined : v })} />
+        <Field label={tr("Then go to")}>
+          <SelectBox label={tr("Then go to")} value={step.next ? String(step.next) : "__default"} options={nextOptions} onChange={(v) => onChange({ next: v === "__default" ? undefined : v })} />
         </Field>
       )}
     </div>

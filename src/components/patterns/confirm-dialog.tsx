@@ -12,6 +12,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { tr, trNode } from "@/lib/i18n";
 
 /**
  * Confirmation for destructive or irreversible actions.
@@ -58,8 +59,8 @@ export function ConfirmDialog({
       {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle>{trNode(title)}</AlertDialogTitle>
+          <AlertDialogDescription>{trNode(description)}</AlertDialogDescription>
         </AlertDialogHeader>
         {children}
         <AlertDialogFooter>
@@ -74,7 +75,7 @@ export function ConfirmDialog({
               })
             }
           >
-            {pending ? "Working…" : confirmLabel}
+            {pending ? tr("Working…") : confirmLabel}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

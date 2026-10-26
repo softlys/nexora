@@ -1,3 +1,4 @@
+import { locale } from "@/lib/i18n";
 /**
  * Every ISO 3166-1 alpha-2 country code (249 entries), so any customer's country can be stored.
  * Labels come from Intl, in English. Validation accepts only these codes.
@@ -39,9 +40,12 @@ export function isCountryCode(value: string): boolean {
   return KNOWN.has(value);
 }
 
-const names = new Intl.DisplayNames(["en"], { type: "region" });
+const displayNames = new Map<string, Intl.DisplayNames>();
 
-export function countryName(code: string): string {
+/** The country's name in the interface language ("Россия" / "Russia"), or in the given language. */
+export function countryName(code: string, language: string = locale()): string {
+  let names = displayNames.get(language);
+  if (!names) displayNames.set(language, (names = new Intl.DisplayNames([language], { type: "region" })));
   try {
     return names.of(code) ?? code;
   } catch {
@@ -49,4 +53,4 @@ export function countryName(code: string): string {
   }
 }
 
-export const COUNTRY_OPTIONS = COUNTRY_CODES.map((code) => ({ value: code, label: countryName(code) })).sort((a, b) => a.label.localeCompare(b.label));
+export const COUNTRY_OPTIONS = COUNTRY_CODES.map((code) => ({ value: code, label: countryName(code) })).sort((a, b) => a.label.localeCompare(b.label, locale()));

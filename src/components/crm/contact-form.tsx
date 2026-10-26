@@ -14,6 +14,7 @@ import { contactFields } from "@/domain/inputs";
 import { applyServerErrors } from "@/lib/forms";
 import { MESSENGER_CHANNELS, MESSENGERS, type MessengerChannel } from "@/lib/messengers";
 import { createContactAction, updateContactAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 type Values = {
   company_id: string | null;
@@ -75,7 +76,7 @@ export function ContactFormButton({
     const payload = { ...values, tags: toTags(values.tags) };
     const result = contact ? await updateContactAction({ id: contact.id, ...payload }) : await createContactAction(payload);
     if (!result.ok) return applyServerErrors(result, setError);
-    toast.success(contact ? "Contact updated" : "Contact created");
+    toast.success(contact ? tr("Contact updated") : tr("Contact created"));
     reset(values);
     setOpen(false);
     if (contact) router.refresh();
@@ -92,39 +93,39 @@ export function ContactFormButton({
         }}
       >
         {contact ? <Pencil aria-hidden /> : <Plus aria-hidden />}
-        {label ?? (contact ? "Edit" : "New contact")}
+        {label ?? (contact ? tr("Edit") : tr("New contact"))}
       </Button>
       <RecordSheet
         error={formState.errors.root?.server?.message}
         open={open}
         onOpenChange={setOpen}
-        title={contact ? `Edit ${contact.first_name} ${contact.last_name}` : "New contact"}
+        title={contact ? tr("Edit {p0} {p1}", { p0: contact.first_name, p1: contact.last_name }) : tr("New contact")}
         dirty={formState.isDirty}
         submitting={formState.isSubmitting}
         onSubmit={onSubmit}
-        submitLabel={contact ? "Save changes" : "Create contact"}
+        submitLabel={contact ? tr("Save changes") : tr("Create contact")}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField control={control} name="first_name" label="First name" autoComplete="given-name" />
-          <TextField control={control} name="last_name" label="Last name" autoComplete="family-name" />
+          <TextField control={control} name="first_name" label={tr("First name")} autoComplete="given-name" />
+          <TextField control={control} name="last_name" label={tr("Last name")} autoComplete="family-name" />
         </div>
-        <ComboboxField control={control} name="company_id" label="Company" options={companies} placeholder="No company" />
-        <TextField control={control} name="job_title" label="Job title" />
+        <ComboboxField control={control} name="company_id" label={tr("Company")} options={companies} placeholder={tr("No company")} />
+        <TextField control={control} name="job_title" label={tr("Job title")} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField control={control} name="email" label="Email" type="email" inputMode="email" autoComplete="email" />
-          <TextField control={control} name="phone" label="Phone" type="tel" inputMode="tel" autoComplete="tel" />
+          <TextField control={control} name="email" label={tr("Email")} type="email" inputMode="email" autoComplete="email" />
+          <TextField control={control} name="phone" label={tr("Phone")} type="tel" inputMode="tel" autoComplete="tel" />
         </div>
         <fieldset className="space-y-3">
-          <legend className="text-sm font-medium">Messengers and social</legend>
-          <p className="text-xs text-text-muted">Saved handles become one-click &quot;write&quot; links on the contact. Phone numbers in international format, e.g. +7 999 123-45-67.</p>
+          <legend className="text-sm font-medium">{tr("Messengers and social")}</legend>
+          <p className="text-xs text-text-muted">{tr("Saved handles become one-click \"write\" links on the contact. Phone numbers in international format, e.g. +7 999 123-45-67.")}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {MESSENGER_CHANNELS.map((c) => (
               <TextField key={c} control={control} name={`messengers.${c}`} label={MESSENGERS[c].label} placeholder={MESSENGERS[c].placeholder} autoComplete="off" />
             ))}
           </div>
         </fieldset>
-        <TextField control={control} name="tags" label="Tags" hint="Comma-separated, up to 10. For example: decision-maker, technical" />
-        {owners.length > 0 && <SelectField control={control} name="owner_id" label="Owner" options={owners} />}
+        <TextField control={control} name="tags" label={tr("Tags")} hint={tr("Comma-separated, up to 10. For example: decision-maker, technical")} />
+        {owners.length > 0 && <SelectField control={control} name="owner_id" label={tr("Owner")} options={owners} />}
       </RecordSheet>
     </>
   );

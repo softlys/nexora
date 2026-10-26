@@ -2,8 +2,9 @@ import { can } from "@/domain/permissions";
 import { requirePermission } from "@/server/guards";
 import { getRepositories } from "@/server/repositories";
 import { TeamTable } from "./team-table";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Team" };
+export const metadata = { title: tr("Team") };
 
 export default async function TeamSettingsPage() {
   const { user, ctx } = await requirePermission("view", "team");

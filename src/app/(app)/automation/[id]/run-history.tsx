@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import type { AutomationExecution } from "@/domain/entities";
 import { formatDate, formatRelative } from "@/lib/format";
 import { retryRunAction } from "@/server/actions/automation";
+import { tr } from "@/lib/i18n";
 
 type StepResult = { step_id: string; type: string; name: string | null; status: string; output?: Record<string, unknown>; error?: string; duration_ms: number };
 
@@ -40,7 +41,7 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
         toast.error(result.error);
         return;
       }
-      toast.success(`Retry ${result.data.status}`);
+      toast.success(tr("Retry {p0}", { p0: result.data.status }));
       setOpenId(null);
       router.refresh();
     });
@@ -48,16 +49,14 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
   return (
     <section className="space-y-3" aria-labelledby="runs-heading">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="runs-heading" className="text-md font-semibold">
-          Run history
-        </h2>
+        <h2 id="runs-heading" className="text-md font-semibold">{tr("Run history")}</h2>
         <div className="flex gap-2">
           <Select value={params.get("status") ?? ALL} onValueChange={(v) => setFilter("status", v)}>
-            <SelectTrigger size="sm" className="w-36" aria-label="Filter by status">
+            <SelectTrigger size="sm" className="w-36" aria-label={tr("Filter by status")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All statuses</SelectItem>
+              <SelectItem value={ALL}>{tr("All statuses")}</SelectItem>
               {["success", "failed", "skipped", "running"].map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
@@ -66,30 +65,30 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
             </SelectContent>
           </Select>
           <Select value={params.get("mode") ?? ALL} onValueChange={(v) => setFilter("mode", v)}>
-            <SelectTrigger size="sm" className="w-32" aria-label="Filter by mode">
+            <SelectTrigger size="sm" className="w-32" aria-label={tr("Filter by mode")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Live and test</SelectItem>
-              <SelectItem value="live">Live runs</SelectItem>
-              <SelectItem value="test">Test runs</SelectItem>
+              <SelectItem value={ALL}>{tr("Live and test")}</SelectItem>
+              <SelectItem value="live">{tr("Live runs")}</SelectItem>
+              <SelectItem value="test">{tr("Test runs")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
       {executions.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border-strong p-6 text-center text-sm text-text-muted">No runs match these filters.</p>
+        <p className="rounded-lg border border-dashed border-border-strong p-6 text-center text-sm text-text-muted">{tr("No runs match these filters.")}</p>
       ) : (
         <div className="relative overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full text-sm">
-            <caption className="sr-only">Runs</caption>
+            <caption className="sr-only">{tr("Runs")}</caption>
             <thead className="border-b border-border bg-surface-subtle text-xs text-text-muted">
               <tr>
-                <th scope="col" className="h-9 px-3 text-left font-medium">Started</th>
-                <th scope="col" className="h-9 px-3 text-left font-medium">Status</th>
-                <th scope="col" className="hidden h-9 px-3 text-left font-medium sm:table-cell">Trigger</th>
-                <th scope="col" className="hidden h-9 px-3 text-right font-medium md:table-cell">Duration</th>
-                <th scope="col" className="h-9 px-3 text-left font-medium">Result</th>
+                <th scope="col" className="h-9 px-3 text-left font-medium">{tr("Started")}</th>
+                <th scope="col" className="h-9 px-3 text-left font-medium">{tr("Status")}</th>
+                <th scope="col" className="hidden h-9 px-3 text-left font-medium sm:table-cell">{tr("Trigger")}</th>
+                <th scope="col" className="hidden h-9 px-3 text-right font-medium md:table-cell">{tr("Duration")}</th>
+                <th scope="col" className="h-9 px-3 text-left font-medium">{tr("Result")}</th>
               </tr>
             </thead>
             <tbody>
@@ -108,8 +107,8 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
                       <time dateTime={e.started_at} title={formatDate(e.started_at)}>
                         {formatRelative(e.started_at)}
                       </time>
-                      {e.trigger_payload.mode === "test" && <span className="ml-2 rounded bg-surface-muted px-1 text-[11px]">test</span>}
-                      {e.retry_of && <span className="ml-2 rounded bg-surface-muted px-1 text-[11px]">retry</span>}
+                      {e.trigger_payload.mode === "test" && <span className="ml-2 rounded bg-surface-muted px-1 text-[11px]">{tr("test")}</span>}
+                      {e.retry_of && <span className="ml-2 rounded bg-surface-muted px-1 text-[11px]">{tr("retry")}</span>}
                     </td>
                     <td className="px-3 py-2">
                       <StatusBadge status={e.status} dot />
@@ -130,12 +129,11 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
           {open && (
             <>
               <SheetHeader className="border-b border-border px-5 py-4">
-                <SheetTitle className="flex items-center gap-2">
-                  Run details <StatusBadge status={open.status} />
+                <SheetTitle className="flex items-center gap-2">{tr("Run details")} <StatusBadge status={open.status} />
                 </SheetTitle>
                 <SheetDescription>
-                  {formatDate(open.started_at)} · {open.duration_ms ?? "—"} ms · version {open.workflow_version}
-                  {open.trigger_payload.mode === "test" ? " · test run, nothing was changed" : ""}
+                  {formatDate(open.started_at)} · {open.duration_ms ?? "—"} {tr("ms · version")} {open.workflow_version}
+                  {open.trigger_payload.mode === "test" ? tr(" · test run, nothing was changed") : ""}
                 </SheetDescription>
               </SheetHeader>
               <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
@@ -144,7 +142,7 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
                     {open.error}
                   </div>
                 )}
-                {open.resume_at && <p className="text-sm text-text-muted">Waiting until {formatDate(open.resume_at)}; the scheduler continues it.</p>}
+                {open.resume_at && <p className="text-sm text-text-muted">{tr("Waiting until")} {formatDate(open.resume_at)}{tr("; the scheduler continues it.")}</p>}
                 <ol className="space-y-2">
                   {(open.steps as StepResult[]).map((s, i) => (
                     <li key={`${s.step_id}-${i}`} className="rounded-md border border-border p-3">
@@ -155,8 +153,7 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
                         <StatusBadge status={s.status} />
                       </div>
                       <p className="text-xs text-text-muted">
-                        {s.type} · {s.duration_ms} ms
-                      </p>
+                        {s.type} · {s.duration_ms} {tr("ms")}</p>
                       {s.error && <p className="mt-1 text-sm text-danger">{s.error}</p>}
                       {s.output && Object.keys(s.output).length > 0 && (
                         <pre className="mt-2 max-h-40 overflow-auto rounded bg-surface-muted p-2 font-mono text-[11px] whitespace-pre-wrap">{JSON.stringify(s.output, null, 2)}</pre>
@@ -165,7 +162,7 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
                   ))}
                 </ol>
                 <details className="text-xs">
-                  <summary className="cursor-pointer text-text-muted">Trigger payload</summary>
+                  <summary className="cursor-pointer text-text-muted">{tr("Trigger payload")}</summary>
                   <pre className="mt-2 max-h-60 overflow-auto rounded bg-surface-muted p-2 font-mono text-[11px] whitespace-pre-wrap">{JSON.stringify(open.trigger_payload, null, 2)}</pre>
                 </details>
               </div>
@@ -173,7 +170,7 @@ export function RunHistory({ executions, canRetry }: { executions: AutomationExe
                 <div className="border-t border-border px-5 py-3">
                   <Button className="w-full" disabled={pending} onClick={() => retry(open.id)}>
                     <RotateCcw aria-hidden />
-                    {pending ? "Retrying…" : "Retry from the failed step"}
+                    {pending ? tr("Retrying…") : tr("Retry from the failed step")}
                   </Button>
                 </div>
               )}

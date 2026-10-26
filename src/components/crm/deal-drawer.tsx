@@ -10,6 +10,7 @@ import type { Deal } from "@/domain/entities";
 import { formatDate, formatMoney } from "@/lib/format";
 import { DealFormButton, type DealFormOptions } from "./deal-form";
 import { CreateOrderButton, StageSelect, type StageOption } from "./stage-controls";
+import { tr, trNode } from "@/lib/i18n";
 
 export type DrawerDeal = Deal & { stage_name: string; is_won: boolean; is_lost: boolean; company_name: string; owner_name: string; days_in_stage: number };
 
@@ -32,14 +33,14 @@ export function DealDrawer({
   const [editing, setEditing] = useState(false);
   if (!deal) return null;
   const facts: Array<[string, string]> = [
-    ["Company", deal.company_name],
-    ["Amount", formatMoney(deal.amount, deal.currency)],
-    ["Probability", `${deal.probability}%`],
-    ["Weighted", formatMoney((deal.amount * deal.probability) / 100, deal.currency)],
-    ["Expected close", formatDate(deal.expected_close_date)],
-    ["Owner", deal.owner_name],
-    ["Days in stage", String(deal.days_in_stage)],
-    ["Next activity", deal.next_activity || "—"],
+    [tr("Company"), deal.company_name],
+    [tr("Amount"), formatMoney(deal.amount, deal.currency)],
+    [tr("Probability"), `${deal.probability}%`],
+    [tr("Weighted"), formatMoney((deal.amount * deal.probability) / 100, deal.currency)],
+    [tr("Expected close"), formatDate(deal.expected_close_date)],
+    [tr("Owner"), deal.owner_name],
+    [tr("Days in stage"), String(deal.days_in_stage)],
+    [tr("Next activity"), deal.next_activity || "—"],
   ];
   return (
     <>
@@ -57,23 +58,21 @@ export function DealDrawer({
               <div className="flex flex-wrap items-center gap-2">
                 <StageSelect dealId={deal.id} dealName={deal.name} stageId={deal.stage_id} stages={stages} />
                 <Button variant="outline" onClick={() => setEditing(true)}>
-                  <Pencil aria-hidden />
-                  Edit
-                </Button>
+                  <Pencil aria-hidden />{tr("Edit")}</Button>
                 {deal.is_won && <CreateOrderButton dealId={deal.id} existing={null} />}
               </div>
             )}
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               {facts.map(([label, value]) => (
                 <div key={label}>
-                  <dt className="text-xs text-text-muted">{label}</dt>
+                  <dt className="text-xs text-text-muted">{trNode(label)}</dt>
                   <dd className="mt-0.5">{value}</dd>
                 </div>
               ))}
             </dl>
             {deal.lost_reason && (
               <p className="rounded-md bg-surface-muted px-3 py-2 text-sm">
-                <span className="text-text-muted">Lost reason: </span>
+                <span className="text-text-muted">{tr("Lost reason:")} </span>
                 {deal.lost_reason}
               </p>
             )}
@@ -82,9 +81,7 @@ export function DealDrawer({
           <div className="border-t border-border px-5 py-3">
             <Button asChild variant="ghost" className="w-full">
               <Link href={`/deals/${deal.id}`}>
-                <ExternalIcon aria-hidden />
-                Open full deal page
-              </Link>
+                <ExternalIcon aria-hidden />{tr("Open full deal page")}</Link>
             </Button>
           </div>
         </SheetContent>
@@ -110,7 +107,7 @@ export function DealPreviewButton(props: { deal: DrawerDeal; stages: StageOption
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="ghost" size="icon-sm" aria-label={`Preview ${props.deal.name}`} onClick={() => setOpen(true)}>
+      <Button variant="ghost" size="icon-sm" aria-label={tr("Preview {p0}", { p0: props.deal.name })} onClick={() => setOpen(true)}>
         <Eye aria-hidden />
       </Button>
       {open && <DealDrawer {...props} open={open} onOpenChange={setOpen} />}

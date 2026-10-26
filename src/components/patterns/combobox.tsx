@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { tr, trNode } from "@/lib/i18n";
 
 export type ComboboxOption = { value: string; label: string; hint?: string };
 
@@ -71,7 +72,7 @@ export function Combobox({
         <Command>
           <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
           <CommandList>
-            {!canCreate && <CommandEmpty>{emptyText}</CommandEmpty>}
+            {!canCreate && <CommandEmpty>{trNode(emptyText)}</CommandEmpty>}
             {canCreate && (
               // Its own always-shown group: the search filter would otherwise hide it.
               <CommandGroup forceMount>
@@ -85,7 +86,7 @@ export function Combobox({
                   }}
                 >
                   <Plus className="size-4" aria-hidden />
-                  <span className="truncate">Create “{typed}”</span>
+                  <span className="truncate">{tr("Create “")}{typed}”</span>
                 </CommandItem>
               </CommandGroup>
             )}

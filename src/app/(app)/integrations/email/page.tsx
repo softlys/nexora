@@ -9,8 +9,9 @@ import { requirePermission } from "@/server/guards";
 import { loadPage } from "@/server/page-data";
 import { listIntegrations } from "@/server/services/integrations";
 import { EmailTest } from "./email-test";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Email provider" };
+export const metadata = { title: tr("Email provider") };
 
 export default async function EmailProviderPage() {
   const { user } = await requirePermission("view", "integration");
@@ -19,19 +20,17 @@ export default async function EmailProviderPage() {
   return (
     <div className="space-y-6">
       <Link href="/integrations" className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-foreground">
-        <ArrowLeft className="size-4" aria-hidden />
-        Integrations
-      </Link>
-      <PageHeader title="Email provider" description="Delivers the Send email step of Automation Studio workflows. Configured with environment variables, never in the browser." />
+        <ArrowLeft className="size-4" aria-hidden />{tr("Integrations")}</Link>
+      <PageHeader title={tr("Email provider")} description={tr("Delivers the Send email step of Automation Studio workflows. Configured with environment variables, never in the browser.")} />
       <section className="space-y-4 rounded-lg border border-border bg-surface p-5 shadow-xs">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-md font-semibold">Status</h2>
-            <p className="text-sm text-text-muted">{email.status === "not_configured" ? "RESEND_API_KEY and NEXORA_EMAIL_FROM are not set." : STATUS_HINTS[email.status]}</p>
+            <h2 className="text-md font-semibold">{tr("Status")}</h2>
+            <p className="text-sm text-text-muted">{email.status === "not_configured" ? tr("RESEND_API_KEY and NEXORA_EMAIL_FROM are not set.") : STATUS_HINTS[email.status]}</p>
           </div>
           <StatusBadge status={email.status} label={STATUS_LABELS[email.status]} dot />
         </div>
-        {email.last_tested_at && <p className="text-xs text-text-muted">Last test {formatDate(email.last_tested_at)}</p>}
+        {email.last_tested_at && <p className="text-xs text-text-muted">{tr("Last test")} {formatDate(email.last_tested_at)}</p>}
         {email.status === "error" && email.last_error && (
           <p role="alert" className="rounded-md border border-danger-border bg-danger-bg p-3 text-sm text-danger">
             {email.last_error}
@@ -39,22 +38,19 @@ export default async function EmailProviderPage() {
         )}
         {email.status === "not_configured" ? (
           <div className="space-y-2 text-sm">
-            <p>To enable email:</p>
+            <p>{tr("To enable email:")}</p>
             <ol className="list-decimal space-y-1 pl-5 text-text-muted">
-              <li>Create an API key at Resend and verify a sending domain.</li>
-              <li>
-                Set <code className="font-mono text-xs">RESEND_API_KEY</code> and <code className="font-mono text-xs">NEXORA_EMAIL_FROM</code> (for example <code className="font-mono text-xs">NEXORA &lt;crm@your-domain&gt;</code>) in the server environment and restart.
-              </li>
-              <li>Come back here and send a test email.</li>
+              <li>{tr("Create an API key at Resend and verify a sending domain.")}</li>
+              <li>{tr("Set")} <code className="font-mono text-xs">{tr("RESEND_API_KEY")}</code> {tr("and")} <code className="font-mono text-xs">{tr("NEXORA_EMAIL_FROM")}</code> {tr("(for example")} <code className="font-mono text-xs">{tr("NEXORA <crm@your-domain>")}</code>{tr(") in the server environment and restart.")}</li>
+              <li>{tr("Come back here and send a test email.")}</li>
             </ol>
-            <p className="text-text-muted">Until then, Send email steps are recorded as skipped (email not configured), never as sent. SMTP is not supported in this release.</p>
+            <p className="text-text-muted">{tr("Until then, Send email steps are recorded as skipped (email not configured), never as sent. SMTP is not supported in this release.")}</p>
           </div>
         ) : (
           <>
-            <p className="text-sm">
-              Provider: Resend · From: <span className="font-mono text-xs">{email.from}</span>
+            <p className="text-sm">{tr("Provider: Resend · From:")} <span className="font-mono text-xs">{email.from}</span>
             </p>
-            {canManage ? <EmailTest defaultTo={user.profile.email} /> : <p className="text-xs text-text-muted">Only admins can send a test email.</p>}
+            {canManage ? <EmailTest defaultTo={user.profile.email} /> : <p className="text-xs text-text-muted">{tr("Only admins can send a test email.")}</p>}
           </>
         )}
       </section>

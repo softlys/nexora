@@ -13,8 +13,9 @@ import { formatAmount, formatDate, formatMoney, formatNumber, formatPercent, for
 import { requirePermission } from "@/server/guards";
 import { loadPage } from "@/server/page-data";
 import { getDashboard } from "@/server/services/analytics";
+import { tr, trNode } from "@/lib/i18n";
 
-export const metadata = { title: "Overview" };
+export const metadata = { title: tr("Overview") };
 
 export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   const { user } = await requirePermission("view", "analytics");
@@ -27,19 +28,19 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   const k = dash.kpis;
   const vs = "vs previous period";
   const range = `closed_from=${period.from}&closed_to=${period.to}`;
-  const scope = user.actor.role === "admin" ? "the whole organization" : user.actor.role === "manager" ? "you and your team" : "your records";
+  const scope = tr(user.actor.role === "admin" ? "the whole organization" : user.actor.role === "manager" ? "you and your team" : "your records");
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Overview"
-        description={`Sales, orders and work for ${scope}. Every number links to the records behind it; definitions are in docs/metrics.md.`}
+        title={tr("Overview")}
+        description={tr("Sales, orders and work for {p0}. Every number links to the records behind it; definitions are in docs/metrics.md.", { p0: scope })}
         actions={<RangeFilter preset={preset} from={period.from} to={period.to} />}
       />
 
-      <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <section aria-label={tr("Key metrics")} className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <KpiCard
-          label="Won deal value"
+          label={tr("Won deal value")}
           icon={BadgeDollarSign}
           tone="brand"
           spark={dash.revenue.map((r) => r.won)}
@@ -47,27 +48,27 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           delta={{ value: k.wonDealValue.change, label: vs }}
           href={`/deals?status=won&${range}`}
         />
-        <KpiCard label="Open pipeline" icon={Briefcase} tone="info" value={formatMoney(k.openPipeline.value ?? 0, currency)} delta={{ value: k.openPipeline.change, label: vs }} href="/pipeline" hint="At period end" />
-        <KpiCard label="Active deals" icon={CalendarClock} tone="brand" value={formatNumber(k.activeDeals.value ?? 0)} delta={{ value: k.activeDeals.change, label: vs }} href="/deals?status=open" />
+        <KpiCard label={tr("Open pipeline")} icon={Briefcase} tone="info" value={formatMoney(k.openPipeline.value ?? 0, currency)} delta={{ value: k.openPipeline.change, label: vs }} href="/pipeline" hint={tr("At period end")} />
+        <KpiCard label={tr("Active deals")} icon={CalendarClock} tone="brand" value={formatNumber(k.activeDeals.value ?? 0)} delta={{ value: k.activeDeals.change, label: vs }} href="/deals?status=open" />
         <KpiCard
-          label="Conversion rate"
+          label={tr("Conversion rate")}
           icon={Percent}
           tone="success"
           value={k.conversionRate.value === null ? "—" : formatPercent(k.conversionRate.value)}
-          delta={k.conversionRate.value === null ? { value: null, emptyLabel: "No deals closed" } : { value: k.conversionRate.change, label: vs }}
+          delta={k.conversionRate.value === null ? { value: null, emptyLabel: tr("No deals closed") } : { value: k.conversionRate.change, label: vs }}
           href={`/deals?status=closed&${range}`}
         />
         <KpiCard
-          label="Outstanding receivables"
+          label={tr("Outstanding receivables")}
           icon={Wallet}
           tone="warning"
           spark={dash.revenue.map((r) => r.collected)}
           value={formatMoney(k.outstandingReceivables.value ?? 0, currency)}
           delta={{ value: k.outstandingReceivables.change, positiveIsGood: false, label: vs }}
           href="/orders?receivable=1"
-          hint="At period end"
+          hint={tr("At period end")}
         />
-        <KpiCard label="Overdue tasks" icon={AlertTriangle} tone="danger" value={formatNumber(k.overdueTasks.value ?? 0)} delta={{ value: k.overdueTasks.change, positiveIsGood: false, label: vs }} href="/tasks?status=overdue" />
+        <KpiCard label={tr("Overdue tasks")} icon={AlertTriangle} tone="danger" value={formatNumber(k.overdueTasks.value ?? 0)} delta={{ value: k.overdueTasks.change, positiveIsGood: false, label: vs }} href="/tasks?status=overdue" />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-5">
@@ -76,22 +77,22 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
         </div>
         <div className="lg:col-span-2">
           <BarsChart
-            title="Deals by stage"
-            description={`Deals created in ${RANGE_LABELS[preset].toLowerCase()}, by current stage. Click a bar to see them.`}
-            data={dash.byStage.map((s) => ({ label: s.stage, value: s.count, href: `/deals?stage=${s.stage_id}&created_from=${period.from}&created_to=${period.to}`, muted: s.is_lost }))}
+            title={tr("Deals by stage")}
+            description={tr("Deals created in {p0}, by current stage. Click a bar to see them.", { p0: tr(RANGE_LABELS[preset]).toLowerCase() })}
+            data={dash.byStage.map((s) => ({ label: tr(s.stage), value: s.count, href: `/deals?stage=${s.stage_id}&created_from=${period.from}&created_to=${period.to}`, muted: s.is_lost }))}
             format="count"
             layout="horizontal"
             height={300}
-            valueLabel="Deals"
-            emptyText="No deals were created in this period."
+            valueLabel={tr("Deals")}
+            emptyText={tr("No deals were created in this period.")}
           />
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Recent activities" actions={<Link href="/tasks?view=activity" className="text-xs text-brand hover:underline">All activity</Link>}>
+        <Panel title={tr("Recent activities")} actions={<Link href="/tasks?view=activity" className="text-xs text-brand hover:underline">{tr("All activity")}</Link>}>
           {dash.recentActivities.length === 0 ? (
-            <p className="text-sm text-text-muted">No activities yet.</p>
+            <p className="text-sm text-text-muted">{tr("No activities yet.")}</p>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {dash.recentActivities.map((a) => (
@@ -101,7 +102,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
                     <span className="block truncate font-medium">{a.subject}</span>
                     {a.related ? (
                       <Link href={a.related.href} className="block truncate text-xs text-brand hover:underline">
-                        {a.related.label}
+                        {trNode(a.related.label)}
                       </Link>
                     ) : (
                       <span className="text-xs text-text-muted">{humanizeStatus(a.type)}</span>
@@ -116,9 +117,9 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
             </ul>
           )}
         </Panel>
-        <Panel title="Upcoming tasks" actions={<Link href="/tasks" className="text-xs text-brand hover:underline">All tasks</Link>}>
+        <Panel title={tr("Upcoming tasks")} actions={<Link href="/tasks" className="text-xs text-brand hover:underline">{tr("All tasks")}</Link>}>
           {dash.upcomingTasks.length === 0 ? (
-            <p className="text-sm text-text-muted">No open tasks with a due date.</p>
+            <p className="text-sm text-text-muted">{tr("No open tasks with a due date.")}</p>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {dash.upcomingTasks.map((t) => (
@@ -127,7 +128,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
                     {t.title}
                   </Link>
                   <span className="flex shrink-0 items-center gap-2">
-                    <span className={t.overdue ? "text-xs font-medium text-danger" : "text-xs text-text-muted"}>{t.overdue ? `Overdue · ${formatDate(t.due_at)}` : formatDate(t.due_at)}</span>
+                    <span className={t.overdue ? "text-xs font-medium text-danger" : "text-xs text-text-muted"}>{t.overdue ? tr("Overdue · {p0}", { p0: formatDate(t.due_at) }) : formatDate(t.due_at)}</span>
                     <StatusBadge status={t.priority} />
                   </span>
                 </li>
@@ -135,9 +136,9 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
             </ul>
           )}
         </Panel>
-        <Panel title="Recent orders" actions={<Link href="/orders" className="text-xs text-brand hover:underline">All orders</Link>}>
+        <Panel title={tr("Recent orders")} actions={<Link href="/orders" className="text-xs text-brand hover:underline">{tr("All orders")}</Link>}>
           {dash.recentOrders.length === 0 ? (
-            <p className="text-sm text-text-muted">No orders yet.</p>
+            <p className="text-sm text-text-muted">{tr("No orders yet.")}</p>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {dash.recentOrders.map((o) => (
@@ -157,9 +158,9 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
             </ul>
           )}
         </Panel>
-        <Panel title="High-priority open deals" actions={<span className="text-xs text-text-muted">Largest weighted value</span>}>
+        <Panel title={tr("High-priority open deals")} actions={<span className="text-xs text-text-muted">{tr("Largest weighted value")}</span>}>
           {dash.highPriorityDeals.length === 0 ? (
-            <p className="text-sm text-text-muted">No open deals.</p>
+            <p className="text-sm text-text-muted">{tr("No open deals.")}</p>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {dash.highPriorityDeals.map((d) => (
@@ -169,12 +170,12 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
                       {d.name}
                     </Link>
                     <span className="block truncate text-xs text-text-muted">
-                      {d.company} · close {formatDate(d.close)}
+                      {d.company} {tr("· close")} {formatDate(d.close)}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="block tabular-nums">{formatMoney(d.amount, d.currency)}</span>
-                    <span className="block text-xs text-text-muted tabular-nums">wtd {formatMoney(d.weighted, d.currency)}</span>
+                    <span className="block text-xs text-text-muted tabular-nums">{tr("wtd")} {formatMoney(d.weighted, d.currency)}</span>
                   </span>
                 </li>
               ))}
@@ -182,8 +183,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           )}
         </Panel>
       </div>
-      <p className="text-xs text-text-muted">
-        Showing {RANGE_LABELS[preset].toLowerCase()} ({period.from} – {period.to}). Payments are simulated. <Link href={`/analytics?${periodQuery(preset, period)}`} className="text-brand hover:underline">Open analytics for this range</Link>
+      <p className="text-xs text-text-muted">{tr("Showing")} {tr(RANGE_LABELS[preset]).toLowerCase()} ({period.from} – {period.to}{tr("). Payments are simulated.")} <Link href={`/analytics?${periodQuery(preset, period)}`} className="text-brand hover:underline">{tr("Open analytics for this range")}</Link>
       </p>
     </div>
   );

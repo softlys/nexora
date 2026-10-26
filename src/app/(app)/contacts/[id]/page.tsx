@@ -12,10 +12,11 @@ import { requirePermission } from "@/server/guards";
 import { loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { companyOptions } from "@/server/services/companies";
 import { getContact } from "@/server/services/contacts";
+import { tr } from "@/lib/i18n";
 
 export async function generateMetadata({ params }: PageProps<"/contacts/[id]">) {
   const { id } = await params;
-  return { title: (await recordTitle("contacts", id)) ?? "Contact" };
+  return { title: (await recordTitle("contacts", id)) ?? tr("Contact") };
 }
 
 export default async function ContactPage({ params }: PageProps<"/contacts/[id]">) {
@@ -33,7 +34,7 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
   return (
     <div className="space-y-6">
       <DetailHeader
-        back={{ href: "/contacts", label: "Contacts" }}
+        back={{ href: "/contacts", label: tr("Contacts") }}
         path={`/contacts/${contact.id}`}
         title={name}
         subtitle={[contact.job_title, company?.name].filter(Boolean).join(" · ") || undefined}
@@ -42,7 +43,7 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
           <RecordActions
             table="contacts"
             id={contact.id}
-            label="Contact"
+            label={tr("Contact")}
             archived={!!contact.archived_at}
             canArchive={can(user.actor, "archive", "contact", record)}
             canDelete={can(user.actor, "delete", "contact", record)}
@@ -57,34 +58,34 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
       <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-6 lg:col-span-2">
           <ActivityComposer links={{ contact_id: contact.id, ...(contact.company_id && company ? { company_id: contact.company_id } : {}) }} />
-          <Panel title="Activity timeline">
+          <Panel title={tr("Activity timeline")}>
             <Timeline entries={timeline} names={people.names} />
           </Panel>
-          <Panel title="Comments">
+          <Panel title={tr("Comments")}>
             <CommentComposer entityType="contact" entityId={contact.id} />
           </Panel>
         </div>
         <div className="space-y-6">
-          <Panel title="Details">
+          <Panel title={tr("Details")}>
             <Facts
               className="sm:grid-cols-1"
               items={[
-                ["Email", contact.email ? <a key="e" href={`mailto:${contact.email}`} className="text-brand hover:underline">{contact.email}</a> : null],
-                ["Phone", contact.phone],
-                ["Company", company ? <Link key="c" href={`/companies/${company.id}`} className="text-brand hover:underline">{company.name}</Link> : null],
-                ["Owner", people.names[contact.owner_id]],
-                ["Last interaction", last_interaction ? `${formatRelative(last_interaction)} (${formatDate(last_interaction)})` : "None logged"],
-                ["Tags", contact.tags.length ? contact.tags.join(", ") : null],
+                [tr("Email"), contact.email ? <a key="e" href={`mailto:${contact.email}`} className="text-brand hover:underline">{contact.email}</a> : null],
+                [tr("Phone"), contact.phone],
+                [tr("Company"), company ? <Link key="c" href={`/companies/${company.id}`} className="text-brand hover:underline">{company.name}</Link> : null],
+                [tr("Owner"), people.names[contact.owner_id]],
+                [tr("Last interaction"), last_interaction ? `${formatRelative(last_interaction)} (${formatDate(last_interaction)})` : tr("None logged")],
+                [tr("Tags"), contact.tags.length ? contact.tags.join(", ") : null],
               ]}
             />
           </Panel>
-          <Panel title="Messengers">
-            <MessengerLinks messengers={contact.messengers} emptyText="No messengers saved. Add Telegram, WhatsApp or Instagram with Edit." />
+          <Panel title={tr("Messengers")}>
+            <MessengerLinks messengers={contact.messengers} emptyText={tr("No messengers saved. Add Telegram, WhatsApp or Instagram with Edit.")} />
           </Panel>
-          <Panel title="Deals">
+          <Panel title={tr("Deals")}>
             <MiniList
               rows={deals}
-              empty="Not the primary contact on any deal you can see."
+              empty={tr("Not the primary contact on any deal you can see.")}
               render={(d) => (
                 <div className="flex items-center justify-between gap-2 text-sm">
                   <Link href={`/deals/${d.id}`} className="truncate font-medium hover:underline">
@@ -95,10 +96,10 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
               )}
             />
           </Panel>
-          <Panel title="Open tasks">
+          <Panel title={tr("Open tasks")}>
             <MiniList
               rows={tasks.filter((t) => t.status === "todo" || t.status === "in_progress")}
-              empty="No open tasks."
+              empty={tr("No open tasks.")}
               render={(t) => (
                 <div className="flex items-center justify-between gap-2 text-sm">
                   <span className="truncate">{t.title}</span>

@@ -14,6 +14,7 @@ import { leadInput } from "@/domain/inputs";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { applyServerErrors } from "@/lib/forms";
 import { createLeadAction, updateLeadAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 type Values = {
   title: string;
@@ -71,7 +72,7 @@ export function LeadFormButton({ lead, owners, variant = lead ? "outline" : "def
         // Admins and managers can leave a new lead unassigned so the New lead automation routes it.
         ...(owners.length > 0 && { owner_id: AUTO }),
       };
-  const ownerOptions = lead ? owners : [{ value: AUTO, label: "Unassigned (route automatically)" }, ...owners];
+  const ownerOptions = lead ? owners : [{ value: AUTO, label: tr("Unassigned (route automatically)") }, ...owners];
   const toPayloadOwner = (v: string | null | undefined) => (v === AUTO ? null : v);
 
   const resolver = zodResolver(leadInput) as unknown as Resolver<Values>;
@@ -88,7 +89,7 @@ export function LeadFormButton({ lead, owners, variant = lead ? "outline" : "def
     const payload = { ...values, ...(values.owner_id !== undefined && { owner_id: toPayloadOwner(values.owner_id) }), next_action_at: fromDateInput(values.next_action_at) };
     const result = lead ? await updateLeadAction({ id: lead.id, ...payload }) : await createLeadAction(payload);
     if (!result.ok) return applyServerErrors(result, setError);
-    toast.success(lead ? "Lead updated" : "Lead created");
+    toast.success(lead ? tr("Lead updated") : tr("Lead created"));
     reset(values);
     setOpen(false);
     if (lead) router.refresh();
@@ -105,25 +106,25 @@ export function LeadFormButton({ lead, owners, variant = lead ? "outline" : "def
         }}
       >
         {lead ? <Pencil aria-hidden /> : <Plus aria-hidden />}
-        {lead ? "Edit" : "New lead"}
+        {lead ? tr("Edit") : tr("New lead")}
       </Button>
-      <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={lead ? "Edit lead" : "New lead"} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={lead ? "Save changes" : "Create lead"}>
-        <TextField control={control} name="title" label="Title" placeholder="e.g. Compressor replacement inquiry" />
+      <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={lead ? tr("Edit lead") : tr("New lead")} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={lead ? tr("Save changes") : tr("Create lead")}>
+        <TextField control={control} name="title" label={tr("Title")} placeholder={tr("e.g. Compressor replacement inquiry")} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField control={control} name="company_name" label="Company" />
-          <TextField control={control} name="contact_name" label="Contact name" />
-          <TextField control={control} name="email" label="Email" type="email" inputMode="email" />
-          <TextField control={control} name="phone" label="Phone" type="tel" inputMode="tel" />
-          <ComboboxField control={control} name="country" label="Country" options={COUNTRY_OPTIONS} placeholder="Unknown" />
-          <SelectField control={control} name="source" label="Source" options={LEAD_SOURCES.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
-          <SelectField control={control} name="status" label="Status" options={(["new", "contacted", "qualified", "unqualified"] as const).map((s) => ({ value: s, label: humanizeStatus(s) }))} />
-          <SelectField control={control} name="qualification" label="Qualification" options={LEAD_QUALIFICATIONS.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
-          <TextField control={control} name="estimated_value" label="Estimated value" inputMode="decimal" />
-          {owners.length > 0 && <SelectField control={control} name="owner_id" label="Owner" options={ownerOptions} />}
+          <TextField control={control} name="company_name" label={tr("Company")} />
+          <TextField control={control} name="contact_name" label={tr("Contact name")} />
+          <TextField control={control} name="email" label={tr("Email")} type="email" inputMode="email" />
+          <TextField control={control} name="phone" label={tr("Phone")} type="tel" inputMode="tel" />
+          <ComboboxField control={control} name="country" label={tr("Country")} options={COUNTRY_OPTIONS} placeholder={tr("Unknown")} />
+          <SelectField control={control} name="source" label={tr("Source")} options={LEAD_SOURCES.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
+          <SelectField control={control} name="status" label={tr("Status")} options={(["new", "contacted", "qualified", "unqualified"] as const).map((s) => ({ value: s, label: humanizeStatus(s) }))} />
+          <SelectField control={control} name="qualification" label={tr("Qualification")} options={LEAD_QUALIFICATIONS.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
+          <TextField control={control} name="estimated_value" label={tr("Estimated value")} inputMode="decimal" />
+          {owners.length > 0 && <SelectField control={control} name="owner_id" label={tr("Owner")} options={ownerOptions} />}
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField control={control} name="next_action" label="Next action" />
-          <TextField control={control} name="next_action_at" label="Next action date" type="date" />
+          <TextField control={control} name="next_action" label={tr("Next action")} />
+          <TextField control={control} name="next_action_at" label={tr("Next action date")} type="date" />
         </div>
       </RecordSheet>
     </>

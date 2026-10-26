@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SlidersHorizontal } from "lucide-react";
+import { tr } from "@/lib/i18n";
 
 /** Close-date and amount range filters stored in the URL (?from=&to=&min=&max=). */
 export function RangeFilters({ dateLabel = "Close date" }: { dateLabel?: string }) {
@@ -30,8 +31,7 @@ export function RangeFilters({ dateLabel = "Close date" }: { dateLabel?: string 
     <Popover>
       <PopoverTrigger asChild>
         <Button variant={activeCount ? "secondary" : "outline"} size="sm">
-          <SlidersHorizontal aria-hidden />
-          Ranges{activeCount ? ` (${activeCount})` : ""}
+          <SlidersHorizontal aria-hidden />{tr("Ranges")}{activeCount ? ` (${activeCount})` : ""}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 space-y-3">
@@ -43,10 +43,10 @@ export function RangeFilters({ dateLabel = "Close date" }: { dateLabel?: string 
           </div>
         </fieldset>
         <fieldset className="space-y-1.5">
-          <legend className="text-xs font-medium text-text-muted">Amount</legend>
+          <legend className="text-xs font-medium text-text-muted">{tr("Amount")}</legend>
           <div className="flex items-center gap-2">
-            <Input inputMode="decimal" placeholder="Min" aria-label="Minimum amount" value={values.min} onChange={(e) => setValues({ ...values, min: e.target.value.replace(/[^0-9.]/g, "") })} />
-            <Input inputMode="decimal" placeholder="Max" aria-label="Maximum amount" value={values.max} onChange={(e) => setValues({ ...values, max: e.target.value.replace(/[^0-9.]/g, "") })} />
+            <Input inputMode="decimal" placeholder={tr("Min")} aria-label={tr("Minimum amount")} value={values.min} onChange={(e) => setValues({ ...values, min: e.target.value.replace(/[^0-9.]/g, "") })} />
+            <Input inputMode="decimal" placeholder={tr("Max")} aria-label={tr("Maximum amount")} value={values.max} onChange={(e) => setValues({ ...values, max: e.target.value.replace(/[^0-9.]/g, "") })} />
           </div>
         </fieldset>
         <div className="flex justify-end gap-2">
@@ -58,12 +58,8 @@ export function RangeFilters({ dateLabel = "Close date" }: { dateLabel?: string 
               setValues(cleared);
               apply(cleared);
             }}
-          >
-            Reset
-          </Button>
-          <Button size="sm" onClick={() => apply(values)}>
-            Apply
-          </Button>
+          >{tr("Reset")}</Button>
+          <Button size="sm" onClick={() => apply(values)}>{tr("Apply")}</Button>
         </div>
       </PopoverContent>
     </Popover>

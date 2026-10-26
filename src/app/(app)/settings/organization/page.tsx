@@ -1,8 +1,9 @@
 import { requirePermission } from "@/server/guards";
 import { getRepositories } from "@/server/repositories";
 import { OrganizationForm } from "./organization-form";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Organization" };
+export const metadata = { title: tr("Organization") };
 
 export default async function OrganizationSettingsPage() {
   const { ctx } = await requirePermission("update", "organization");

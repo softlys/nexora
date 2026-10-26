@@ -17,15 +17,16 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { tr, trNode } from "@/lib/i18n";
 
 export function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-20 space-y-4 rounded-lg border border-border bg-surface p-5 shadow-xs">
       <div>
         <h2 id={`${id}-heading`} className="text-md font-semibold">
-          {title}
+          {trNode(title)}
         </h2>
-        {description && <p className="mt-0.5 text-sm text-text-muted">{description}</p>}
+        {description && <p className="mt-0.5 text-sm text-text-muted">{trNode(description)}</p>}
       </div>
       {children}
     </section>
@@ -35,7 +36,7 @@ export function Section({ id, title, description, children }: { id: string; titl
 function Spec({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium tracking-wide text-text-muted uppercase">{label}</p>
+      <p className="text-xs font-medium tracking-wide text-text-muted uppercase">{trNode(label)}</p>
       <div className="flex flex-wrap items-center gap-2">{children}</div>
     </div>
   );
@@ -44,31 +45,27 @@ function Spec({ label, children }: { label: string; children: React.ReactNode })
 export function ButtonsShowcase() {
   return (
     <div className="space-y-4">
-      <Spec label="Variants">
-        <Button>Primary</Button>
-        <Button variant="outline">Outline</Button>
-        <Button variant="secondary">Secondary</Button>
-        <Button variant="ghost">Ghost</Button>
-        <Button variant="danger">Danger</Button>
-        <Button variant="link">Link</Button>
+      <Spec label={tr("Variants")}>
+        <Button>{tr("Primary")}</Button>
+        <Button variant="outline">{tr("Outline")}</Button>
+        <Button variant="secondary">{tr("Secondary")}</Button>
+        <Button variant="ghost">{tr("Ghost")}</Button>
+        <Button variant="danger">{tr("Danger")}</Button>
+        <Button variant="link">{tr("Link")}</Button>
       </Spec>
-      <Spec label="Sizes and icons">
-        <Button size="xs">Extra small</Button>
-        <Button size="sm">Small</Button>
-        <Button>Default</Button>
-        <Button size="lg">Large</Button>
+      <Spec label={tr("Sizes and icons")}>
+        <Button size="xs">{tr("Extra small")}</Button>
+        <Button size="sm">{tr("Small")}</Button>
+        <Button>{tr("Default")}</Button>
+        <Button size="lg">{tr("Large")}</Button>
         <Button>
-          <Plus aria-hidden />
-          With icon
-        </Button>
-        <IconButton label="Notifications" icon={Bell} />
+          <Plus aria-hidden />{tr("With icon")}</Button>
+        <IconButton label={tr("Notifications")} icon={Bell} />
       </Spec>
-      <Spec label="States">
-        <Button disabled>Disabled</Button>
-        <Button disabled>Saving…</Button>
-        <Button variant="outline" className="ring-3 ring-ring/40">
-          Focus ring
-        </Button>
+      <Spec label={tr("States")}>
+        <Button disabled>{tr("Disabled")}</Button>
+        <Button disabled>{tr("Saving…")}</Button>
+        <Button variant="outline" className="ring-3 ring-ring/40">{tr("Focus ring")}</Button>
       </Spec>
     </div>
   );
@@ -79,42 +76,42 @@ export function InputsShowcase() {
   const invalid = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <FormField id="kit-name" label="Company name" hint="Shown on orders and invoices.">
-        <Input id="kit-name" placeholder="Atlasford Industrial Supply" aria-describedby="kit-name-hint" />
+      <FormField id="kit-name" label={tr("Company name")} hint={tr("Shown on orders and invoices.")}>
+        <Input id="kit-name" placeholder={tr("Atlasford Industrial Supply")} aria-describedby="kit-name-hint" />
       </FormField>
-      <FormField id="kit-email" label="Email" error={invalid ? "Enter a valid email address." : undefined}>
+      <FormField id="kit-email" label={tr("Email")} error={invalid ? tr("Enter a valid email address.") : undefined}>
         <Input id="kit-email" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={invalid || undefined} aria-describedby={invalid ? "kit-email-error" : undefined} />
       </FormField>
-      <FormField id="kit-search" label="Search with icon">
+      <FormField id="kit-search" label={tr("Search with icon")}>
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-text-muted" aria-hidden />
-          <Input id="kit-search" className="pl-8" placeholder="Search companies…" />
+          <Input id="kit-search" className="pl-8" placeholder={tr("Search companies…")} />
         </div>
       </FormField>
-      <FormField id="kit-disabled" label="Disabled">
+      <FormField id="kit-disabled" label={tr("Disabled")}>
         <Input id="kit-disabled" disabled value="Read only for your role" />
       </FormField>
-      <FormField id="kit-select" label="Select">
+      <FormField id="kit-select" label={tr("Select")}>
         <Select defaultValue="draft">
           <SelectTrigger id="kit-select" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="confirmed">Confirmed</SelectItem>
+            <SelectItem value="draft">{tr("Draft")}</SelectItem>
+            <SelectItem value="confirmed">{tr("Confirmed")}</SelectItem>
           </SelectContent>
         </Select>
       </FormField>
-      <FormField id="kit-notes" label="Textarea">
-        <Textarea id="kit-notes" rows={2} placeholder="Notes are plain text." />
+      <FormField id="kit-notes" label={tr("Textarea")}>
+        <Textarea id="kit-notes" rows={2} placeholder={tr("Notes are plain text.")} />
       </FormField>
       <div className="flex items-center gap-2">
         <Checkbox id="kit-check" defaultChecked />
-        <Label htmlFor="kit-check">Checkbox</Label>
+        <Label htmlFor="kit-check">{tr("Checkbox")}</Label>
       </div>
       <div className="flex items-center gap-2">
         <Switch id="kit-switch" defaultChecked />
-        <Label htmlFor="kit-switch">Switch</Label>
+        <Label htmlFor="kit-switch">{tr("Switch")}</Label>
       </div>
     </div>
   );
@@ -125,47 +122,43 @@ export function OverlaysShowcase() {
     <div className="flex flex-wrap gap-2">
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="outline">Open modal</Button>
+          <Button variant="outline">{tr("Open modal")}</Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Modal dialog</DialogTitle>
-            <DialogDescription>Focus moves into the dialog, Escape closes it and focus returns to the trigger.</DialogDescription>
+            <DialogTitle>{tr("Modal dialog")}</DialogTitle>
+            <DialogDescription>{tr("Focus moves into the dialog, Escape closes it and focus returns to the trigger.")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button>Close with Escape</Button>
+            <Button>{tr("Close with Escape")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="outline">Open drawer</Button>
+          <Button variant="outline">{tr("Open drawer")}</Button>
         </SheetTrigger>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Detail drawer</SheetTitle>
-            <SheetDescription>Used for quick edits and record previews, such as the deal drawer on the pipeline.</SheetDescription>
+            <SheetTitle>{tr("Detail drawer")}</SheetTitle>
+            <SheetDescription>{tr("Used for quick edits and record previews, such as the deal drawer on the pipeline.")}</SheetDescription>
           </SheetHeader>
         </SheetContent>
       </Sheet>
       <ConfirmDialog
         trigger={
           <Button variant="outline">
-            <Trash2 aria-hidden />
-            Destructive confirm
-          </Button>
+            <Trash2 aria-hidden />{tr("Destructive confirm")}</Button>
         }
-        title="Archive this company?"
-        description="Destructive and irreversible actions are always confirmed. This is a demo: nothing is archived."
-        confirmLabel="Archive"
+        title={tr("Archive this company?")}
+        description={tr("Destructive and irreversible actions are always confirmed. This is a demo: nothing is archived.")}
+        confirmLabel={tr("Archive")}
         destructive
         onConfirm={() => {
-          toast.success("Confirmed (demo only, nothing changed)");
+          toast.success(tr("Confirmed (demo only, nothing changed)"));
         }}
       />
-      <Button variant="outline" onClick={() => toast.success("Saved", { description: "Toasts confirm completed actions." })}>
-        Show toast
-      </Button>
+      <Button variant="outline" onClick={() => toast.success(tr("Saved"), { description: tr("Toasts confirm completed actions.") })}>{tr("Show toast")}</Button>
     </div>
   );
 }
@@ -174,19 +167,13 @@ export function NavigationShowcase() {
   return (
     <Tabs defaultValue="overview">
       <TabsList>
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="activity">Activity</TabsTrigger>
-        <TabsTrigger value="notes">Notes</TabsTrigger>
+        <TabsTrigger value="overview">{tr("Overview")}</TabsTrigger>
+        <TabsTrigger value="activity">{tr("Activity")}</TabsTrigger>
+        <TabsTrigger value="notes">{tr("Notes")}</TabsTrigger>
       </TabsList>
-      <TabsContent value="overview" className="pt-3 text-sm text-text-muted">
-        Tabs switch views of one record. Arrow keys move between tabs.
-      </TabsContent>
-      <TabsContent value="activity" className="pt-3 text-sm text-text-muted">
-        Activity timeline content.
-      </TabsContent>
-      <TabsContent value="notes" className="pt-3 text-sm text-text-muted">
-        Notes and comments.
-      </TabsContent>
+      <TabsContent value="overview" className="pt-3 text-sm text-text-muted">{tr("Tabs switch views of one record. Arrow keys move between tabs.")}</TabsContent>
+      <TabsContent value="activity" className="pt-3 text-sm text-text-muted">{tr("Activity timeline content.")}</TabsContent>
+      <TabsContent value="notes" className="pt-3 text-sm text-text-muted">{tr("Notes and comments.")}</TabsContent>
     </Tabs>
   );
 }
@@ -194,19 +181,19 @@ export function NavigationShowcase() {
 export function ChartShowcase() {
   return (
     <BarsChart
-      title="Sample bar chart"
-      description="Sample data for the style guide, not computed from your records."
+      title={tr("Sample bar chart")}
+      description={tr("Sample data for the style guide, not computed from your records.")}
       data={[
-        { label: "Qualification", value: 8 },
-        { label: "Discovery", value: 6 },
-        { label: "Proposal", value: 5 },
-        { label: "Negotiation", value: 3 },
-        { label: "Won", value: 4 },
+        { label: tr("Qualification"), value: 8 },
+        { label: tr("Discovery"), value: 6 },
+        { label: tr("Proposal"), value: 5 },
+        { label: tr("Negotiation"), value: 3 },
+        { label: tr("Won"), value: 4 },
       ]}
       format="count"
       layout="horizontal"
       height={220}
-      valueLabel="Deals"
+      valueLabel={tr("Deals")}
     />
   );
 }

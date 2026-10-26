@@ -12,10 +12,11 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { requirePermission } from "@/server/guards";
 import { getCompany } from "@/server/services/companies";
+import { tr } from "@/lib/i18n";
 
 export async function generateMetadata({ params }: PageProps<"/companies/[id]">) {
   const { id } = await params;
-  return { title: (await recordTitle("companies", id)) ?? "Company" };
+  return { title: (await recordTitle("companies", id)) ?? tr("Company") };
 }
 
 export default async function CompanyPage({ params }: PageProps<"/companies/[id]">) {
@@ -36,21 +37,21 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
   return (
     <div className="space-y-6">
       <DetailHeader
-        back={{ href: "/companies", label: "Companies" }}
+        back={{ href: "/companies", label: tr("Companies") }}
         path={`/companies/${company.id}`}
         title={company.name}
         subtitle={`${company.industry} · ${[company.city, countryName(company.country)].filter(Boolean).join(", ")}`}
         badges={
           <>
             <StatusBadge status={company.lifecycle_stage} />
-            {company.archived_at && <StatusBadge status="archived" label="Archived" />}
+            {company.archived_at && <StatusBadge status="archived" label={tr("Archived")} />}
           </>
         }
         actions={
           <RecordActions
             table="companies"
             id={company.id}
-            label="Company"
+            label={tr("Company")}
             archived={!!company.archived_at}
             canArchive={can(user.actor, "archive", "company", record)}
             canDelete={can(user.actor, "delete", "company", record)}
@@ -66,31 +67,31 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
         tabs={[
           {
             id: "overview",
-            label: "Overview",
+            label: tr("Overview"),
             content: (
               <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
-                <Panel title="Details" className="lg:col-span-2">
+                <Panel title={tr("Details")} className="lg:col-span-2">
                   <Facts
                     items={[
-                      ["Industry", company.industry],
-                      ["Employees", company.size],
-                      ["Website", <ExternalLink key="w" href={company.website} />],
-                      ["Phone", company.phone],
-                      ["Address", [company.address, company.city, countryName(company.country)].filter(Boolean).join(", ")],
-                      ["Owner", people.names[company.owner_id]],
-                      ["Lifecycle stage", <StatusBadge key="l" status={company.lifecycle_stage} />],
-                      ["Created", formatDate(company.created_at)],
+                      [tr("Industry"), company.industry],
+                      [tr("Employees"), company.size],
+                      [tr("Website"), <ExternalLink key="w" href={company.website} />],
+                      [tr("Phone"), company.phone],
+                      [tr("Address"), [company.address, company.city, countryName(company.country)].filter(Boolean).join(", ")],
+                      [tr("Owner"), people.names[company.owner_id]],
+                      [tr("Lifecycle stage"), <StatusBadge key="l" status={company.lifecycle_stage} />],
+                      [tr("Created"), formatDate(company.created_at)],
                     ]}
                   />
                 </Panel>
-                <Panel title="At a glance">
+                <Panel title={tr("At a glance")}>
                   <Facts
                     className="sm:grid-cols-1"
                     items={[
-                      ["Contacts", contacts.length],
-                      ["Open deals", deals.filter((d) => !d.closed_at).length],
-                      ["Open pipeline", formatMoney(deals.filter((d) => !d.closed_at).reduce((s, d) => s + d.amount, 0))],
-                      ["Orders", orders.length],
+                      [tr("Contacts"), contacts.length],
+                      [tr("Open deals"), deals.filter((d) => !d.closed_at).length],
+                      [tr("Open pipeline"), formatMoney(deals.filter((d) => !d.closed_at).reduce((s, d) => s + d.amount, 0))],
+                      [tr("Orders"), orders.length],
                     ]}
                   />
                 </Panel>
@@ -99,13 +100,13 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
           },
           {
             id: "contacts",
-            label: "Contacts",
+            label: tr("Contacts"),
             count: contacts.length,
             content: (
-              <Panel title="Contacts">
+              <Panel title={tr("Contacts")}>
                 <MiniList
                   rows={contacts}
-                  empty="No contacts at this company you can see."
+                  empty={tr("No contacts at this company you can see.")}
                   render={(c) => (
                     <div className="flex items-center justify-between gap-2 text-sm">
                       <Link href={`/contacts/${c.id}`} className="font-medium hover:underline">
@@ -120,20 +121,20 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
           },
           {
             id: "deals",
-            label: "Deals",
+            label: tr("Deals"),
             count: deals.length,
             content: (
-              <Panel title="Deals">
+              <Panel title={tr("Deals")}>
                 <MiniList
                   rows={deals}
-                  empty="No deals with this company you can see."
+                  empty={tr("No deals with this company you can see.")}
                   render={(d) => (
                     <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                       <Link href={`/deals/${d.id}`} className="font-medium hover:underline">
                         {d.name}
                       </Link>
                       <span className="flex items-center gap-3">
-                        <StatusBadge label={stageName.get(d.stage_id)?.name ?? "Unknown"} tone={stageName.get(d.stage_id)?.is_won ? "success" : stageName.get(d.stage_id)?.is_lost ? "neutral" : "accent"} />
+                        <StatusBadge label={stageName.get(d.stage_id)?.name ?? tr("Unknown")} tone={stageName.get(d.stage_id)?.is_won ? "success" : stageName.get(d.stage_id)?.is_lost ? "neutral" : "accent"} />
                         <span className="tabular-nums">{formatMoney(d.amount, d.currency)}</span>
                       </span>
                     </div>
@@ -144,13 +145,13 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
           },
           {
             id: "orders",
-            label: "Orders",
+            label: tr("Orders"),
             count: orders.length,
             content: (
-              <Panel title="Orders">
+              <Panel title={tr("Orders")}>
                 <MiniList
                   rows={orders}
-                  empty="No orders from this company you can see."
+                  empty={tr("No orders from this company you can see.")}
                   render={(o) => (
                     <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                       <Link href={`/orders/${o.id}`} className="font-medium tabular-nums hover:underline">
@@ -168,16 +169,16 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
           },
           {
             id: "tasks",
-            label: "Tasks",
+            label: tr("Tasks"),
             count: openTasks.length,
             content: (
               <Panel
-                title={`Tasks · ${openTasks.length} open${closedTasks.length ? `, ${closedTasks.length} done or cancelled` : ""}`}
-                actions={<Link href={`/tasks?company=${company.id}`} className="text-xs text-brand hover:underline">Open in Tasks</Link>}
+                title={tr("Tasks · {p0} open{p1}", { p0: openTasks.length, p1: closedTasks.length ? `, ${closedTasks.length} done or cancelled` : "" })}
+                actions={<Link href={`/tasks?company=${company.id}`} className="text-xs text-brand hover:underline">{tr("Open in Tasks")}</Link>}
               >
                 <MiniList
                   rows={[...openTasks, ...closedTasks]}
-                  empty="No tasks for this company."
+                  empty={tr("No tasks for this company.")}
                   render={(t) => {
                     const overdue = isOpen(t) && t.due_at !== null && t.due_at < nowIso;
                     return (
@@ -186,7 +187,7 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
                           {t.title}
                         </Link>
                         <span className="flex items-center gap-2 text-text-muted">
-                          {t.due_at && <span className={overdue ? "font-medium text-danger" : undefined}>{overdue ? `Overdue · ${formatDate(t.due_at)}` : formatDate(t.due_at)}</span>}
+                          {t.due_at && <span className={overdue ? "font-medium text-danger" : undefined}>{overdue ? tr("Overdue · {p0}", { p0: formatDate(t.due_at) }) : formatDate(t.due_at)}</span>}
                           <StatusBadge status={t.status} />
                         </span>
                       </div>
@@ -198,17 +199,17 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
           },
           {
             id: "notes",
-            label: "Notes",
+            label: tr("Notes"),
             count: comments.length,
             content: (
               <div className="space-y-4">
-                <Panel title="Notes">
-                  {company.notes ? <p className="text-sm whitespace-pre-wrap">{company.notes}</p> : <p className="text-sm text-text-muted">No notes. Edit the company to add some.</p>}
+                <Panel title={tr("Notes")}>
+                  {company.notes ? <p className="text-sm whitespace-pre-wrap">{company.notes}</p> : <p className="text-sm text-text-muted">{tr("No notes. Edit the company to add some.")}</p>}
                 </Panel>
-                <Panel title="Comments">
+                <Panel title={tr("Comments")}>
                   <div className="space-y-4">
                     <CommentComposer entityType="company" entityId={company.id} />
-                    <Timeline entries={comments} names={people.names} emptyText="No comments yet." />
+                    <Timeline entries={comments} names={people.names} emptyText={tr("No comments yet.")} />
                   </div>
                 </Panel>
               </div>
@@ -216,7 +217,7 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
           },
           {
             id: "activity",
-            label: "Activity",
+            label: tr("Activity"),
             content: (
               <div className="space-y-4">
                 <ActivityComposer links={{ company_id: company.id }} />

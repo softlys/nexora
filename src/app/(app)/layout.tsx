@@ -5,6 +5,7 @@ import { visibleNavGroups, visibleSettingsSections } from "@/domain/navigation";
 import { can } from "@/domain/permissions";
 import { getRepoContext } from "@/server/auth";
 import { getRepositories } from "@/server/repositories";
+import { tr } from "@/lib/i18n";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const { user, ctx } = await getRepoContext();
@@ -18,17 +19,17 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   const quickCreate: ShellData["quickCreate"] = (
     [
-      ["company", "Company", "/companies?new=1"],
-      ["contact", "Contact", "/contacts?new=1"],
-      ["lead", "Lead", "/leads?new=1"],
-      ["deal", "Deal", "/deals?new=1"],
-      ["order", "Order", "/orders?new=1"],
-      ["task", "Task", "/tasks?new=1"],
+      ["company", tr("Company"), "/companies?new=1"],
+      ["contact", tr("Contact"), "/contacts?new=1"],
+      ["lead", tr("Lead"), "/leads?new=1"],
+      ["deal", tr("Deal"), "/deals?new=1"],
+      ["order", tr("Order"), "/orders?new=1"],
+      ["task", tr("Task"), "/tasks?new=1"],
     ] as const
   )
     .filter(([resource]) => can(user.actor, "create", resource))
     .map(([icon, label, href]) => ({ icon, label, href }));
-  if (can(user.actor, "manage", "pipeline_stage")) quickCreate.push({ label: "Pipeline stage", href: "/settings/pipeline?new=1", icon: "stage" });
+  if (can(user.actor, "manage", "pipeline_stage")) quickCreate.push({ label: tr("Pipeline stage"), href: "/settings/pipeline?new=1", icon: "stage" });
 
   const data: ShellData = {
     mode: user.mode,

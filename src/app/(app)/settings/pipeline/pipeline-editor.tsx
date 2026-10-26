@@ -29,6 +29,7 @@ import { pipelineStageInput } from "@/domain/entities";
 import { applyServerErrors } from "@/lib/forms";
 import { cn } from "@/lib/utils";
 import { reorderPipelineStagesAction, savePipelineStageAction } from "@/server/actions/settings";
+import { tr } from "@/lib/i18n";
 
 type Stage = { id: string; name: string; probability: number; is_won: boolean; is_lost: boolean; position: number };
 
@@ -61,7 +62,7 @@ export function PipelineEditor({ stages: initial, openNew }: { stages: Stage[]; 
         toast.error(result.error);
         return;
       }
-      toast.success("Stage order saved");
+      toast.success(tr("Stage order saved"));
       router.refresh();
     });
   };
@@ -86,21 +87,17 @@ export function PipelineEditor({ stages: initial, openNew }: { stages: Stage[]; 
 
   return (
     <SettingsCard
-      title="Pipeline stages"
-      description="Stages used by deals and the pipeline board. Probability is the default for deals entering the stage. The pipeline needs exactly one won and one lost stage."
+      title={tr("Pipeline stages")}
+      description={tr("Stages used by deals and the pipeline board. Probability is the default for deals entering the stage. The pipeline needs exactly one won and one lost stage.")}
       footer={
         <Button onClick={() => setEditing("new")}>
-          <Plus aria-hidden />
-          Add stage
-        </Button>
+          <Plus aria-hidden />{tr("Add stage")}</Button>
       }
     >
-      <p id="reorder-help" className="mb-3 text-xs text-text-muted">
-        Drag a stage by its handle, or focus the handle and use Space and the arrow keys. The arrow buttons also reorder.
-      </p>
+      <p id="reorder-help" className="mb-3 text-xs text-text-muted">{tr("Drag a stage by its handle, or focus the handle and use Space and the arrow keys. The arrow buttons also reorder.")}</p>
       <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={stages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-          <ol className="divide-y divide-border rounded-md border border-border" aria-label="Pipeline stages in order">
+          <ol className="divide-y divide-border rounded-md border border-border" aria-label={tr("Pipeline stages in order")}>
             {stages.map((stage, index) => (
               <SortableStage
                 key={stage.id}
@@ -156,7 +153,7 @@ function SortableStage({
         ref={setActivatorNodeRef}
         type="button"
         className="flex size-7 cursor-grab items-center justify-center rounded text-text-muted hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none active:cursor-grabbing"
-        aria-label={`Reorder ${stage.name}`}
+        aria-label={tr("Reorder {p0}", { p0: stage.name })}
         {...attributes}
         {...listeners}
         aria-describedby="reorder-help"
@@ -169,9 +166,9 @@ function SortableStage({
       {stage.is_lost && <StatusBadge status="lost" />}
       <span className="w-12 text-right text-sm text-text-subtle tabular-nums">{stage.probability}%</span>
       <div className="flex items-center">
-        <IconButton icon={ArrowUp} label={`Move ${stage.name} up`} size="sm" disabled={disabled || index === 0} onClick={() => onMove(index, -1)} />
-        <IconButton icon={ArrowDown} label={`Move ${stage.name} down`} size="sm" disabled={disabled || index === count - 1} onClick={() => onMove(index, 1)} />
-        <IconButton icon={Pencil} label={`Edit ${stage.name}`} size="sm" onClick={onEdit} />
+        <IconButton icon={ArrowUp} label={tr("Move {p0} up", { p0: stage.name })} size="sm" disabled={disabled || index === 0} onClick={() => onMove(index, -1)} />
+        <IconButton icon={ArrowDown} label={tr("Move {p0} down", { p0: stage.name })} size="sm" disabled={disabled || index === count - 1} onClick={() => onMove(index, 1)} />
+        <IconButton icon={Pencil} label={tr("Edit {p0}", { p0: stage.name })} size="sm" onClick={onEdit} />
       </div>
     </li>
   );
@@ -196,7 +193,7 @@ function StageDialog({ stage, open, onClose, onSaved }: { stage: Stage | null; o
   const onSubmit = handleSubmit(async (values) => {
     const result = await savePipelineStageAction(values);
     if (!result.ok) return applyServerErrors(result, setError);
-    toast.success(stage ? "Stage updated" : "Stage added");
+    toast.success(stage ? tr("Stage updated") : tr("Stage added"));
     onSaved();
   });
 
@@ -205,13 +202,13 @@ function StageDialog({ stage, open, onClose, onSaved }: { stage: Stage | null; o
       <DialogContent>
         <form onSubmit={onSubmit} noValidate className="grid gap-4">
           <DialogHeader>
-            <DialogTitle>{stage ? `Edit ${stage.name}` : "Add stage"}</DialogTitle>
-            <DialogDescription>New open stages are placed before the won and lost stages. You can reorder them afterwards.</DialogDescription>
+            <DialogTitle>{stage ? tr("Edit {p0}", { p0: stage.name }) : tr("Add stage")}</DialogTitle>
+            <DialogDescription>{tr("New open stages are placed before the won and lost stages. You can reorder them afterwards.")}</DialogDescription>
           </DialogHeader>
-          <FormField id="stage-name" label="Name" error={formState.errors.name?.message}>
+          <FormField id="stage-name" label={tr("Name")} error={formState.errors.name?.message}>
             <Input id="stage-name" autoFocus aria-invalid={!!formState.errors.name} {...register("name")} />
           </FormField>
-          <FormField id="stage-probability" label="Default probability (%)" error={formState.errors.probability?.message}>
+          <FormField id="stage-probability" label={tr("Default probability (%)")} error={formState.errors.probability?.message}>
             <Input id="stage-probability" type="number" min={0} max={100} step={1} className="w-28" aria-invalid={!!formState.errors.probability} {...register("probability")} />
           </FormField>
           <div className="flex flex-wrap gap-5">
@@ -220,9 +217,7 @@ function StageDialog({ stage, open, onClose, onSaved }: { stage: Stage | null; o
               name="is_won"
               render={({ field }) => (
                 <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
-                  Won stage
-                </label>
+                  <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />{tr("Won stage")}</label>
               )}
             />
             <Controller
@@ -230,9 +225,7 @@ function StageDialog({ stage, open, onClose, onSaved }: { stage: Stage | null; o
               name="is_lost"
               render={({ field }) => (
                 <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
-                  Lost stage
-                </label>
+                  <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />{tr("Lost stage")}</label>
               )}
             />
           </div>
@@ -242,11 +235,9 @@ function StageDialog({ stage, open, onClose, onSaved }: { stage: Stage | null; o
             </p>
           )}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>{tr("Cancel")}</Button>
             <Button type="submit" disabled={formState.isSubmitting}>
-              {formState.isSubmitting ? "Saving…" : "Save stage"}
+              {formState.isSubmitting ? tr("Saving…") : tr("Save stage")}
             </Button>
           </DialogFooter>
         </form>

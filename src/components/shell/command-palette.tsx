@@ -20,11 +20,12 @@ import { searchAction } from "@/server/actions/crm";
 import type { SearchResult } from "@/server/services/search";
 import { NAV_ICONS } from "./nav-icons";
 import { useShell } from "./shell-context";
+import { tr, trNode } from "@/lib/i18n";
 
 export const OPEN_COMMAND_PALETTE_EVENT = "nexora:open-command-palette";
 
 const RESULT_ICON = { company: Building2, contact: Users, lead: Target, deal: Handshake, order: Package, task: ListTodo } as const;
-const RESULT_GROUP = { company: "Companies", contact: "Contacts", lead: "Leads", deal: "Deals", order: "Orders", task: "Open tasks" } as const;
+const RESULT_GROUP = { company: tr("Companies"), contact: tr("Contacts"), lead: tr("Leads"), deal: tr("Deals"), order: "Orders", task: tr("Open tasks") } as const;
 
 /**
  * Cmd/Ctrl+K palette: page navigation plus record search. Search runs on the server and
@@ -103,17 +104,16 @@ export function CommandPalette() {
         setOpen(next);
         if (!next) reset();
       }}
-      title="Command palette"
-      description="Search records or jump to a page"
+      title={tr("Command palette")}
+      description={tr("Search records or jump to a page")}
     >
       <Command shouldFilter={false}>
-        <CommandInput placeholder="Search records or go to page…" value={query} onValueChange={(v) => setQuery(v.slice(0, 100))} />
+        <CommandInput placeholder={tr("Search records or go to page…")} value={query} onValueChange={(v) => setQuery(v.slice(0, 100))} />
         <CommandList>
-          <CommandEmpty>{loading ? "Searching…" : (error ?? "No matches.")}</CommandEmpty>
+          <CommandEmpty>{loading ? tr("Searching…") : (error ?? tr("No matches."))}</CommandEmpty>
           {loading && searching && (
             <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted" aria-live="polite">
-              <Loader2 className="size-3 animate-spin" aria-hidden /> Searching records…
-            </div>
+              <Loader2 className="size-3 animate-spin" aria-hidden /> {tr("Searching records…")}</div>
           )}
           {groups.map((g) => {
             const Icon = RESULT_ICON[g.kind];
@@ -130,20 +130,20 @@ export function CommandPalette() {
             );
           })}
           {navMatches.map((group, gi) => (
-            <CommandGroup key={group.label ?? gi} heading={group.label ?? "General"}>
+            <CommandGroup key={group.label ?? gi} heading={group.label ?? tr("General")}>
               {group.items.map((item) => {
                 const Icon = NAV_ICONS[item.icon];
                 return (
                   <CommandItem key={item.href} value={`nav-${item.href}`} onSelect={() => go(item.href)}>
                     <Icon aria-hidden />
-                    {item.label}
+                    {trNode(item.label)}
                   </CommandItem>
                 );
               })}
             </CommandGroup>
           ))}
           {settingsMatches.length > 0 && (
-            <CommandGroup heading="Settings">
+            <CommandGroup heading={tr("Settings")}>
               {settingsMatches.map((s) => (
                 <CommandItem key={s.href} value={`nav-${s.href}`} onSelect={() => go(s.href)}>
                   <Settings aria-hidden />
@@ -155,7 +155,7 @@ export function CommandPalette() {
           {!searching && (
             <>
               <CommandSeparator />
-              <CommandGroup heading="Preferences">
+              <CommandGroup heading={tr("Preferences")}>
                 <CommandItem
                   value="theme-light"
                   onSelect={() => {
@@ -163,9 +163,7 @@ export function CommandPalette() {
                     setOpen(false);
                   }}
                 >
-                  <Sun aria-hidden />
-                  Switch to light theme
-                </CommandItem>
+                  <Sun aria-hidden />{tr("Switch to light theme")}</CommandItem>
                 <CommandItem
                   value="theme-dark"
                   onSelect={() => {
@@ -173,9 +171,7 @@ export function CommandPalette() {
                     setOpen(false);
                   }}
                 >
-                  <Moon aria-hidden />
-                  Switch to dark theme
-                </CommandItem>
+                  <Moon aria-hidden />{tr("Switch to dark theme")}</CommandItem>
               </CommandGroup>
             </>
           )}
@@ -192,11 +188,11 @@ export function CommandPaletteButton() {
       size="sm"
       className="w-9 justify-center px-0 text-text-muted sm:w-56 sm:justify-start sm:px-2.5"
       onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT))}
-      aria-label="Open command palette"
+      aria-label={tr("Open command palette")}
     >
       <Search aria-hidden />
-      <span className="hidden sm:inline">Search or jump to…</span>
-      <CommandShortcut className="ml-auto hidden sm:inline">Ctrl K</CommandShortcut>
+      <span className="hidden sm:inline">{tr("Search or jump to…")}</span>
+      <CommandShortcut className="ml-auto hidden sm:inline">{tr("Ctrl K")}</CommandShortcut>
     </Button>
   );
 }

@@ -1,8 +1,9 @@
 import { ROLE_LABELS } from "@/lib/format";
 import { requirePermission } from "@/server/guards";
 import { ProfileForm } from "./profile-form";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Profile" };
+export const metadata = { title: tr("Profile") };
 
 export default async function ProfileSettingsPage() {
   const { user } = await requirePermission("update", "profile");

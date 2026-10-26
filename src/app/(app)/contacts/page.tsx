@@ -13,8 +13,9 @@ import { companyOptions } from "@/server/services/companies";
 import { listContacts } from "@/server/services/contacts";
 import { MessengerMarks } from "@/components/crm/messenger-links";
 import { ExportButton, ImportButton } from "@/components/list/export-import";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Contacts" };
+export const metadata = { title: tr("Contacts") };
 
 export default async function ContactsPage({ searchParams }: PageProps<"/contacts">) {
   await requirePermission("view", "contact");
@@ -33,8 +34,8 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Contacts"
-        description="People at your customer and prospect companies."
+        title={tr("Contacts")}
+        description={tr("People at your customer and prospect companies.")}
         actions={
           <>
             <ExportButton entity="contacts" query={exportQuery} />
@@ -44,14 +45,14 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
         }
       />
       <ListToolbar
-        searchPlaceholder="Search name, email, company, tag…"
+        searchPlaceholder={tr("Search name, email, company, tag…")}
         filters={[
-          { key: "company", label: "Companies", options: companies },
-          ...(people.assignable.length > 1 ? [{ key: "owner", label: "Owners", options: people.assignable }] : []),
+          { key: "company", label: tr("Companies"), options: companies },
+          ...(people.assignable.length > 1 ? [{ key: "owner", label: tr("Owners"), options: people.assignable }] : []),
         ]}
       />
       <ListTable
-        caption="Contacts"
+        caption={tr("Contacts")}
         basePath="/contacts"
         params={params}
         {...page}
@@ -60,7 +61,7 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
         columns={[
           {
             id: "name",
-            header: "Name",
+            header: tr("Name"),
             sort: "name",
             cell: (c) => (
               <div className="min-w-0">
@@ -71,12 +72,12 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
               </div>
             ),
           },
-          { id: "company", header: "Company", sort: "company", cell: (c) => <span className="text-text-subtle">{c.company_name ?? "—"}</span> },
-          { id: "email", header: "Email", hideBelow: "md", cell: (c) => <span className="text-text-subtle">{c.email ?? "—"}</span> },
-          { id: "messengers", header: "Messengers", hideBelow: "lg", cell: (c) => <MessengerMarks messengers={c.messengers} /> },
+          { id: "company", header: tr("Company"), sort: "company", cell: (c) => <span className="text-text-subtle">{c.company_name ?? "—"}</span> },
+          { id: "email", header: tr("Email"), hideBelow: "md", cell: (c) => <span className="text-text-subtle">{c.email ?? "—"}</span> },
+          { id: "messengers", header: tr("Messengers"), hideBelow: "lg", cell: (c) => <MessengerMarks messengers={c.messengers} /> },
           {
             id: "tags",
-            header: "Tags",
+            header: tr("Tags"),
             hideBelow: "xl",
             cell: (c) => (
               <span className="flex flex-wrap gap-1">
@@ -88,14 +89,14 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
               </span>
             ),
           },
-          { id: "last", header: "Last interaction", sort: "last_interaction", hideBelow: "lg", cell: (c) => <span className="text-text-subtle">{c.last_interaction ? formatRelative(c.last_interaction) : "None"}</span> },
-          { id: "owner", header: "Owner", hideBelow: "md", cell: (c) => <span className="text-text-subtle">{people.names[c.owner_id] ?? "—"}</span> },
+          { id: "last", header: tr("Last interaction"), sort: "last_interaction", hideBelow: "lg", cell: (c) => <span className="text-text-subtle">{c.last_interaction ? formatRelative(c.last_interaction) : tr("None")}</span> },
+          { id: "owner", header: tr("Owner"), hideBelow: "md", cell: (c) => <span className="text-text-subtle">{people.names[c.owner_id] ?? "—"}</span> },
         ]}
         empty={
           <EmptyState
             icon={Users}
-            title={filtered ? "No contacts match these filters" : "No contacts yet"}
-            description={filtered ? "Try a different search or clear the filters." : "Add the people you work with at your customers."}
+            title={filtered ? tr("No contacts match these filters") : tr("No contacts yet")}
+            description={filtered ? tr("Try a different search or clear the filters.") : tr("Add the people you work with at your customers.")}
             action={!filtered && perms.canCreate ? <ContactFormButton owners={people.assignable} companies={companies} /> : undefined}
             className="m-4 border-0 bg-transparent"
           />

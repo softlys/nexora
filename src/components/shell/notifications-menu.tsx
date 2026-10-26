@@ -10,6 +10,7 @@ import { formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { markNotificationsReadAction } from "@/server/actions/notifications";
 import { useShell } from "./shell-context";
+import { tr } from "@/lib/i18n";
 
 /** Bell reading the notifications table for the current user. */
 export function NotificationsMenu() {
@@ -25,7 +26,7 @@ export function NotificationsMenu() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`Notifications${notifications.unread ? `, ${notifications.unread} unread` : ""}`} className="relative">
+        <Button variant="ghost" size="icon" aria-label={tr("Notifications{p0}", { p0: notifications.unread ? `, ${notifications.unread} unread` : "" })} className="relative">
           <Bell aria-hidden />
           {notifications.unread > 0 && (
             <span className="absolute top-1 right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-brand px-1 text-[10px] leading-none font-semibold text-brand-foreground tabular-nums">
@@ -36,14 +37,12 @@ export function NotificationsMenu() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(22rem,calc(100vw-2rem))] p-0">
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <span className="text-sm font-medium">Notifications</span>
+          <span className="text-sm font-medium">{tr("Notifications")}</span>
           <Button variant="ghost" size="xs" disabled={pending || notifications.unread === 0} onClick={() => markRead("all")}>
-            <CheckCheck aria-hidden />
-            Mark all read
-          </Button>
+            <CheckCheck aria-hidden />{tr("Mark all read")}</Button>
         </div>
         {notifications.items.length === 0 ? (
-          <p className="px-3 py-8 text-center text-sm text-text-muted">You have no notifications.</p>
+          <p className="px-3 py-8 text-center text-sm text-text-muted">{tr("You have no notifications.")}</p>
         ) : (
           <ul className="max-h-96 overflow-y-auto py-1">
             {notifications.items.map((n) => {
@@ -55,7 +54,7 @@ export function NotificationsMenu() {
                     {n.body && <span className="block truncate text-xs text-text-muted">{n.body}</span>}
                     <span className="mt-0.5 block text-[11px] text-text-muted">{formatRelative(n.created_at)}</span>
                   </span>
-                  {!n.read_at && <span className="sr-only">Unread</span>}
+                  {!n.read_at && <span className="sr-only">{tr("Unread")}</span>}
                 </>
               );
               const itemClass = "flex w-full gap-2.5 px-3 py-2 text-left hover:bg-surface-subtle focus-visible:bg-surface-subtle focus-visible:outline-none";

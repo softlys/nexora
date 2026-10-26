@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/patterns/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { resetDemoDataAction } from "@/server/actions/session";
+import { tr } from "@/lib/i18n";
 
 export function ResetDemoButton() {
   const router = useRouter();
@@ -13,13 +14,11 @@ export function ResetDemoButton() {
     <ConfirmDialog
       trigger={
         <Button variant="destructive">
-          <RotateCcw aria-hidden />
-          Reset demo data
-        </Button>
+          <RotateCcw aria-hidden />{tr("Reset demo data")}</Button>
       }
-      title="Reset demo data?"
-      description="All records return to the seeded state. This cannot be undone."
-      confirmLabel="Reset data"
+      title={tr("Reset demo data?")}
+      description={tr("All records return to the seeded state. This cannot be undone.")}
+      confirmLabel={tr("Reset data")}
       destructive
       onConfirm={async () => {
         const result = await resetDemoDataAction();
@@ -27,7 +26,7 @@ export function ResetDemoButton() {
           toast.error(result.error);
           return false;
         }
-        toast.success("Demo data restored");
+        toast.success(tr("Demo data restored"));
         router.refresh();
       }}
     />

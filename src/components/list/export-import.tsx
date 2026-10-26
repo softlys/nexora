@@ -7,15 +7,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { importCsvAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 /** Downloads the current list (same search, filters and sort) as CSV. */
 export function ExportButton({ entity, query }: { entity: "companies" | "contacts" | "leads" | "deals"; query: string }) {
   return (
     <Button variant="outline" asChild>
       <a href={`/export/${entity}${query ? `?${query}` : ""}`} data-testid={`export-${entity}`}>
-        <Download aria-hidden />
-        Export CSV
-      </a>
+        <Download aria-hidden />{tr("Export CSV")}</a>
     </Button>
   );
 }
@@ -23,8 +22,8 @@ export function ExportButton({ entity, query }: { entity: "companies" | "contact
 type Result = { rows: number; valid: number; errors: Array<{ row: number; message: string }>; created: number };
 
 const COLUMNS = {
-  companies: "Name, Industry, Country (name or code) — required. Optional: Size, City, Address, Phone, Website, Lifecycle stage, Notes.",
-  contacts: "First name, Last name — required. Optional: Email, Phone, Job title, Company (an existing company's name), Tags (separated by ;), Telegram, WhatsApp, Instagram and other messengers.",
+  companies: tr("Name, Industry, Country (name or code) — required. Optional: Size, City, Address, Phone, Website, Lifecycle stage, Notes."),
+  contacts: tr("First name, Last name — required. Optional: Email, Phone, Job title, Company (an existing company's name), Tags (separated by ;), Telegram, WhatsApp, Instagram and other messengers."),
 } as const;
 
 /** Upload a CSV, see what would be imported and the errors by row, then import. */
@@ -56,7 +55,7 @@ export function ImportButton({ entity }: { entity: "companies" | "contacts" }) {
       }
       if (dryRun) setCheck(r.data);
       else {
-        toast.success(`Imported ${r.data.created} ${entity}`);
+        toast.success(tr("Imported {p0} {p1}", { p0: r.data.created, p1: entity }));
         setOpen(false);
         reset();
         router.refresh();
@@ -66,9 +65,7 @@ export function ImportButton({ entity }: { entity: "companies" | "contacts" }) {
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)} data-testid={`import-${entity}`}>
-        <Upload aria-hidden />
-        Import CSV
-      </Button>
+        <Upload aria-hidden />{tr("Import CSV")}</Button>
       <Dialog
         open={open}
         onOpenChange={(o) => {
@@ -79,14 +76,14 @@ export function ImportButton({ entity }: { entity: "companies" | "contacts" }) {
       >
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Import {entity} from CSV</DialogTitle>
-            <DialogDescription>{COLUMNS[entity]} The first row holds the column names; an exported file can be imported back. Comma or semicolon separated, UTF-8.</DialogDescription>
+            <DialogTitle>{tr("Import")} {entity} {tr("from CSV")}</DialogTitle>
+            <DialogDescription>{COLUMNS[entity]} {tr("The first row holds the column names; an exported file can be imported back. Comma or semicolon separated, UTF-8.")}</DialogDescription>
           </DialogHeader>
           <input
             ref={input}
             type="file"
             accept=".csv,text/csv"
-            aria-label="CSV file"
+            aria-label={tr("CSV file")}
             className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-border file:bg-surface-muted file:px-3 file:py-1.5 file:text-sm"
             onChange={async (e) => {
               const file = e.target.files?.[0];
@@ -103,7 +100,7 @@ export function ImportButton({ entity }: { entity: "companies" | "contacts" }) {
               run(true, text);
             }}
           />
-          {pending && <p className="text-sm text-text-muted">Checking {fileName}…</p>}
+          {pending && <p className="text-sm text-text-muted">{tr("Checking")} {fileName}…</p>}
           {error && (
             <p role="alert" className="rounded-md border border-danger-border bg-danger-bg p-3 text-sm text-danger">
               {error}
@@ -112,27 +109,25 @@ export function ImportButton({ entity }: { entity: "companies" | "contacts" }) {
           {check && (
             <div className="space-y-2 text-sm" data-testid="import-check">
               <p>
-                {check.rows} rows: <span className="font-medium text-success">{check.valid} ready to import</span>
-                {check.errors.length > 0 && <span className="font-medium text-danger">, {check.errors.length} with errors</span>}.
+                {check.rows} {tr("rows:")} <span className="font-medium text-success">{check.valid} {tr("ready to import")}</span>
+                {check.errors.length > 0 && <span className="font-medium text-danger">, {check.errors.length} {tr("with errors")}</span>}.
               </p>
               {check.errors.length > 0 && (
                 <ul className="max-h-48 space-y-1 overflow-auto rounded-md border border-border p-2 text-xs">
                   {check.errors.map((e) => (
                     <li key={`${e.row}-${e.message}`}>
-                      <span className="font-medium">Row {e.row}:</span> {e.message}
+                      <span className="font-medium">{tr("Row")} {e.row}:</span> {e.message}
                     </li>
                   ))}
                 </ul>
               )}
-              {check.errors.length > 0 && <p className="text-xs text-text-muted">Fix these rows in the file and choose it again. Nothing is imported while there are errors.</p>}
+              {check.errors.length > 0 && <p className="text-xs text-text-muted">{tr("Fix these rows in the file and choose it again. Nothing is imported while there are errors.")}</p>}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>{tr("Cancel")}</Button>
             <Button onClick={() => csv && run(false, csv)} disabled={pending || !check || check.errors.length > 0 || check.valid === 0}>
-              {pending && check ? "Importing…" : `Import ${check?.valid ?? ""} ${entity}`.trim()}
+              {pending && check ? tr("Importing…") : `Import ${check?.valid ?? ""} ${entity}`.trim()}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export type Tone = "neutral" | "accent" | "success" | "warning" | "danger" | "info";
@@ -83,7 +84,7 @@ const ACRONYMS = new Set(["api", "id", "url", "ip", "sso", "mfa", "crm"]);
 export function humanizeStatus(status: string): string {
   const words = status.split("_").map((w) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w));
   const label = words.join(" ");
-  return label.charAt(0).toUpperCase() + label.slice(1);
+  return tr(label.charAt(0).toUpperCase() + label.slice(1));
 }
 
 export function StatusBadge({
@@ -109,7 +110,7 @@ export function StatusBadge({
       )}
     >
       {dot && <span aria-hidden className={cn("size-1.5 rounded-full", dotClasses[resolvedTone])} />}
-      {label ?? (status ? humanizeStatus(status) : "")}
+      {label !== undefined ? tr(label) : status ? humanizeStatus(status) : ""}
     </span>
   );
 }

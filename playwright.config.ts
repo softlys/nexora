@@ -26,6 +26,8 @@ export default defineConfig({
     reuseExistingServer: false,
     env: {
       NEXORA_DATA_MODE: "demo",
+      // The e2e suite checks English texts; the Russian interface has its own test file.
+      NEXORA_LOCALE: process.env.E2E_LOCALE ?? "en",
       NEXORA_DEMO_DATA_PATH: ".data/e2e-demo.json",
       NEXORA_SESSION_SECRET_PATH: ".data/e2e-session-secret",
     },

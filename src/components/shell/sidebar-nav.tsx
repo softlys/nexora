@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { NavGroup } from "@/domain/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ICONS } from "./nav-icons";
+import { tr, trNode } from "@/lib/i18n";
 
 export function isActivePath(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
@@ -22,11 +23,11 @@ export function SidebarNav({
 }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Main" className="flex flex-col gap-4">
+    <nav aria-label={tr("Main")} className="flex flex-col gap-4">
       {groups.map((group, gi) => (
         <div key={group.label ?? gi} className="flex flex-col gap-0.5">
           {group.label && !collapsed && (
-            <div className="px-3 pb-1.5 text-[11px] font-medium tracking-wider text-sidebar-muted uppercase">{group.label}</div>
+            <div className="px-3 pb-1.5 text-[11px] font-medium tracking-wider text-sidebar-muted uppercase">{trNode(group.label)}</div>
           )}
           {group.label && collapsed && <div className="mx-2 mb-1 border-t border-sidebar-border" aria-hidden />}
           {group.items.map((item) => {
@@ -46,13 +47,13 @@ export function SidebarNav({
                 )}
               >
                 <Icon className={cn("size-4 shrink-0", active ? "text-brand-foreground" : "text-sidebar-muted group-hover:text-sidebar-foreground")} aria-hidden />
-                {collapsed ? <span className="sr-only">{item.label}</span> : <span className="truncate">{item.label}</span>}
+                {collapsed ? <span className="sr-only">{trNode(item.label)}</span> : <span className="truncate">{trNode(item.label)}</span>}
               </Link>
             );
             return collapsed ? (
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right">{item.label}</TooltipContent>
+                <TooltipContent side="right">{trNode(item.label)}</TooltipContent>
               </Tooltip>
             ) : (
               link

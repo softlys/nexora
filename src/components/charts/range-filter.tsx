@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RANGE_LABELS, RANGE_PRESETS, type RangePreset } from "@/domain/metrics/period";
+import { tr } from "@/lib/i18n";
 
 /** Date range filter for dashboards; the choice lives in the URL so links and reloads keep it. */
 export function RangeFilter({ preset, from, to }: { preset: RangePreset; from: string; to: string }) {
@@ -31,13 +32,13 @@ export function RangeFilter({ preset, from, to }: { preset: RangePreset; from: s
         value={preset}
         onValueChange={(v) => (v === "custom" ? go({ range: "custom", from: custom.from, to: custom.to }) : go({ range: v, from: null, to: null }))}
       >
-        <SelectTrigger className="w-40" aria-label="Date range">
+        <SelectTrigger className="w-40" aria-label={tr("Date range")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {RANGE_PRESETS.map((p) => (
             <SelectItem key={p} value={p}>
-              {RANGE_LABELS[p]}
+              {tr(RANGE_LABELS[p])}
             </SelectItem>
           ))}
         </SelectContent>
@@ -52,14 +53,12 @@ export function RangeFilter({ preset, from, to }: { preset: RangePreset; from: s
             go({ range: "custom", from: custom.from, to: custom.to });
           }}
         >
-          <Input type="date" aria-label="From" value={custom.from} max={custom.to} onChange={(e) => setCustom({ ...custom, from: e.target.value })} className="w-38" />
-          <Input type="date" aria-label="To" value={custom.to} min={custom.from} onChange={(e) => setCustom({ ...custom, to: e.target.value })} className="w-38" />
-          <Button type="submit" size="sm" variant="outline" disabled={invalid}>
-            Apply
-          </Button>
+          <Input type="date" aria-label={tr("From")} value={custom.from} max={custom.to} onChange={(e) => setCustom({ ...custom, from: e.target.value })} className="w-38" />
+          <Input type="date" aria-label={tr("To")} value={custom.to} min={custom.from} onChange={(e) => setCustom({ ...custom, to: e.target.value })} className="w-38" />
+          <Button type="submit" size="sm" variant="outline" disabled={invalid}>{tr("Apply")}</Button>
           {invalid && (
             <span role="alert" className="text-xs text-danger">
-              {!custom.from || !custom.to ? "Choose both dates." : "The end date is before the start date."}
+              {!custom.from || !custom.to ? tr("Choose both dates.") : tr("The end date is before the start date.")}
             </span>
           )}
         </form>

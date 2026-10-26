@@ -5,18 +5,19 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Tooltip, X
 import { CHART_COLORS, ChartContainer, ChartTooltip, chartAxis, chartGrid } from "@/components/patterns/chart-container";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { tr, intlLocale } from "@/lib/i18n";
 
 export type ValueFormat = "money" | "count" | "percent";
 
 function formatter(format: ValueFormat, currency: string, compact = false) {
-  return (v: number) => (format === "money" ? formatMoney(v, currency, "en-US", compact) : format === "percent" ? `${Math.round(v * 100)}%` : formatNumber(v));
+  return (v: number) => (format === "money" ? formatMoney(v, currency, intlLocale(), compact) : format === "percent" ? `${Math.round(v * 100)}%` : formatNumber(v));
 }
 
 /** Accessible data table under every chart ("Show data"). */
 function DataTable({ columns, rows }: { columns: string[]; rows: Array<Array<string | number>> }) {
   return (
     <details className="mt-3 text-xs">
-      <summary className="cursor-pointer text-text-muted hover:text-foreground">Show data</summary>
+      <summary className="cursor-pointer text-text-muted hover:text-foreground">{tr("Show data")}</summary>
       <div className="mt-2 max-h-56 overflow-auto rounded border border-border">
         <table className="w-full">
           <thead className="bg-surface-subtle text-text-muted">
@@ -48,8 +49,8 @@ function DataTable({ columns, rows }: { columns: string[]; rows: Array<Array<str
 const BUCKET_LABEL = (key: string, bucket: "day" | "week" | "month") => {
   const d = new Date(key.length === 7 ? `${key}-01T00:00:00Z` : `${key}T00:00:00Z`);
   // "Jan 2026", never "Jan 26" (which reads like a day).
-  if (bucket === "month") return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" }).format(d);
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(d);
+  if (bucket === "month") return new Intl.DateTimeFormat(intlLocale(), { month: "short", year: "numeric", timeZone: "UTC" }).format(d);
+  return new Intl.DateTimeFormat(intlLocale(), { month: "short", day: "numeric", timeZone: "UTC" }).format(d);
 };
 
 /** Last day covered by a bucket key, for drill-down links. */
@@ -89,10 +90,10 @@ export function RevenueChart({
     <ChartContainer
       title={title}
       description={description}
-      summary={`${title}: won ${fmt(totalWon)} and collected ${fmt(totalCollected)} between ${period.from} and ${period.to}, by ${bucket}.`}
+      summary={tr("{p0}: won {p1} and collected {p2} between {p3} and {p4}, by {p5}.", { p0: title, p1: fmt(totalWon), p2: fmt(totalCollected), p3: period.from, p4: period.to, p5: bucket })}
     
-      empty={empty ? <EmptyChart text="No won deals or payments in this period." /> : undefined}
-      footer={<DataTable columns={["Period", "Won deal value", "Collected"]} rows={rows.map((r) => [r.label, fmt(r.won), fmt(r.collected)])} />}
+      empty={empty ? <EmptyChart text={tr("No won deals or payments in this period.")} /> : undefined}
+      footer={<DataTable columns={[tr("Period"), tr("Won deal value"), tr("Collected")]} rows={rows.map((r) => [r.label, fmt(r.won), fmt(r.collected)])} />}
     >
       <LineChart
         data={rows}
@@ -218,8 +219,8 @@ export function PairedBarsChart({
   const empty = data.every((d) => d.a === 0 && d.b === 0);
   return (
     <ChartContainer title={title} description={description} summary={`${title}: ${data.map((d) => `${d.label} ${series[0]} ${fmt(d.a)}, ${series[1]} ${fmt(d.b)}`).join("; ")}.`}
-      empty={empty ? <EmptyChart text="No open deals." /> : undefined}
-      footer={<DataTable columns={["Stage", series[0], series[1]]} rows={data.map((d) => [d.label, fmt(d.a), fmt(d.b)])} />}
+      empty={empty ? <EmptyChart text={tr("No open deals.")} /> : undefined}
+      footer={<DataTable columns={[tr("Stage"), series[0], series[1]]} rows={data.map((d) => [d.label, fmt(d.a), fmt(d.b)])} />}
     >
       <BarChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }} barGap={2}>
         <CartesianGrid {...chartGrid} />

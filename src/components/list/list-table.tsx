@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { hrefWith, type Params } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import { ClickableRow } from "./clickable-row";
+import { tr, trNode } from "@/lib/i18n";
 
 export type ListColumn<T> = {
   id: string;
@@ -90,7 +91,7 @@ export function ListTable<T>({
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="p-0">
-                  {empty}
+                  {trNode(empty)}
                 </td>
               </tr>
             ) : (
@@ -117,17 +118,16 @@ export function ListTable<T>({
       {total > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-text-muted">
           <span className="tabular-nums">
-            {(page - 1) * size + 1}–{Math.min(total, page * size)} of {total}
+            {(page - 1) * size + 1}–{Math.min(total, page * size)} {tr("of")} {total}
           </span>
           {pageCount > 1 && (
-            <nav aria-label="Pagination" className="flex items-center gap-1">
-              <PageLink disabled={page <= 1} href={hrefWith(basePath, params, { page: page - 1 })} label="Previous page">
+            <nav aria-label={tr("Pagination")} className="flex items-center gap-1">
+              <PageLink disabled={page <= 1} href={hrefWith(basePath, params, { page: page - 1 })} label={tr("Previous page")}>
                 <ChevronLeft className="size-4" aria-hidden />
               </PageLink>
-              <span className="px-2 tabular-nums">
-                Page {page} of {pageCount}
+              <span className="px-2 tabular-nums">{tr("Page")} {page} {tr("of")} {pageCount}
               </span>
-              <PageLink disabled={page >= pageCount} href={hrefWith(basePath, params, { page: page + 1 })} label="Next page">
+              <PageLink disabled={page >= pageCount} href={hrefWith(basePath, params, { page: page + 1 })} label={tr("Next page")}>
                 <ChevronRight className="size-4" aria-hidden />
               </PageLink>
             </nav>

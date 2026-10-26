@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 /** NEXORA wordmark: a simple geometric mark in the accent color. */
 export function BrandMark({ className }: { className?: string }) {
@@ -22,7 +23,7 @@ export function Brand({ orgName, collapsed = false }: { orgName: string; collaps
       <BrandMark />
       {!collapsed && (
         <div className="min-w-0 leading-tight">
-          <div className="text-base font-semibold tracking-tight">NEXORA</div>
+          <div className="text-base font-semibold tracking-tight">{tr("NEXORA")}</div>
           <div className="truncate text-xs text-sidebar-muted">{orgName}</div>
         </div>
       )}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { TaskCheck } from "@/components/crm/task-check";
 import { hrefWith, type Params } from "@/lib/url";
 import { cn } from "@/lib/utils";
+import { tr, trNode, intlLocale } from "@/lib/i18n";
 
 export type CalendarTask = { id: string; title: string; due_at: string; status: string; priority: string; overdue: boolean; can_edit: boolean };
 
@@ -20,7 +21,7 @@ export function calendarRange(mode: "month" | "week", anchor: string): { days: s
   if (mode === "week") {
     const start = startOfWeek(a);
     const days = Array.from({ length: 7 }, (_, i) => iso(new Date(start.getTime() + i * DAY)));
-    const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    const fmt = new Intl.DateTimeFormat(intlLocale(), { month: "short", day: "numeric", timeZone: "UTC" });
     return { days, prev: iso(new Date(start.getTime() - 7 * DAY)), next: iso(new Date(start.getTime() + 7 * DAY)), title: `${fmt.format(start)} – ${fmt.format(new Date(start.getTime() + 6 * DAY))}` };
   }
   const first = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1));
@@ -33,7 +34,7 @@ export function calendarRange(mode: "month" | "week", anchor: string): { days: s
     days,
     prev: iso(new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() - 1, 1))),
     next: iso(new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + 1, 1))),
-    title: new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(first),
+    title: new Intl.DateTimeFormat(intlLocale(), { month: "long", year: "numeric", timeZone: "UTC" }).format(first),
   };
 }
 
@@ -46,26 +47,24 @@ export function TaskCalendar({ mode, anchor, tasks, params }: { mode: "month" | 
     const key = t.due_at.slice(0, 10);
     byDay.set(key, [...(byDay.get(key) ?? []), t]);
   }
-  const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weekdays = [tr("Mon"), tr("Tue"), tr("Wed"), tr("Thu"), tr("Fri"), tr("Sat"), tr("Sun")];
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-md font-semibold">{title}</h2>
+        <h2 className="text-md font-semibold">{trNode(title)}</h2>
         <div className="flex items-center gap-1">
-          <Link href={hrefWith("/tasks", params, { date: prev })} aria-label={`Previous ${mode}`} className="flex size-8 items-center justify-center rounded-md border border-border hover:bg-surface-muted">
+          <Link href={hrefWith("/tasks", params, { date: prev })} aria-label={tr("Previous {p0}", { p0: mode })} className="flex size-8 items-center justify-center rounded-md border border-border hover:bg-surface-muted">
             <ChevronLeft className="size-4" aria-hidden />
           </Link>
-          <Link href={hrefWith("/tasks", params, { date: null })} className="rounded-md border border-border px-2.5 py-1 text-sm hover:bg-surface-muted">
-            Today
-          </Link>
-          <Link href={hrefWith("/tasks", params, { date: next })} aria-label={`Next ${mode}`} className="flex size-8 items-center justify-center rounded-md border border-border hover:bg-surface-muted">
+          <Link href={hrefWith("/tasks", params, { date: null })} className="rounded-md border border-border px-2.5 py-1 text-sm hover:bg-surface-muted">{tr("Today")}</Link>
+          <Link href={hrefWith("/tasks", params, { date: next })} aria-label={tr("Next {p0}", { p0: mode })} className="flex size-8 items-center justify-center rounded-md border border-border hover:bg-surface-muted">
             <ChevronRight className="size-4" aria-hidden />
           </Link>
         </div>
       </div>
       <div className="relative overflow-x-auto">
-        <div className="grid min-w-[700px] grid-cols-7 overflow-hidden rounded-lg border border-border bg-border gap-px" role="grid" aria-label={`Tasks, ${title}`}>
+        <div className="grid min-w-[700px] grid-cols-7 overflow-hidden rounded-lg border border-border bg-border gap-px" role="grid" aria-label={tr("Tasks, {p0}", { p0: title })}>
           {weekdays.map((d) => (
             <div key={d} role="columnheader" className="bg-surface-subtle px-2 py-1.5 text-xs font-medium text-text-muted">
               {d}
@@ -90,7 +89,7 @@ export function TaskCalendar({ mode, anchor, tasks, params }: { mode: "month" | 
                       </Link>
                     </li>
                   ))}
-                  {mode === "month" && items.length > 4 && <li className="px-1 text-[11px] text-text-muted">+{items.length - 4} more</li>}
+                  {mode === "month" && items.length > 4 && <li className="px-1 text-[11px] text-text-muted">+{items.length - 4} {tr("more")}</li>}
                 </ul>
               </div>
             );

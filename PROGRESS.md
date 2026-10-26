@@ -28,6 +28,21 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Russian interface (2026-10-26)
+
+- **Whole interface in Russian.** Set with `NEXORA_LOCALE`: `ru` by default, `en` for English.
+  - Covered: every page, form, menu, table, toast, empty state and status label; server and validation messages, including Zod's own messages (`z.locales.ru()`); dates, numbers and money; country names (Россия); Russian plural forms.
+- **How it works.**
+  - `tr("English text")` uses the English text as the key. A missing translation falls back to English, so nothing breaks.
+  - The dictionary is `src/lib/i18n/ru.ts` (about 1,670 phrases).
+  - `tr` is synchronous and works in server components, client components and helpers. On the server the language comes from the environment, in the browser from `<html lang>`.
+- **Kept as they are:**
+  - demo data (company names, deal titles), translated only where they are the default pipeline stage names;
+  - CSV export headers, so files round-trip; import accepts country names in both languages.
+- **Tests.**
+  - The unit and e2e suites run in English (`NEXORA_LOCALE=en`).
+  - `tests/unit/i18n.test.ts` fails when any interface text in the code has no Russian translation, and checks plural forms and Russian dates, money and countries.
+
 ## Connectors (2026-10-24)
 
 Seventeen connectors, all configured on the server and listed on Integrations with status, setup steps and the addresses to paste (docs/integrations.md):

@@ -7,6 +7,10 @@
 import { messengersInput } from "@/lib/messengers";
 import { isCountryCode } from "@/lib/countries";
 import { z } from "zod";
+import { locale } from "@/lib/i18n";
+
+// Zod's built-in messages ("too long", "invalid input"…) follow the interface language.
+if (locale() === "ru") z.config(z.locales.ru());
 import {
   ACTIVITY_TYPES,
   COMPANY_SIZES,

@@ -1,8 +1,9 @@
 import { requirePermission } from "@/server/guards";
 import { getRepositories } from "@/server/repositories";
 import { PipelineEditor } from "./pipeline-editor";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Pipeline stages" };
+export const metadata = { title: tr("Pipeline stages") };
 
 export default async function PipelineSettingsPage({ searchParams }: PageProps<"/settings/pipeline">) {
   const { ctx } = await requirePermission("manage", "pipeline_stage");

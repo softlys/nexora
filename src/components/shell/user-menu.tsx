@@ -18,6 +18,7 @@ import {
 import { initials, ROLE_LABELS } from "@/lib/format";
 import { switchDemoUserAction, signOutAction } from "@/server/actions/session";
 import { useShell } from "./shell-context";
+import { tr } from "@/lib/i18n";
 
 function Avatar({ name }: { name: string }) {
   return (
@@ -39,7 +40,7 @@ export function UserMenu() {
         toast.error(result.error);
         return;
       }
-      toast.success(`Now acting as ${name}`, { description: ROLE_LABELS[result.data.role] });
+      toast.success(tr("Now acting as {p0}", { p0: name }), { description: ROLE_LABELS[result.data.role] });
       router.refresh();
     });
 
@@ -48,7 +49,7 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-9 gap-2 px-1.5" disabled={pending} aria-label={`User menu, signed in as ${user.full_name}`} data-testid="user-menu">
+        <Button variant="ghost" className="h-9 gap-2 px-1.5" disabled={pending} aria-label={tr("User menu, signed in as {p0}", { p0: user.full_name })} data-testid="user-menu">
           <Avatar name={user.full_name} />
           <span className="hidden min-w-0 text-left leading-tight md:block">
             <span className="block max-w-36 truncate text-sm font-medium">{user.full_name}</span>
@@ -67,14 +68,12 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/settings/profile">
-            <UserRound aria-hidden />
-            Profile
-          </Link>
+            <UserRound aria-hidden />{tr("Profile")}</Link>
         </DropdownMenuItem>
         {mode === "demo" && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs font-normal text-text-muted">Demo mode: act as</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs font-normal text-text-muted">{tr("Demo mode: act as")}</DropdownMenuLabel>
             {byRole.map(({ role, users }) =>
               users.length === 0 ? null : (
                 <DropdownMenuGroup key={role}>
@@ -92,7 +91,7 @@ export function UserMenu() {
                         <span className="block truncate text-sm">{u.full_name}</span>
                         <span className="block text-xs text-text-muted">{ROLE_LABELS[u.role]}</span>
                       </span>
-                      {u.id === user.id && <Check className="text-brand" aria-label="Current user" />}
+                      {u.id === user.id && <Check className="text-brand" aria-label={tr("Current user")} />}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuGroup>
@@ -104,9 +103,7 @@ export function UserMenu() {
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => startTransition(() => signOutAction())}>
-              <LogOut aria-hidden />
-              Sign out
-            </DropdownMenuItem>
+              <LogOut aria-hidden />{tr("Sign out")}</DropdownMenuItem>
           </>
         )}
       </DropdownMenuContent>

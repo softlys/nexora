@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 export type FilterDef = {
   key: string;
@@ -69,7 +70,7 @@ export function ListToolbar({
     <div className={cn("flex flex-wrap items-center gap-2", pending && "opacity-80")} aria-busy={pending}>
       <div className="relative w-full sm:w-64">
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-text-muted" aria-hidden />
-        <Input value={q} onChange={(e) => setQ(e.target.value.slice(0, 100))} placeholder={searchPlaceholder} aria-label="Search" className="pl-8" maxLength={100} />
+        <Input value={q} onChange={(e) => setQ(e.target.value.slice(0, 100))} placeholder={searchPlaceholder} aria-label={tr("Search")} className="pl-8" maxLength={100} />
       </div>
       {filters.map((f) => (
         <Select key={f.key} value={params.get(f.key) ?? ALL} onValueChange={(v) => update({ [f.key]: v === ALL ? null : v })}>
@@ -77,7 +78,7 @@ export function ListToolbar({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>All {f.label.toLowerCase()}</SelectItem>
+            <SelectItem value={ALL}>{tr("All")} {f.label.toLowerCase()}</SelectItem>
             {f.options.map((o) => (
               <SelectItem key={o.value} value={o.value}>
                 {o.label}
@@ -89,7 +90,7 @@ export function ListToolbar({
       {showArchivedToggle && (
         <Button variant={archived ? "secondary" : "ghost"} size="sm" aria-pressed={archived} onClick={() => update({ archived: archived ? null : "1" })}>
           <Archive aria-hidden />
-          {archived ? "Showing archived" : "Archived"}
+          {archived ? tr("Showing archived") : tr("Archived")}
         </Button>
       )}
       {active && (
@@ -101,9 +102,7 @@ export function ListToolbar({
             startTransition(() => router.replace(pathname, { scroll: false }));
           }}
         >
-          <X aria-hidden />
-          Clear
-        </Button>
+          <X aria-hidden />{tr("Clear")}</Button>
       )}
       <div className="ml-auto flex items-center gap-2">{children}</div>
     </div>

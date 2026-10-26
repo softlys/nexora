@@ -5,12 +5,13 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { orderPaymentLinkAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 const DOCS = [
-  { doc: "invoice", lang: "ru", label: "Счёт (RU)" },
-  { doc: "quote", lang: "ru", label: "КП (RU)" },
-  { doc: "invoice", lang: "en", label: "Invoice (EN)" },
-  { doc: "quote", lang: "en", label: "Quote (EN)" },
+  { doc: "invoice", lang: "ru", label: tr("Счёт (RU)") },
+  { doc: "quote", lang: "ru", label: tr("КП (RU)") },
+  { doc: "invoice", lang: "en", label: tr("Invoice (EN)") },
+  { doc: "quote", lang: "en", label: tr("Quote (EN)") },
 ] as const;
 
 /** Printable invoice and quote, and online payment links (YooKassa, Stripe) for an order. */
@@ -32,7 +33,7 @@ export function OrderDocuments({ orderId, providers, canPay }: { orderId: string
       {canPay && (
         <div className="space-y-2 border-t border-border pt-3">
           {providers.length === 0 ? (
-            <p className="text-xs text-text-muted">Online payment: connect YooKassa or Stripe in Integrations to send customers a payment link.</p>
+            <p className="text-xs text-text-muted">{tr("Online payment: connect YooKassa or Stripe in Integrations to send customers a payment link.")}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {providers.map((p) => (
@@ -48,8 +49,7 @@ export function OrderDocuments({ orderId, providers, canPay }: { orderId: string
                     })
                   }
                 >
-                  <CreditCard aria-hidden />
-                  Payment link · {p.label}
+                  <CreditCard aria-hidden />{tr("Payment link ·")} {p.label}
                 </Button>
               ))}
             </div>
@@ -62,21 +62,17 @@ export function OrderDocuments({ orderId, providers, canPay }: { orderId: string
                 variant="ghost"
                 onClick={() => {
                   void navigator.clipboard?.writeText(link);
-                  toast.success("Link copied: send it to the customer");
+                  toast.success(tr("Link copied: send it to the customer"));
                 }}
               >
-                <Copy aria-hidden />
-                Copy
-              </Button>
+                <Copy aria-hidden />{tr("Copy")}</Button>
               <Button asChild size="sm" variant="ghost">
                 <a href={link} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink aria-hidden />
-                  Open
-                </a>
+                  <ExternalLink aria-hidden />{tr("Open")}</a>
               </Button>
             </div>
           )}
-          <p className="text-xs text-text-muted">The payment is added to the order automatically when the provider confirms it.</p>
+          <p className="text-xs text-text-muted">{tr("The payment is added to the order automatically when the provider confirms it.")}</p>
         </div>
       )}
     </div>

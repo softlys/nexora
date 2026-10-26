@@ -2,23 +2,24 @@ import { Bell, FileText, GitBranch, Hash, ListTodo, Mail, MessageCircle, Message
 import { humanizeStatus } from "@/components/patterns/status-badge";
 import type { Step, StepType, WorkflowDefinition } from "@/domain/automation/schema";
 import { cn } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 const NODE: Record<StepType | "trigger", { icon: LucideIcon; tone: string; label: string; hint: string }> = {
-  trigger: { icon: Zap, tone: "bg-brand-subtle text-brand-subtle-foreground", label: "Trigger", hint: "Starts the workflow" },
-  condition: { icon: GitBranch, tone: "bg-warning-bg text-warning", label: "Condition", hint: "Branches on record fields" },
-  assign_owner: { icon: UserCheck, tone: "bg-info-bg text-info", label: "Assign owner", hint: "Round robin or a fixed rep" },
-  create_task: { icon: ListTodo, tone: "bg-info-bg text-info", label: "Create task", hint: "Assigns a follow-up" },
-  update_record: { icon: PencilLine, tone: "bg-info-bg text-info", label: "Update record", hint: "Allow-listed fields only" },
-  create_activity: { icon: MessageSquare, tone: "bg-info-bg text-info", label: "Log activity", hint: "Adds to the timeline" },
-  create_notification: { icon: Bell, tone: "bg-success-bg text-success", label: "Notify", hint: "In-app notification" },
-  convert_deal_to_order: { icon: PackageCheck, tone: "bg-success-bg text-success", label: "Create order", hint: "From a won deal" },
-  send_email: { icon: Mail, tone: "bg-success-bg text-success", label: "Send email", hint: "Owner or assignee" },
-  send_telegram: { icon: Send, tone: "bg-info-bg text-info", label: "Send to Telegram", hint: "Team chat via the bot" },
-  send_whatsapp: { icon: MessageCircle, tone: "bg-success-bg text-success", label: "WhatsApp", hint: "Message to the customer" },
-  send_slack: { icon: Hash, tone: "bg-info-bg text-info", label: "Send to Slack", hint: "Team channel" },
-  create_notion_page: { icon: FileText, tone: "bg-surface-muted text-text-subtle", label: "Notion page", hint: "In the configured database" },
-  send_webhook: { icon: Webhook, tone: "bg-success-bg text-success", label: "Send webhook", hint: "Signed, to integrations" },
-  delay: { icon: Timer, tone: "bg-surface-muted text-text-subtle", label: "Delay", hint: "Waits, then resumes" },
+  trigger: { icon: Zap, tone: "bg-brand-subtle text-brand-subtle-foreground", label: tr("Trigger"), hint: tr("Starts the workflow") },
+  condition: { icon: GitBranch, tone: "bg-warning-bg text-warning", label: tr("Condition"), hint: tr("Branches on record fields") },
+  assign_owner: { icon: UserCheck, tone: "bg-info-bg text-info", label: tr("Assign owner"), hint: tr("Round robin or a fixed rep") },
+  create_task: { icon: ListTodo, tone: "bg-info-bg text-info", label: tr("Create task"), hint: tr("Assigns a follow-up") },
+  update_record: { icon: PencilLine, tone: "bg-info-bg text-info", label: tr("Update record"), hint: tr("Allow-listed fields only") },
+  create_activity: { icon: MessageSquare, tone: "bg-info-bg text-info", label: tr("Log activity"), hint: tr("Adds to the timeline") },
+  create_notification: { icon: Bell, tone: "bg-success-bg text-success", label: tr("Notify"), hint: tr("In-app notification") },
+  convert_deal_to_order: { icon: PackageCheck, tone: "bg-success-bg text-success", label: tr("Create order"), hint: tr("From a won deal") },
+  send_email: { icon: Mail, tone: "bg-success-bg text-success", label: tr("Send email"), hint: tr("Owner or assignee") },
+  send_telegram: { icon: Send, tone: "bg-info-bg text-info", label: tr("Send to Telegram"), hint: tr("Team chat via the bot") },
+  send_whatsapp: { icon: MessageCircle, tone: "bg-success-bg text-success", label: tr("WhatsApp"), hint: tr("Message to the customer") },
+  send_slack: { icon: Hash, tone: "bg-info-bg text-info", label: tr("Send to Slack"), hint: tr("Team channel") },
+  create_notion_page: { icon: FileText, tone: "bg-surface-muted text-text-subtle", label: tr("Notion page"), hint: tr("In the configured database") },
+  send_webhook: { icon: Webhook, tone: "bg-success-bg text-success", label: tr("Send webhook"), hint: tr("Signed, to integrations") },
+  delay: { icon: Timer, tone: "bg-surface-muted text-text-subtle", label: tr("Delay"), hint: tr("Waits, then resumes") },
 };
 
 const W = 210;
@@ -29,9 +30,9 @@ const GAP_Y = 22;
 function detail(step: Step): string {
   switch (step.type) {
     case "condition":
-      return `If ${step.match} of ${step.conditions.length} condition${step.conditions.length === 1 ? "" : "s"}`;
+      return tr("If {p0} of {p1} condition{p2}", { p0: step.match, p1: step.conditions.length, p2: step.conditions.length === 1 ? "" : "s" });
     case "delay":
-      return `Wait ${step.hours} h`;
+      return tr("Wait {p0} h", { p0: step.hours });
     case "send_webhook":
       return step.event_type;
     case "send_telegram":
@@ -108,10 +109,10 @@ export function WorkflowCanvas({ definition }: { definition: WorkflowDefinition 
   const at = new Map(placed.map((p) => [p.id, p]));
   const used = new Set<StepType | "trigger">(["trigger", ...definition.steps.map((s) => s.type)]);
   return (
-    <section className="grid gap-4 rounded-xl border border-border bg-surface p-4 shadow-sm lg:grid-cols-[220px_1fr]" aria-label="Workflow map">
+    <section className="grid gap-4 rounded-xl border border-border bg-surface p-4 shadow-sm lg:grid-cols-[220px_1fr]" aria-label={tr("Workflow map")}>
       <aside>
-        <h2 className="text-sm font-semibold">Nodes library</h2>
-        <p className="mt-0.5 text-xs text-text-muted">Highlighted: used in this workflow</p>
+        <h2 className="text-sm font-semibold">{tr("Nodes library")}</h2>
+        <p className="mt-0.5 text-xs text-text-muted">{tr("Highlighted: used in this workflow")}</p>
         <ul className="mt-3 space-y-1.5">
           {(Object.keys(NODE) as Array<keyof typeof NODE>).map((k) => {
             const n = NODE[k];

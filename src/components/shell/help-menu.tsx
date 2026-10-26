@@ -13,12 +13,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { tr } from "@/lib/i18n";
 
 const SHORTCUTS: Array<[string, string]> = [
-  ["Ctrl / Cmd + K", "Open command palette"],
-  ["Esc", "Close dialogs and menus"],
-  ["Tab / Shift + Tab", "Move focus"],
-  ["Enter", "Open the focused row"],
+  [tr("Ctrl / Cmd + K"), tr("Open command palette")],
+  [tr("Esc"), tr("Close dialogs and menus")],
+  [tr("Tab / Shift + Tab"), tr("Move focus")],
+  [tr("Enter"), tr("Open the focused row")],
 ];
 
 export function HelpMenu() {
@@ -27,30 +28,26 @@ export function HelpMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Help">
+          <Button variant="ghost" size="icon" aria-label={tr("Help")}>
             <CircleHelp aria-hidden />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuLabel>Help</DropdownMenuLabel>
+          <DropdownMenuLabel>{tr("Help")}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <Link href="/help">
-              <BookOpen aria-hidden />
-              Guide and documentation
-            </Link>
+              <BookOpen aria-hidden />{tr("Guide and documentation")}</Link>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setShortcutsOpen(true)}>
-            <Keyboard aria-hidden />
-            Keyboard shortcuts
-          </DropdownMenuItem>
+            <Keyboard aria-hidden />{tr("Keyboard shortcuts")}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Keyboard shortcuts</DialogTitle>
-            <DialogDescription>Shortcuts available everywhere in NEXORA.</DialogDescription>
+            <DialogTitle>{tr("Keyboard shortcuts")}</DialogTitle>
+            <DialogDescription>{tr("Shortcuts available everywhere in NEXORA.")}</DialogDescription>
           </DialogHeader>
           <dl className="divide-y divide-border rounded-md border border-border">
             {SHORTCUTS.map(([keys, action]) => (

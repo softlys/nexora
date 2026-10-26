@@ -4,6 +4,7 @@ import { PermissionError } from "@/domain/permissions";
 import { DomainError } from "@/server/repositories/types";
 import { getRequestMeta } from "@/server/auth";
 import { assertSameOrigin, OriginError } from "@/server/security/origin";
+import { tr } from "@/lib/i18n";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data: T }
@@ -24,18 +25,18 @@ export async function runAction<T>(body: () => Promise<T>): Promise<ActionResult
       const fieldErrors: Record<string, string[]> = {};
       for (const issue of error.issues) {
         const key = issue.path.join(".") || "_form";
-        (fieldErrors[key] ??= []).push(issue.message);
+        (fieldErrors[key] ??= []).push(tr(issue.message));
       }
-      return { ok: false, error: "Please fix the highlighted fields.", fieldErrors };
+      return { ok: false, error: tr("Please fix the highlighted fields."), fieldErrors };
     }
     if (error instanceof PermissionError) {
-      return { ok: false, error: "You don't have permission to do that." };
+      return { ok: false, error: tr("You don't have permission to do that.") };
     }
     if (error instanceof DomainError) {
-      return { ok: false, error: error.message };
+      return { ok: false, error: tr(error.message) };
     }
     if (error instanceof OriginError) {
-      return { ok: false, error: "This request was blocked because it came from another site." };
+      return { ok: false, error: tr("This request was blocked because it came from another site.") };
     }
     // Next.js redirect/notFound signals must propagate.
     if (error && typeof error === "object" && "digest" in error && String((error as { digest: unknown }).digest).startsWith("NEXT_")) {
@@ -43,6 +44,6 @@ export async function runAction<T>(body: () => Promise<T>): Promise<ActionResult
     }
     const { request_id } = await getRequestMeta();
     console.error(`[action-error] request_id=${request_id}`, error);
-    return { ok: false, error: `Something went wrong. Reference: ${request_id.slice(0, 8)}`, requestId: request_id };
+    return { ok: false, error: tr("Something went wrong. Reference: {ref}", { ref: request_id.slice(0, 8) }), requestId: request_id };
   }
 }

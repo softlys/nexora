@@ -11,6 +11,7 @@ import { getValidationLog } from "@/server/security/validation-log";
 import { emitSecurity, flushSecurityEvents, type ServiceContext } from "@/server/services/context";
 import type { ActionResult } from "./action-result";
 import { dispatchAutomations } from "./automation/runtime";
+import { tr } from "@/lib/i18n";
 
 /** Builds the service context from the session. Organization and actor never come from the client. */
 export async function getServiceContext(): Promise<ServiceContext> {
@@ -58,9 +59,9 @@ export async function serviceAction<S extends z.ZodType, T>(
       const event = getValidationLog().record(ctx.actor.id, options.name, fields);
       if (event) emitSecurity(ctx, { type: "validation.failed", payload: { action: options.name, count: event.count, fields: event.fields } });
       const fieldErrors: Record<string, string[]> = {};
-      for (const issue of parsed.error.issues) (fieldErrors[issue.path.join(".") || "_form"] ??= []).push(issue.message);
+      for (const issue of parsed.error.issues) (fieldErrors[issue.path.join(".") || "_form"] ??= []).push(tr(issue.message));
       const unknownKeys = parsed.error.issues.some((i) => i.code === "unrecognized_keys");
-      return { ok: false, error: unknownKeys ? "The request contained fields that cannot be changed." : "Please fix the highlighted fields.", fieldErrors };
+      return { ok: false, error: tr(unknownKeys ? "The request contained fields that cannot be changed." : "Please fix the highlighted fields."), fieldErrors };
     }
 
     const data = await body(ctx, parsed.data);
@@ -68,14 +69,14 @@ export async function serviceAction<S extends z.ZodType, T>(
     await dispatchAutomations(ctx);
     return { ok: true, data };
   } catch (error) {
-    if (error instanceof PermissionError) return { ok: false, error: "You don't have permission to do that." };
-    if (error instanceof DomainError) return { ok: false, error: error.message };
-    if (error instanceof RateLimitError) return { ok: false, error: error.message };
-    if (error instanceof OriginError) return { ok: false, error: "This request was blocked because it came from another site." };
+    if (error instanceof PermissionError) return { ok: false, error: tr("You don't have permission to do that.") };
+    if (error instanceof DomainError) return { ok: false, error: tr(error.message) };
+    if (error instanceof RateLimitError) return { ok: false, error: tr(error.message) };
+    if (error instanceof OriginError) return { ok: false, error: tr("This request was blocked because it came from another site.") };
     if (error && typeof error === "object" && "digest" in error && String((error as { digest: unknown }).digest).startsWith("NEXT_")) throw error;
     const requestId = ctx?.meta.request_id ?? "unknown";
     console.error(`[action-error] action=${options.name} request_id=${requestId}`, error);
-    return { ok: false, error: `Something went wrong. Reference: ${requestId.slice(0, 8)}`, requestId };
+    return { ok: false, error: tr("Something went wrong. Reference: {ref}", { ref: requestId.slice(0, 8) }), requestId };
   } finally {
     if (ctx) await flushSecurityEvents(ctx);
   }

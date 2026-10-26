@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 export function SettingsNav({ sections }: { sections: Array<{ href: string; label: string }> }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Settings" className="min-w-0 md:w-52 md:shrink-0">
+    <nav aria-label={tr("Settings")} className="min-w-0 md:w-52 md:shrink-0">
       <ul className="relative flex gap-1 overflow-x-auto md:flex-col">
         {sections.map((s) => {
           const active = pathname === s.href;

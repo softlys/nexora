@@ -1,6 +1,7 @@
 import { CircleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { tr, trNode } from "@/lib/i18n";
 
 export function ErrorState({
   title = "Something went wrong",
@@ -19,9 +20,9 @@ export function ErrorState({
   return (
     <div role="alert" className={cn("flex flex-col items-center rounded-lg border border-danger-border bg-danger-bg px-6 py-10 text-center", className)}>
       <CircleAlert className="mb-3 size-6 text-danger" aria-hidden />
-      <h2 className="text-md font-semibold text-foreground">{title}</h2>
-      {description && <div className="mt-1.5 max-w-md text-sm text-text-subtle">{description}</div>}
-      {reference && <p className="mt-2 font-mono text-xs text-text-muted">Reference: {reference}</p>}
+      <h2 className="text-md font-semibold text-foreground">{trNode(title)}</h2>
+      {description && <div className="mt-1.5 max-w-md text-sm text-text-subtle">{trNode(description)}</div>}
+      {reference && <p className="mt-2 font-mono text-xs text-text-muted">{tr("Reference:")} {reference}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

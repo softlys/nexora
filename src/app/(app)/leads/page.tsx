@@ -13,8 +13,9 @@ import { requirePermission } from "@/server/guards";
 import { loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { listLeads } from "@/server/services/leads";
 import { ExportButton } from "@/components/list/export-import";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Leads" };
+export const metadata = { title: tr("Leads") };
 
 export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
   await requirePermission("view", "lead");
@@ -36,7 +37,7 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Leads" description="Interest that is not a deal yet. Qualify it, then convert it into a deal." actions={
+      <PageHeader title={tr("Leads")} description={tr("Interest that is not a deal yet. Qualify it, then convert it into a deal.")} actions={
           <>
             <ExportButton entity="leads" query={exportQuery} />
             {perms.canCreate && <LeadFormButton owners={people.assignable} autoOpen={first(params.new) === "1"} />}
@@ -44,16 +45,16 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
         }
       />
       <ListToolbar
-        searchPlaceholder="Search leads…"
+        searchPlaceholder={tr("Search leads…")}
         filters={[
-          { key: "status", label: "Statuses", options: LEAD_STATUSES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
-          { key: "source", label: "Sources", options: LEAD_SOURCES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
-          { key: "qualification", label: "Qualification", options: LEAD_QUALIFICATIONS.map((s) => ({ value: s, label: humanizeStatus(s) })) },
-          ...(people.assignable.length > 1 ? [{ key: "owner", label: "Owners", options: people.assignable }] : []),
+          { key: "status", label: tr("Statuses"), options: LEAD_STATUSES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
+          { key: "source", label: tr("Sources"), options: LEAD_SOURCES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
+          { key: "qualification", label: tr("Qualification"), options: LEAD_QUALIFICATIONS.map((s) => ({ value: s, label: humanizeStatus(s) })) },
+          ...(people.assignable.length > 1 ? [{ key: "owner", label: tr("Owners"), options: people.assignable }] : []),
         ]}
       />
       <ListTable
-        caption="Leads"
+        caption={tr("Leads")}
         basePath="/leads"
         params={params}
         {...page}
@@ -62,7 +63,7 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
         columns={[
           {
             id: "title",
-            header: "Lead",
+            header: tr("Lead"),
             sort: "title",
             cell: (l) => (
               <div className="min-w-0">
@@ -75,18 +76,18 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
               </div>
             ),
           },
-          { id: "status", header: "Status", sort: "status", cell: (l) => <StatusBadge status={l.status} /> },
-          { id: "qualification", header: "Qualification", hideBelow: "lg", cell: (l) => <StatusBadge label={humanizeStatus(l.qualification)} tone={l.qualification === "hot" ? "danger" : l.qualification === "warm" ? "warning" : "neutral"} /> },
-          { id: "source", header: "Source", hideBelow: "lg", cell: (l) => <span className="text-text-subtle">{humanizeStatus(l.source)}</span> },
-          { id: "value", header: "Est. value", sort: "value", align: "right", hideBelow: "sm", cell: (l) => formatMoney(l.estimated_value, l.currency) },
-          { id: "next", header: "Next action", sort: "next", hideBelow: "md", cell: (l) => <span className="text-text-subtle">{l.next_action ? `${l.next_action}${l.next_action_at ? ` · ${formatDate(l.next_action_at)}` : ""}` : "—"}</span> },
-          { id: "owner", header: "Owner", hideBelow: "md", cell: (l) => <span className="text-text-subtle">{l.owner_name ?? "Unassigned"}</span> },
+          { id: "status", header: tr("Status"), sort: "status", cell: (l) => <StatusBadge status={l.status} /> },
+          { id: "qualification", header: tr("Qualification"), hideBelow: "lg", cell: (l) => <StatusBadge label={humanizeStatus(l.qualification)} tone={l.qualification === "hot" ? "danger" : l.qualification === "warm" ? "warning" : "neutral"} /> },
+          { id: "source", header: tr("Source"), hideBelow: "lg", cell: (l) => <span className="text-text-subtle">{humanizeStatus(l.source)}</span> },
+          { id: "value", header: tr("Est. value"), sort: "value", align: "right", hideBelow: "sm", cell: (l) => formatMoney(l.estimated_value, l.currency) },
+          { id: "next", header: tr("Next action"), sort: "next", hideBelow: "md", cell: (l) => <span className="text-text-subtle">{l.next_action ? `${l.next_action}${l.next_action_at ? ` · ${formatDate(l.next_action_at)}` : ""}` : "—"}</span> },
+          { id: "owner", header: tr("Owner"), hideBelow: "md", cell: (l) => <span className="text-text-subtle">{l.owner_name ?? tr("Unassigned")}</span> },
         ]}
         empty={
           <EmptyState
             icon={Target}
-            title={filtered ? "No leads match these filters" : "No leads yet"}
-            description={filtered ? "Try a different search or clear the filters." : "Add a lead when someone shows interest."}
+            title={filtered ? tr("No leads match these filters") : tr("No leads yet")}
+            description={filtered ? tr("Try a different search or clear the filters.") : tr("Add a lead when someone shows interest.")}
             action={!filtered && perms.canCreate ? <LeadFormButton owners={people.assignable} /> : undefined}
             className="m-4 border-0 bg-transparent"
           />

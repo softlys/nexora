@@ -16,6 +16,7 @@ import {
   InputGroupAddon,
 } from "@/components/ui/input-group"
 import { SearchIcon, CheckIcon } from "lucide-react"
+import { trNode } from "@/lib/i18n";
 
 function Command({
   className,
@@ -49,8 +50,8 @@ function CommandDialog({
   return (
     <Dialog {...props}>
       <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
+        <DialogTitle>{trNode(title)}</DialogTitle>
+        <DialogDescription>{trNode(description)}</DialogDescription>
       </DialogHeader>
       <DialogContent
         className={cn(

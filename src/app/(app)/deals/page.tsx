@@ -16,8 +16,9 @@ import { requirePermission } from "@/server/guards";
 import { dealFormOptions, loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { listDeals } from "@/server/services/deals";
 import { ExportButton } from "@/components/list/export-import";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Deals" };
+export const metadata = { title: tr("Deals") };
 
 export default async function DealsPage({ searchParams }: PageProps<"/deals">) {
   const { user } = await requirePermission("view", "deal");
@@ -37,30 +38,28 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Deals"
-        description="Every opportunity, from qualification to won or lost."
+        title={tr("Deals")}
+        description={tr("Every opportunity, from qualification to won or lost.")}
         actions={
           <>
-            <Link href="/pipeline" className="text-sm text-brand hover:underline">
-              Open pipeline board
-            </Link>
+            <Link href="/pipeline" className="text-sm text-brand hover:underline">{tr("Open pipeline board")}</Link>
             <ExportButton entity="deals" query={exportQuery} />
             {perms.canCreate && <DealFormButton options={options} autoOpen={first(params.new) === "1"} />}
           </>
         }
       />
       <ListToolbar
-        searchPlaceholder="Search deals…"
+        searchPlaceholder={tr("Search deals…")}
         filters={[
-          { key: "status", label: "Statuses", options: [{ value: "open", label: "Open" }, { value: "won", label: "Won" }, { value: "lost", label: "Lost" }] },
-          { key: "stage", label: "Stages", options: page.stages.map((s) => ({ value: s.id, label: s.name })) },
-          ...(people.assignable.length > 1 ? [{ key: "owner", label: "Owners", options: people.assignable }] : []),
+          { key: "status", label: tr("Statuses"), options: [{ value: "open", label: tr("Open") }, { value: "won", label: tr("Won") }, { value: "lost", label: tr("Lost") }] },
+          { key: "stage", label: tr("Stages"), options: page.stages.map((s) => ({ value: s.id, label: tr(s.name) })) },
+          ...(people.assignable.length > 1 ? [{ key: "owner", label: tr("Owners"), options: people.assignable }] : []),
         ]}
       >
         <RangeFilters />
       </ListToolbar>
       <ListTable
-        caption="Deals"
+        caption={tr("Deals")}
         basePath="/deals"
         params={params}
         {...page}
@@ -69,7 +68,7 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
         columns={[
           {
             id: "name",
-            header: "Deal",
+            header: tr("Deal"),
             sort: "name",
             cell: (d) => (
               <div className="min-w-0">
@@ -80,28 +79,28 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
               </div>
             ),
           },
-          { id: "stage", header: "Stage", sort: "stage", cell: (d) => <StatusBadge label={d.stage_name} tone={d.is_won ? "success" : d.is_lost ? "neutral" : "accent"} /> },
-          { id: "amount", header: "Amount", sort: "amount", align: "right", cell: (d) => formatMoney(d.amount, d.currency) },
-          { id: "probability", header: "Prob.", align: "right", hideBelow: "lg", cell: (d) => `${d.probability}%` },
+          { id: "stage", header: tr("Stage"), sort: "stage", cell: (d) => <StatusBadge label={d.stage_name} tone={d.is_won ? "success" : d.is_lost ? "neutral" : "accent"} /> },
+          { id: "amount", header: tr("Amount"), sort: "amount", align: "right", cell: (d) => formatMoney(d.amount, d.currency) },
+          { id: "probability", header: tr("Prob."), align: "right", hideBelow: "lg", cell: (d) => `${d.probability}%` },
           {
             id: "close",
-            header: "Close date",
+            header: tr("Close date"),
             sort: "close",
             hideBelow: "md",
             // Closed deals show when they actually closed; open deals their expected date.
             cell: (d) =>
               d.closed_at ? (
-                <span className="text-text-subtle" title="Closed">
+                <span className="text-text-subtle" title={tr("Closed")}>
                   {formatDate(d.closed_at)}
                 </span>
               ) : (
-                <span className="text-text-subtle" title="Expected">
+                <span className="text-text-subtle" title={tr("Expected")}>
                   {formatDate(d.expected_close_date)}
                   {d.expected_close_date && <span className="ml-1 text-xs text-text-muted">exp.</span>}
                 </span>
               ),
           },
-          { id: "owner", header: "Owner", sort: "owner", hideBelow: "md", cell: (d) => <span className="text-text-subtle">{d.owner_name}</span> },
+          { id: "owner", header: tr("Owner"), sort: "owner", hideBelow: "md", cell: (d) => <span className="text-text-subtle">{d.owner_name}</span> },
           {
             id: "preview",
             header: "",
@@ -119,8 +118,8 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
         empty={
           <EmptyState
             icon={Handshake}
-            title={filtered ? "No deals match these filters" : "No deals yet"}
-            description={filtered ? "Try a different search or clear the filters." : "Create a deal or convert a qualified lead."}
+            title={filtered ? tr("No deals match these filters") : tr("No deals yet")}
+            description={filtered ? tr("Try a different search or clear the filters.") : tr("Create a deal or convert a qualified lead.")}
             action={!filtered && perms.canCreate ? <DealFormButton options={options} /> : undefined}
             className="m-4 border-0 bg-transparent"
           />

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { trNode } from "@/lib/i18n";
 
 /**
  * Empty state: says what the area holds and offers at most one real next step.
@@ -28,8 +29,8 @@ export function EmptyState({
           <Icon className="size-5" aria-hidden />
         </div>
       )}
-      <h2 className="text-md font-semibold text-foreground">{title}</h2>
-      {description && <div className="mt-1.5 max-w-md text-sm text-text-muted">{description}</div>}
+      <h2 className="text-md font-semibold text-foreground">{trNode(title)}</h2>
+      {description && <div className="mt-1.5 max-w-md text-sm text-text-muted">{trNode(description)}</div>}
       {children && <div className="mt-5 w-full max-w-lg">{children}</div>}
       {action && <div className="mt-5">{action}</div>}
     </div>

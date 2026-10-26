@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { tr } from "@/lib/i18n";
 
 /** Date picker that reads and writes YYYY-MM-DD strings (date-only, no time zone drift). */
 export function DatePicker({
@@ -63,7 +64,7 @@ export function DatePicker({
         </PopoverContent>
       </Popover>
       {clearable && value && !disabled && (
-        <Button type="button" variant="ghost" size="icon-sm" aria-label="Clear date" onClick={() => onChange(null)}>
+        <Button type="button" variant="ghost" size="icon-sm" aria-label={tr("Clear date")} onClick={() => onChange(null)}>
           <X aria-hidden />
         </Button>
       )}

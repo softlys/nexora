@@ -9,15 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import type { EntityType } from "@/domain/entities";
 import { addCommentAction, logActivityAction } from "@/server/actions/crm";
+import { tr, trNode } from "@/lib/i18n";
 
 type Links = Partial<Record<"company_id" | "contact_id" | "deal_id" | "order_id" | "lead_id", string>>;
 
 const TYPES = [
-  ["call", "Call"],
-  ["meeting", "Meeting"],
-  ["email", "Email"],
-  ["note", "Note"],
-  ["follow_up", "Follow-up"],
+  ["call", tr("Call")],
+  ["meeting", tr("Meeting")],
+  ["email", tr("Email")],
+  ["note", tr("Note")],
+  ["follow_up", tr("Follow-up")],
 ] as const;
 
 /** Log a call, meeting, email, note or follow-up on a record. */
@@ -49,7 +50,7 @@ export function ActivityComposer({ links }: { links: Links }) {
       }
       setSubject("");
       setBody("");
-      toast.success("Activity logged");
+      toast.success(tr("Activity logged"));
       router.refresh();
     });
 
@@ -60,30 +61,30 @@ export function ActivityComposer({ links }: { links: Links }) {
         e.preventDefault();
         submit();
       }}
-      aria-label="Log activity"
+      aria-label={tr("Log activity")}
     >
       <div className="flex flex-col gap-2 sm:flex-row">
         <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
-          <SelectTrigger className="sm:w-36" aria-label="Activity type">
+          <SelectTrigger className="sm:w-36" aria-label={tr("Activity type")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {TYPES.map(([value, label]) => (
               <SelectItem key={value} value={value}>
-                {label}
+                {trNode(label)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Summary, e.g. Discussed delivery dates" aria-label="Activity summary" maxLength={200} aria-invalid={!!error} />
+        <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={tr("Summary, e.g. Discussed delivery dates")} aria-label={tr("Activity summary")} maxLength={200} aria-invalid={!!error} />
       </div>
-      <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Details (optional)" aria-label="Activity details" rows={2} maxLength={5000} />
+      <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder={tr("Details (optional)")} aria-label={tr("Activity details")} rows={2} maxLength={5000} />
       <div className="flex items-center justify-between gap-2">
         <p role="alert" className="text-xs text-danger">
           {error}
         </p>
         <Button type="submit" size="sm" disabled={pending || !subject.trim()}>
-          {pending ? "Saving…" : "Log activity"}
+          {pending ? tr("Saving…") : tr("Log activity")}
         </Button>
       </div>
     </form>
@@ -98,7 +99,7 @@ export function CommentComposer({ entityType, entityId }: { entityType: EntityTy
   return (
     <form
       className="space-y-2"
-      aria-label="Add comment"
+      aria-label={tr("Add comment")}
       onSubmit={(e) => {
         e.preventDefault();
         startTransition(async () => {
@@ -108,15 +109,15 @@ export function CommentComposer({ entityType, entityId }: { entityType: EntityTy
             return;
           }
           setBody("");
-          toast.success("Comment added");
+          toast.success(tr("Comment added"));
           router.refresh();
         });
       }}
     >
-      <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write a comment…" aria-label="Comment" rows={2} maxLength={5000} />
+      <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder={tr("Write a comment…")} aria-label={tr("Comment")} rows={2} maxLength={5000} />
       <div className="flex justify-end">
         <Button type="submit" size="sm" variant="outline" disabled={pending || !body.trim()}>
-          {pending ? "Posting…" : "Comment"}
+          {pending ? tr("Posting…") : tr("Comment")}
         </Button>
       </div>
     </form>

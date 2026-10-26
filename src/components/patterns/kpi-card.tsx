@@ -2,6 +2,7 @@ import { ArrowDownRight, ArrowRight, ArrowUpRight, type LucideIcon } from "lucid
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { tr, trNode } from "@/lib/i18n";
 
 export type KpiDelta = {
   /** Relative change versus the comparison period, e.g. 0.12 for +12%. Null when not comparable. */
@@ -54,13 +55,13 @@ export function KpiCard({
   const body = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <span className="min-w-0 pt-0.5 text-sm font-medium text-text-subtle">{label}</span>
+        <span className="min-w-0 pt-0.5 text-sm font-medium text-text-subtle">{trNode(label)}</span>
         {Icon && (
           <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", t.tile)}>
             <Icon className="size-[18px]" aria-hidden />
           </span>
         )}
-        {illustrative && <span className="rounded border border-warning-border bg-warning-bg px-1 text-[11px] font-medium text-warning">Illustrative</span>}
+        {illustrative && <span className="rounded border border-warning-border bg-warning-bg px-1 text-[11px] font-medium text-warning">{tr("Illustrative")}</span>}
       </div>
       <div className="mt-1 flex items-end justify-between gap-2">
         <div className="min-w-0 text-2xl font-semibold tracking-tight text-foreground tabular-nums">{value}</div>
@@ -72,7 +73,7 @@ export function KpiCard({
             <DeltaPill delta={delta} />
           </div>
         )}
-        {hint && <div className="truncate">{hint}</div>}
+        {hint && <div className="truncate">{trNode(hint)}</div>}
       </div>
     </>
   );
@@ -108,7 +109,7 @@ export function Sparkline({ values, color, className }: { values: number[]; colo
 }
 
 function DeltaPill({ delta }: { delta: KpiDelta }) {
-  if (delta.value === null) return <span className="text-text-muted">{delta.emptyLabel ?? "No prior data to compare"}</span>;
+  if (delta.value === null) return <span className="text-text-muted">{delta.emptyLabel ?? tr("No prior data to compare")}</span>;
   const up = delta.value > 0;
   const flat = Math.abs(delta.value) < 0.005;
   const good = flat ? null : up === (delta.positiveIsGood ?? true);
@@ -117,7 +118,7 @@ function DeltaPill({ delta }: { delta: KpiDelta }) {
     <span className={cn("inline-flex flex-wrap items-center gap-x-0.5 font-medium tabular-nums", good === null ? "text-text-muted" : good ? "text-success" : "text-danger")}>
       <Icon className="size-3.5" aria-hidden />
       {`${up ? "+" : ""}${(delta.value * 100).toFixed(1)}%`}
-      {delta.label && <span className="ml-1 font-normal whitespace-nowrap text-text-muted">{delta.label}</span>}
+      {delta.label && <span className="ml-1 font-normal whitespace-nowrap text-text-muted">{trNode(delta.label)}</span>}
     </span>
   );
 }

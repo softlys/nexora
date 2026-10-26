@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { dealAssistAction, dealMeetingAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 /** AI summary and email draft for a deal (YandexGPT or Claude, whichever the server is configured with). */
 export function DealAssistant({ dealId, provider }: { dealId: string; provider: string | null }) {
@@ -12,7 +13,7 @@ export function DealAssistant({ dealId, provider }: { dealId: string; provider: 
   const [result, setResult] = useState<{ kind: "summary" | "email"; text: string } | null>(null);
   const [pending, start] = useTransition();
   if (!provider) {
-    return <p className="text-sm text-text-muted">Not configured. Add YandexGPT or Claude keys on the server (Integrations → AI assistant) to get deal summaries and email drafts.</p>;
+    return <p className="text-sm text-text-muted">{tr("Not configured. Add YandexGPT or Claude keys on the server (Integrations → AI assistant) to get deal summaries and email drafts.")}</p>;
   }
   const run = (kind: "summary" | "email") =>
     start(async () => {
@@ -24,14 +25,10 @@ export function DealAssistant({ dealId, provider }: { dealId: string; provider: 
     <div className="space-y-3" data-testid="deal-assistant">
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={() => run("summary")} disabled={pending}>
-          <Sparkles aria-hidden />
-          Summary and next steps
-        </Button>
+          <Sparkles aria-hidden />{tr("Summary and next steps")}</Button>
         <Button size="sm" variant="outline" onClick={() => run("email")} disabled={pending}>
-          <Mail aria-hidden />
-          Draft email
-        </Button>
-        <div className="ml-auto flex overflow-hidden rounded-md border border-border text-xs" role="group" aria-label="Answer language">
+          <Mail aria-hidden />{tr("Draft email")}</Button>
+        <div className="ml-auto flex overflow-hidden rounded-md border border-border text-xs" role="group" aria-label={tr("Answer language")}>
           {(["ru", "en"] as const).map((l) => (
             <button key={l} type="button" onClick={() => setLanguage(l)} aria-pressed={language === l} className={language === l ? "bg-surface-muted px-2 py-1 font-medium" : "px-2 py-1 text-text-muted"}>
               {l.toUpperCase()}
@@ -39,25 +36,23 @@ export function DealAssistant({ dealId, provider }: { dealId: string; provider: 
           ))}
         </div>
       </div>
-      {pending && <p className="text-sm text-text-muted">{provider} is thinking…</p>}
+      {pending && <p className="text-sm text-text-muted">{provider} {tr("is thinking…")}</p>}
       {result && !pending && (
         <div className="space-y-2 rounded-md border border-border bg-surface-subtle p-3">
           <p className="text-sm whitespace-pre-wrap" data-testid="deal-assistant-result">
             {result.text}
           </p>
           <div className="flex items-center justify-between gap-2 text-xs text-text-muted">
-            <span>{provider} · check before you use it</span>
+            <span>{provider} {tr("· check before you use it")}</span>
             <Button
               size="sm"
               variant="ghost"
               onClick={() => {
                 void navigator.clipboard?.writeText(result.text);
-                toast.success("Copied");
+                toast.success(tr("Copied"));
               }}
             >
-              <Copy aria-hidden />
-              Copy
-            </Button>
+              <Copy aria-hidden />{tr("Copy")}</Button>
           </div>
         </div>
       )}
@@ -84,7 +79,7 @@ export function DealMeetingButton({ dealId }: { dealId: string }) {
         }
       >
         <Video aria-hidden />
-        {pending ? "Creating…" : "Create Telemost meeting"}
+        {pending ? tr("Creating…") : tr("Create Telemost meeting")}
       </Button>
       {url && (
         <div className="flex items-center gap-2 rounded-md border border-border bg-surface-subtle p-2 text-xs">
@@ -96,9 +91,9 @@ export function DealMeetingButton({ dealId }: { dealId: string }) {
             variant="ghost"
             onClick={() => {
               void navigator.clipboard?.writeText(url);
-              toast.success("Link copied");
+              toast.success(tr("Link copied"));
             }}
-            aria-label="Copy meeting link"
+            aria-label={tr("Copy meeting link")}
           >
             <Copy aria-hidden />
           </Button>

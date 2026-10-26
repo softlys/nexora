@@ -17,6 +17,7 @@ import { maskedKey, SCOPE_DESCRIPTIONS, SCOPES_BY_KIND, type ApiKeyKind, type Ap
 import type { ApiKey } from "@/domain/entities";
 import { formatDate, formatRelative } from "@/lib/format";
 import { createApiKeyAction, revokeApiKeyAction } from "@/server/actions/integrations";
+import { tr } from "@/lib/i18n";
 
 type KeyView = Omit<ApiKey, "key_hash">;
 
@@ -59,12 +60,12 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
     });
 
   const revoke = async (id: string) => {
-    const result = await revokeApiKeyAction({ id, reason: "Revoked in Settings" });
+    const result = await revokeApiKeyAction({ id, reason: tr("Revoked in Settings") });
     if (!result.ok) {
       toast.error(result.error);
       return false;
     }
-    toast.success("Key revoked");
+    toast.success(tr("Key revoked"));
     router.refresh();
   };
 
@@ -72,25 +73,23 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Button onClick={openNew}>
-          <Plus aria-hidden />
-          Create API key
-        </Button>
+          <Plus aria-hidden />{tr("Create API key")}</Button>
       </div>
       {keys.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border-strong p-6 text-center text-sm text-text-muted">No API keys yet. Create one for Make, n8n, a website form or the SIEM.</p>
+        <p className="rounded-lg border border-dashed border-border-strong p-6 text-center text-sm text-text-muted">{tr("No API keys yet. Create one for Make, n8n, a website form or the SIEM.")}</p>
       ) : (
         <div className="relative overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
-            <caption className="sr-only">API keys</caption>
+            <caption className="sr-only">{tr("API keys")}</caption>
             <thead className="border-b border-border bg-surface-subtle text-xs text-text-muted">
               <tr>
-                <th scope="col" className="h-9 px-3 text-left font-medium">Name</th>
-                <th scope="col" className="h-9 px-3 text-left font-medium">Key</th>
-                <th scope="col" className="hidden h-9 px-3 text-left font-medium md:table-cell">Scopes</th>
-                <th scope="col" className="hidden h-9 px-3 text-left font-medium sm:table-cell">Last used</th>
-                <th scope="col" className="h-9 px-3 text-left font-medium">Status</th>
+                <th scope="col" className="h-9 px-3 text-left font-medium">{tr("Name")}</th>
+                <th scope="col" className="h-9 px-3 text-left font-medium">{tr("Key")}</th>
+                <th scope="col" className="hidden h-9 px-3 text-left font-medium md:table-cell">{tr("Scopes")}</th>
+                <th scope="col" className="hidden h-9 px-3 text-left font-medium sm:table-cell">{tr("Last used")}</th>
+                <th scope="col" className="h-9 px-3 text-left font-medium">{tr("Status")}</th>
                 <th scope="col" className="h-9 px-3">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{tr("Actions")}</span>
                 </th>
               </tr>
             </thead>
@@ -99,7 +98,7 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
                 <tr key={k.id} className="border-b border-border last:border-0" data-testid="api-key-row">
                   <td className="px-3 py-2">
                     <span className="font-medium">{k.name}</span>
-                    <span className="block text-xs text-text-muted">{k.kind === "siem" ? "SIEM key" : "Integration key"} · created {formatDate(k.created_at)}</span>
+                    <span className="block text-xs text-text-muted">{k.kind === "siem" ? tr("SIEM key") : tr("Integration key")} {tr("· created")} {formatDate(k.created_at)}</span>
                   </td>
                   <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{maskedKey(k)}</td>
                   <td className="hidden px-3 py-2 md:table-cell">
@@ -111,7 +110,7 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
                       ))}
                     </div>
                   </td>
-                  <td className="hidden px-3 py-2 text-text-subtle sm:table-cell">{k.last_used_at ? formatRelative(k.last_used_at) : "Never"}</td>
+                  <td className="hidden px-3 py-2 text-text-subtle sm:table-cell">{k.last_used_at ? formatRelative(k.last_used_at) : tr("Never")}</td>
                   <td className="px-3 py-2">
                     <StatusBadge status={k.revoked_at ? "revoked" : "active"} />
                   </td>
@@ -119,13 +118,11 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
                     {!k.revoked_at && (
                       <ConfirmDialog
                         trigger={
-                          <Button variant="ghost" size="sm">
-                            Revoke
-                          </Button>
+                          <Button variant="ghost" size="sm">{tr("Revoke")}</Button>
                         }
-                        title={`Revoke “${k.name}”?`}
-                        description="Requests with this key fail immediately, and any further use is logged as api_key.used_after_revoke. This cannot be undone."
-                        confirmLabel="Revoke key"
+                        title={tr("Revoke “{p0}”?", { p0: k.name })}
+                        description={tr("Requests with this key fail immediately, and any further use is logged as api_key.used_after_revoke. This cannot be undone.")}
+                        confirmLabel={tr("Revoke key")}
                         destructive
                         onConfirm={() => revoke(k.id)}
                       />
@@ -141,26 +138,26 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create API key</DialogTitle>
-            <DialogDescription>Give it the fewest scopes that do the job.</DialogDescription>
+            <DialogTitle>{tr("Create API key")}</DialogTitle>
+            <DialogDescription>{tr("Give it the fewest scopes that do the job.")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <FormField id="key-name" label="Name" hint="Where it is used, e.g. “Make — lead notifications”." error={error ?? undefined}>
+            <FormField id="key-name" label={tr("Name")} hint={tr("Where it is used, e.g. “Make — lead notifications”.")} error={error ?? undefined}>
               <Input id="key-name" value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />
             </FormField>
-            <FormField id="key-kind" label="Kind">
+            <FormField id="key-kind" label={tr("Kind")}>
               <Select value={kind} onValueChange={(v) => changeKind(v as ApiKeyKind)}>
                 <SelectTrigger id="key-kind" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="integration">Integration (Make, n8n, forms)</SelectItem>
-                  <SelectItem value="siem">SIEM (security log and response)</SelectItem>
+                  <SelectItem value="integration">{tr("Integration (Make, n8n, forms)")}</SelectItem>
+                  <SelectItem value="siem">{tr("SIEM (security log and response)")}</SelectItem>
                 </SelectContent>
               </Select>
             </FormField>
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">Scopes</legend>
+              <legend className="text-sm font-medium">{tr("Scopes")}</legend>
               {SCOPES_BY_KIND[kind].map((s) => (
                 <label key={s} className="flex cursor-pointer gap-2.5 text-sm">
                   <Checkbox checked={scopes.includes(s)} onCheckedChange={(on) => setScopes((prev) => (on === true ? [...prev, s] : prev.filter((x) => x !== s)))} aria-label={s} />
@@ -173,17 +170,15 @@ export function ApiKeysManager({ keys }: { keys: KeyView[] }) {
             </fieldset>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>{tr("Cancel")}</Button>
             <Button onClick={create} disabled={pending || name.trim() === "" || scopes.length === 0}>
-              {pending ? "Creating…" : "Create key"}
+              {pending ? tr("Creating…") : tr("Create key")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <SecretDialog title="Your new API key" description="Send it as Authorization: Bearer <key>." secret={revealed} onClose={() => setRevealed(null)} />
+      <SecretDialog title={tr("Your new API key")} description={tr("Send it as Authorization: Bearer <key>.")} secret={revealed} onClose={() => setRevealed(null)} />
     </div>
   );
 }

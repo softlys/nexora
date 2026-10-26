@@ -12,6 +12,7 @@ import { findVisible, type ServiceContext } from "@/server/services/context";
 import { WorkflowCanvas } from "@/components/crm/workflow-canvas";
 import { RunHistory } from "./run-history";
 import { WorkflowEditor } from "./workflow-editor";
+import { tr, trNode } from "@/lib/i18n";
 
 async function testRecordOptions(ctx: ServiceContext, entity: TriggerEntity) {
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
@@ -56,20 +57,20 @@ export default async function WorkflowPage({ params, searchParams }: PageProps<"
   return (
     <div className="space-y-6">
       <DetailHeader
-        back={{ href: "/automation", label: "Automation Studio" }}
+        back={{ href: "/automation", label: tr("Automation Studio") }}
         path={`/automation/${workflow.id}`}
         title={workflow.name}
         subtitle={workflow.description || undefined}
       />
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          ["Runs", String(stats.runs)],
-          ["Success rate", stats.success_rate === null ? "—" : formatPercent(stats.success_rate)],
-          ["Failed", String(stats.failed)],
-          ["Skipped", String(stats.skipped)],
+          [tr("Runs"), String(stats.runs)],
+          [tr("Success rate"), stats.success_rate === null ? "—" : formatPercent(stats.success_rate)],
+          [tr("Failed"), String(stats.failed)],
+          [tr("Skipped"), String(stats.skipped)],
         ].map(([label, value]) => (
           <div key={label} className="rounded-lg border border-border bg-surface p-3">
-            <dt className="text-xs text-text-muted">{label}</dt>
+            <dt className="text-xs text-text-muted">{trNode(label)}</dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums">{value}</dd>
           </div>
         ))}

@@ -13,8 +13,9 @@ import { requirePermission } from "@/server/guards";
 import { loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { companyOptions } from "@/server/services/companies";
 import { listOrders, productOptions } from "@/server/services/orders";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Orders" };
+export const metadata = { title: tr("Orders") };
 
 export default async function OrdersPage({ searchParams }: PageProps<"/orders">) {
   await requirePermission("view", "order");
@@ -41,21 +42,21 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Orders"
-        description="Orders with line items, simulated payments and fulfillment."
+        title={tr("Orders")}
+        description={tr("Orders with line items, simulated payments and fulfillment.")}
         actions={perms.canCreate && <OrderFormButton companies={companies} products={products} owners={people.assignable} currency={currency} autoOpen={first(params.new) === "1"} />}
       />
       <ListToolbar
-        searchPlaceholder="Search order number or company…"
+        searchPlaceholder={tr("Search order number or company…")}
         filters={[
-          { key: "status", label: "Statuses", options: ORDER_STATUSES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
-          { key: "payment", label: "Payment", options: PAYMENT_STATUSES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
-          { key: "company", label: "Companies", options: companies },
-          ...(people.assignable.length > 1 ? [{ key: "owner", label: "Owners", options: people.assignable }] : []),
+          { key: "status", label: tr("Statuses"), options: ORDER_STATUSES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
+          { key: "payment", label: tr("Payment"), options: PAYMENT_STATUSES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
+          { key: "company", label: tr("Companies"), options: companies },
+          ...(people.assignable.length > 1 ? [{ key: "owner", label: tr("Owners"), options: people.assignable }] : []),
         ]}
       />
       <ListTable
-        caption="Orders"
+        caption={tr("Orders")}
         basePath="/orders"
         params={params}
         {...page}
@@ -64,7 +65,7 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
         columns={[
           {
             id: "number",
-            header: "Order",
+            header: tr("Order"),
             sort: "number",
             cell: (o) => (
               <div className="min-w-0">
@@ -75,19 +76,19 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
               </div>
             ),
           },
-          { id: "status", header: "Status", sort: "status", cell: (o) => <StatusBadge status={o.status} /> },
-          { id: "payment", header: "Payment", cell: (o) => <StatusBadge status={o.payment_status} dot /> },
-          { id: "total", header: "Total", sort: "total", align: "right", cell: (o) => formatAmount(o.total, o.currency) },
-          { id: "collected", header: "Collected", align: "right", hideBelow: "lg", cell: (o) => <span className="text-text-subtle">{formatAmount(o.collected, o.currency)}</span> },
-          { id: "date", header: "Order date", sort: "date", hideBelow: "md", cell: (o) => <span className="text-text-subtle">{formatDate(o.order_date)}</span> },
-          { id: "due", header: "Due", sort: "due", hideBelow: "lg", cell: (o) => <span className="text-text-subtle">{formatDate(o.payment_due_date)}</span> },
-          { id: "owner", header: "Owner", hideBelow: "xl", cell: (o) => <span className="text-text-subtle">{o.owner_name}</span> },
+          { id: "status", header: tr("Status"), sort: "status", cell: (o) => <StatusBadge status={o.status} /> },
+          { id: "payment", header: tr("Payment"), cell: (o) => <StatusBadge status={o.payment_status} dot /> },
+          { id: "total", header: tr("Total"), sort: "total", align: "right", cell: (o) => formatAmount(o.total, o.currency) },
+          { id: "collected", header: tr("Collected"), align: "right", hideBelow: "lg", cell: (o) => <span className="text-text-subtle">{formatAmount(o.collected, o.currency)}</span> },
+          { id: "date", header: tr("Order date"), sort: "date", hideBelow: "md", cell: (o) => <span className="text-text-subtle">{formatDate(o.order_date)}</span> },
+          { id: "due", header: tr("Due"), sort: "due", hideBelow: "lg", cell: (o) => <span className="text-text-subtle">{formatDate(o.payment_due_date)}</span> },
+          { id: "owner", header: tr("Owner"), hideBelow: "xl", cell: (o) => <span className="text-text-subtle">{o.owner_name}</span> },
         ]}
         empty={
           <EmptyState
             icon={Package}
-            title={filtered ? "No orders match these filters" : "No orders yet"}
-            description={filtered ? "Try a different search or clear the filters." : "Create an order, or convert a won deal into one."}
+            title={filtered ? tr("No orders match these filters") : tr("No orders yet")}
+            description={filtered ? tr("Try a different search or clear the filters.") : tr("Create an order, or convert a won deal into one.")}
             action={!filtered && perms.canCreate ? form : undefined}
             className="m-4 border-0 bg-transparent"
           />

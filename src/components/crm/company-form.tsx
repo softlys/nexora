@@ -14,6 +14,7 @@ import { companyInput } from "@/domain/inputs";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { applyServerErrors } from "@/lib/forms";
 import { createCompanyAction, updateCompanyAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 type Values = {
   name: string;
@@ -65,7 +66,7 @@ export function CompanyFormButton({
   const onSubmit = handleSubmit(async (values) => {
     const result = company ? await updateCompanyAction({ id: company.id, ...values }) : await createCompanyAction(values);
     if (!result.ok) return applyServerErrors(result, setError);
-    toast.success(company ? "Company updated" : "Company created");
+    toast.success(company ? tr("Company updated") : tr("Company created"));
     reset(values);
     setOpen(false);
     if (company) router.refresh();
@@ -82,33 +83,33 @@ export function CompanyFormButton({
         }}
       >
         {company ? <Pencil aria-hidden /> : <Plus aria-hidden />}
-        {company ? "Edit" : "New company"}
+        {company ? tr("Edit") : tr("New company")}
       </Button>
       <RecordSheet
         error={formState.errors.root?.server?.message}
         open={open}
         onOpenChange={setOpen}
-        title={company ? `Edit ${company.name}` : "New company"}
+        title={company ? tr("Edit {p0}", { p0: company.name }) : tr("New company")}
         dirty={formState.isDirty}
         submitting={formState.isSubmitting}
         onSubmit={onSubmit}
-        submitLabel={company ? "Save changes" : "Create company"}
+        submitLabel={company ? tr("Save changes") : tr("Create company")}
       >
-        <TextField control={control} name="name" label="Name" autoComplete="organization" />
+        <TextField control={control} name="name" label={tr("Name")} autoComplete="organization" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField control={control} name="industry" label="Industry" placeholder="e.g. Food Processing" />
-          <SelectField control={control} name="size" label="Employees" options={COMPANY_SIZES.map((s) => ({ value: s, label: s }))} />
-          <ComboboxField control={control} name="country" label="Country" options={COUNTRY_OPTIONS} />
-          <TextField control={control} name="city" label="City" />
+          <TextField control={control} name="industry" label={tr("Industry")} placeholder={tr("e.g. Food Processing")} />
+          <SelectField control={control} name="size" label={tr("Employees")} options={COMPANY_SIZES.map((s) => ({ value: s, label: s }))} />
+          <ComboboxField control={control} name="country" label={tr("Country")} options={COUNTRY_OPTIONS} />
+          <TextField control={control} name="city" label={tr("City")} />
         </div>
-        <TextField control={control} name="address" label="Address" autoComplete="street-address" />
+        <TextField control={control} name="address" label={tr("Address")} autoComplete="street-address" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField control={control} name="website" label="Website" placeholder="https://" inputMode="url" />
-          <TextField control={control} name="phone" label="Phone" type="tel" inputMode="tel" />
-          <SelectField control={control} name="lifecycle_stage" label="Lifecycle stage" options={LIFECYCLE_STAGES.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
-          {owners.length > 0 && <SelectField control={control} name="owner_id" label="Owner" options={owners} />}
+          <TextField control={control} name="website" label={tr("Website")} placeholder="https://" inputMode="url" />
+          <TextField control={control} name="phone" label={tr("Phone")} type="tel" inputMode="tel" />
+          <SelectField control={control} name="lifecycle_stage" label={tr("Lifecycle stage")} options={LIFECYCLE_STAGES.map((s) => ({ value: s, label: humanizeStatus(s) }))} />
+          {owners.length > 0 && <SelectField control={control} name="owner_id" label={tr("Owner")} options={owners} />}
         </div>
-        <TextareaField control={control} name="notes" label="Notes" hint="Plain text, visible to everyone who can see this company." />
+        <TextareaField control={control} name="notes" label={tr("Notes")} hint={tr("Plain text, visible to everyone who can see this company.")} />
       </RecordSheet>
     </>
   );

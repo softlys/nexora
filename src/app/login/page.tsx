@@ -3,8 +3,9 @@ import { connection } from "next/server";
 import { BrandMark } from "@/components/shell/brand";
 import { demoAccessCode, getDataMode } from "@/server/env";
 import { DemoAccessForm, LoginForm } from "./login-form";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Sign in" };
+export const metadata = { title: tr("Sign in") };
 
 /** Supabase mode sign-in. Demo mode has no sign-in: it asks for the access code when one is set, otherwise it goes straight to the app. */
 export default async function LoginPage() {
@@ -18,8 +19,8 @@ export default async function LoginPage() {
         <div className="flex flex-col items-center gap-3 text-center">
           <BrandMark className="size-9" />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">{demo ? "NEXORA demo" : "Sign in to NEXORA"}</h1>
-            <p className="mt-1 text-sm text-text-muted">{demo ? "Enter the access code you were given." : "Use the account your admin created for you."}</p>
+            <h1 className="text-xl font-semibold tracking-tight">{demo ? tr("NEXORA demo") : tr("Sign in to NEXORA")}</h1>
+            <p className="mt-1 text-sm text-text-muted">{demo ? tr("Enter the access code you were given.") : tr("Use the account your admin created for you.")}</p>
           </div>
         </div>
         {demo ? <DemoAccessForm /> : <LoginForm />}

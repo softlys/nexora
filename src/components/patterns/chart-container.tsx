@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { ResponsiveContainer, type TooltipContentProps } from "recharts";
 import { cn } from "@/lib/utils";
+import { trNode } from "@/lib/i18n";
 
 /** Series colors from the design tokens, in a fixed order for consistency across charts. */
 export const CHART_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"] as const;
@@ -47,8 +48,8 @@ export function ChartContainer({
     <figure className={cn("rounded-lg border border-border bg-surface p-4 shadow-xs", className)}>
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <figcaption className="text-sm font-medium text-foreground">{title}</figcaption>
-          {description && <p className="mt-0.5 text-xs text-text-muted">{description}</p>}
+          <figcaption className="text-sm font-medium text-foreground">{trNode(title)}</figcaption>
+          {description && <p className="mt-0.5 text-xs text-text-muted">{trNode(description)}</p>}
         </div>
         {actions}
       </div>

@@ -13,6 +13,7 @@ import { TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES, type Task } from "@/domain/
 import { taskInput } from "@/domain/inputs";
 import { applyServerErrors } from "@/lib/forms";
 import { createTaskAction, updateTaskAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 type Option = { value: string; label: string };
 
@@ -95,7 +96,7 @@ export function TaskFormButton({
     const payload = { ...rest, due_at: toDue(due_date, due_time) };
     const result = task ? await updateTaskAction({ id: task.id, ...payload }) : await createTaskAction(payload);
     if (!result.ok) return applyServerErrors(result, setError);
-    toast.success(task ? "Task updated" : "Task created");
+    toast.success(task ? tr("Task updated") : tr("Task created"));
     reset(values);
     setOpen(false);
     router.refresh();
@@ -111,31 +112,31 @@ export function TaskFormButton({
         }}
       >
         {task ? <Pencil aria-hidden /> : <Plus aria-hidden />}
-        {label ?? (task ? "Edit" : "New task")}
+        {label ?? (task ? tr("Edit") : tr("New task"))}
       </Button>
-      <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={task ? "Edit task" : "New task"} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={task ? "Save changes" : "Create task"}>
-        <TextField control={control} name="title" label="Title" />
+      <RecordSheet error={formState.errors.root?.server?.message} open={open} onOpenChange={setOpen} title={task ? tr("Edit task") : tr("New task")} dirty={formState.isDirty} submitting={formState.isSubmitting} onSubmit={onSubmit} submitLabel={task ? tr("Save changes") : tr("Create task")}>
+        <TextField control={control} name="title" label={tr("Title")} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField control={control} name="type" label="Type" options={TASK_TYPES.map((t) => ({ value: t, label: humanizeStatus(t) }))} />
-          <SelectField control={control} name="priority" label="Priority" options={TASK_PRIORITIES.map((t) => ({ value: t, label: humanizeStatus(t) }))} />
-          <TextField control={control} name="due_date" label="Due date" type="date" />
-          <TextField control={control} name="due_time" label="Due time" type="time" />
-          <SelectField control={control} name="status" label="Status" options={TASK_STATUSES.map((t) => ({ value: t, label: humanizeStatus(t) }))} />
+          <SelectField control={control} name="type" label={tr("Type")} options={TASK_TYPES.map((t) => ({ value: t, label: humanizeStatus(t) }))} />
+          <SelectField control={control} name="priority" label={tr("Priority")} options={TASK_PRIORITIES.map((t) => ({ value: t, label: humanizeStatus(t) }))} />
+          <TextField control={control} name="due_date" label={tr("Due date")} type="date" />
+          <TextField control={control} name="due_time" label={tr("Due time")} type="time" />
+          <SelectField control={control} name="status" label={tr("Status")} options={TASK_STATUSES.map((t) => ({ value: t, label: humanizeStatus(t) }))} />
           <SelectField
             control={control}
             name="assignee_id"
-            label="Assignee"
-            options={options.assignees.length > 0 ? options.assignees : [{ value: options.currentUserId, label: "Me" }]}
-            hint={options.assignees.length === 0 ? "Sales reps assign tasks to themselves." : undefined}
+            label={tr("Assignee")}
+            options={options.assignees.length > 0 ? options.assignees : [{ value: options.currentUserId, label: tr("Me") }]}
+            hint={options.assignees.length === 0 ? tr("Sales reps assign tasks to themselves.") : undefined}
           />
         </div>
         <fieldset className="space-y-3">
-          <legend className="text-sm font-medium">Related to</legend>
-          <ComboboxField control={control} name="company_id" label="Company" options={options.companies} placeholder="None" />
-          <ComboboxField control={control} name="deal_id" label="Deal" options={options.deals} placeholder="None" />
-          <ComboboxField control={control} name="order_id" label="Order" options={options.orders} placeholder="None" />
+          <legend className="text-sm font-medium">{tr("Related to")}</legend>
+          <ComboboxField control={control} name="company_id" label={tr("Company")} options={options.companies} placeholder={tr("None")} />
+          <ComboboxField control={control} name="deal_id" label={tr("Deal")} options={options.deals} placeholder={tr("None")} />
+          <ComboboxField control={control} name="order_id" label={tr("Order")} options={options.orders} placeholder={tr("None")} />
         </fieldset>
-        <TextareaField control={control} name="description" label="Description" />
+        <TextareaField control={control} name="description" label={tr("Description")} />
       </RecordSheet>
     </>
   );

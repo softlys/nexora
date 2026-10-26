@@ -15,13 +15,14 @@ import type { OrderStatus } from "@/domain/entities";
 import { ORDER_TRANSITIONS } from "@/domain/rules/orders";
 import { formatAmount } from "@/lib/format";
 import { changeOrderStatusAction, recordPaymentAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 const ACTION_LABEL: Partial<Record<OrderStatus, string>> = {
-  confirmed: "Confirm order",
-  processing: "Start processing",
-  shipped: "Mark shipped",
-  delivered: "Mark delivered",
-  cancelled: "Cancel order",
+  confirmed: tr("Confirm order"),
+  processing: tr("Start processing"),
+  shipped: tr("Mark shipped"),
+  delivered: tr("Mark delivered"),
+  cancelled: tr("Cancel order"),
 };
 
 /** Buttons for the allowed next statuses only. The server enforces the same transitions. */
@@ -37,7 +38,7 @@ export function OrderStatusActions({ orderId, status }: { orderId: string; statu
       toast.error(result.error);
       return false;
     }
-    toast.success(`Order ${humanizeStatus(to).toLowerCase()}`);
+    toast.success(tr("Order {p0}", { p0: humanizeStatus(to).toLowerCase() }));
     router.refresh();
   };
 
@@ -53,14 +54,12 @@ export function OrderStatusActions({ orderId, status }: { orderId: string; statu
       {next.includes("cancelled") && (
         <ConfirmDialog
           trigger={
-            <Button variant="outline" disabled={pending}>
-              Cancel order
-            </Button>
+            <Button variant="outline" disabled={pending}>{tr("Cancel order")}</Button>
           }
-          title="Cancel this order?"
-          description="A cancelled order cannot be reopened. Simulated payments already recorded stay on the order as history; NEXORA does not process refunds, so handle any refund outside the app."
-          confirmLabel="Cancel order"
-          cancelLabel="Keep order"
+          title={tr("Cancel this order?")}
+          description={tr("A cancelled order cannot be reopened. Simulated payments already recorded stay on the order as history; NEXORA does not process refunds, so handle any refund outside the app.")}
+          confirmLabel={tr("Cancel order")}
+          cancelLabel={tr("Keep order")}
           destructive
           onConfirm={() => change("cancelled")}
         />
@@ -87,9 +86,7 @@ export function RecordPaymentButton({ orderId, outstanding, currency }: { orderI
           setOpen(true);
         }}
       >
-        <Banknote aria-hidden />
-        Record payment
-      </Button>
+        <Banknote aria-hidden />{tr("Record payment")}</Button>
       <Dialog open={open} onOpenChange={(v) => !pending && setOpen(v)}>
         <DialogContent>
           <form
@@ -102,38 +99,37 @@ export function RecordPaymentButton({ orderId, outstanding, currency }: { orderI
                   setError(Object.values(result.fieldErrors ?? {})[0]?.[0] ?? result.error);
                   return;
                 }
-                toast.success("Simulated payment recorded");
+                toast.success(tr("Simulated payment recorded"));
                 setOpen(false);
                 router.refresh();
               });
             }}
           >
             <DialogHeader>
-              <DialogTitle>Record a simulated payment</DialogTitle>
-              <DialogDescription>
-                This is a demo record only. No money moves and no payment provider is contacted. Outstanding: {formatAmount(outstanding, currency)}.
+              <DialogTitle>{tr("Record a simulated payment")}</DialogTitle>
+              <DialogDescription>{tr("This is a demo record only. No money moves and no payment provider is contacted. Outstanding:")} {formatAmount(outstanding, currency)}.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField id="pay-amount" label={`Amount (${currency})`}>
+              <FormField id="pay-amount" label={tr("Amount ({p0})", { p0: currency })}>
                 <Input id="pay-amount" inputMode="decimal" value={values.amount} onChange={(e) => setValues({ ...values, amount: e.target.value })} />
               </FormField>
-              <FormField id="pay-date" label="Paid on">
+              <FormField id="pay-date" label={tr("Paid on")}>
                 <Input id="pay-date" type="date" max={new Date().toISOString().slice(0, 10)} value={values.paid_at} onChange={(e) => setValues({ ...values, paid_at: e.target.value })} />
               </FormField>
-              <FormField id="pay-method" label="Method">
+              <FormField id="pay-method" label={tr("Method")}>
                 <Select value={values.method} onValueChange={(v) => setValues({ ...values, method: v })}>
                   <SelectTrigger id="pay-method" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bank_transfer">Bank transfer</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="bank_transfer">{tr("Bank transfer")}</SelectItem>
+                    <SelectItem value="card">{tr("Card")}</SelectItem>
+                    <SelectItem value="other">{tr("Other")}</SelectItem>
                   </SelectContent>
                 </Select>
               </FormField>
-              <FormField id="pay-ref" label="Reference">
+              <FormField id="pay-ref" label={tr("Reference")}>
                 <Input id="pay-ref" value={values.reference} maxLength={120} onChange={(e) => setValues({ ...values, reference: e.target.value })} />
               </FormField>
             </div>
@@ -143,11 +139,9 @@ export function RecordPaymentButton({ orderId, outstanding, currency }: { orderI
               </p>
             )}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>{tr("Cancel")}</Button>
               <Button type="submit" disabled={pending}>
-                {pending ? "Saving…" : "Record simulated payment"}
+                {pending ? tr("Saving…") : tr("Record simulated payment")}
               </Button>
             </DialogFooter>
           </form>

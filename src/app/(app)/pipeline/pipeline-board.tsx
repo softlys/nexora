@@ -42,6 +42,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { convertDealToOrderAction, moveDealStageAction, quickEditDealAction } from "@/server/actions/crm";
 import { InitialsAvatar } from "@/components/patterns/initials-avatar";
+import { intlLocale, tr, trNode } from "@/lib/i18n";
 
 export type BoardDeal = DrawerDeal & { can_edit: boolean };
 
@@ -98,14 +99,14 @@ export function PipelineBoard({ stages, deals: serverDeals, options, currency, d
       const result = await moveDealStageAction({ deal_id: dealId, stage_id: stageId, ...(lostReason && { lost_reason: lostReason }) });
       if (!result.ok) {
         setDeals(before);
-        toast.error(`Could not move "${deal.name}"`, { description: result.error });
+        toast.error(tr("Could not move \"{p0}\"", { p0: deal.name }), { description: result.error });
         return;
       }
       if (stage.is_won) {
         toast.success(`${deal.name} won`, {
-          description: "Create the order now or later from the deal.",
+          description: tr("Create the order now or later from the deal."),
           action: {
-            label: "Create order",
+            label: tr("Create order"),
             onClick: async () => {
               const order = await convertDealToOrderAction({ deal_id: dealId });
               if (order.ok) router.push(`/orders/${order.data.order_id}`);
@@ -114,7 +115,7 @@ export function PipelineBoard({ stages, deals: serverDeals, options, currency, d
           },
         });
       } else {
-        toast.success(`Moved to ${stage.name}`);
+        toast.success(tr("Moved to {p0}", { p0: stage.name }));
       }
       router.refresh();
     });
@@ -132,19 +133,19 @@ export function PipelineBoard({ stages, deals: serverDeals, options, currency, d
   };
 
   const announcements: Announcements = {
-    onDragStart: ({ active }) => `Picked up deal ${deals.find((d) => d.id === active.id)?.name}. Use arrow keys to move between stages, space to drop, escape to cancel.`,
-    onDragOver: ({ active, over }) => (over ? `Deal ${deals.find((d) => d.id === active.id)?.name} is over ${stageById.get(String(over.id))?.name}.` : "Not over a stage."),
-    onDragEnd: ({ active, over }) => (over ? `Deal ${deals.find((d) => d.id === active.id)?.name} dropped in ${stageById.get(String(over.id))?.name}.` : "Drop cancelled."),
-    onDragCancel: () => "Drag cancelled. The deal stayed in its stage.",
+    onDragStart: ({ active }) => tr("Picked up deal {p0}. Use arrow keys to move between stages, space to drop, escape to cancel.", { p0: deals.find((d) => d.id === active.id)?.name }),
+    onDragOver: ({ active, over }) => (over ? tr("Deal {p0} is over {p1}.", { p0: deals.find((d) => d.id === active.id)?.name, p1: stageById.get(String(over.id))?.name }) : tr("Not over a stage.")),
+    onDragEnd: ({ active, over }) => (over ? tr("Deal {p0} dropped in {p1}.", { p0: deals.find((d) => d.id === active.id)?.name, p1: stageById.get(String(over.id))?.name }) : tr("Drop cancelled.")),
+    onDragCancel: () => tr("Drag cancelled. The deal stayed in its stage."),
   };
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Open pipeline" value={formatMoney(summary.openTotal, currency)} />
-        <Stat label="Weighted forecast" value={formatMoney(summary.weightedTotal, currency)} hint="Amount × probability, open stages" />
-        <Stat label="Open deals" value={String(deals.filter((d) => !d.is_won && !d.is_lost).length)} />
-        <Stat label="Won in view" value={formatMoney(deals.filter((d) => d.is_won).reduce((s, d) => s + d.amount, 0), currency)} />
+        <Stat label={tr("Open pipeline")} value={formatMoney(summary.openTotal, currency)} />
+        <Stat label={tr("Weighted forecast")} value={formatMoney(summary.weightedTotal, currency)} hint={tr("Amount × probability, open stages")} />
+        <Stat label={tr("Open deals")} value={String(deals.filter((d) => !d.is_won && !d.is_lost).length)} />
+        <Stat label={tr("Won in view")} value={formatMoney(deals.filter((d) => d.is_won).reduce((s, d) => s + d.amount, 0), currency)} />
       </div>
 
       <DndContext id={dndId} sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)} accessibility={{ announcements }}>
@@ -194,9 +195,9 @@ export function PipelineBoard({ stages, deals: serverDeals, options, currency, d
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg border border-border bg-surface p-3" title={hint}>
-      <div className="text-xs text-text-muted">{label}</div>
+      <div className="text-xs text-text-muted">{trNode(label)}</div>
       <div className="mt-1 text-lg font-semibold tabular-nums">{value}</div>
-      {hint && <div className="text-[11px] text-text-muted">{hint}</div>}
+      {hint && <div className="text-[11px] text-text-muted">{trNode(hint)}</div>}
     </div>
   );
 }
@@ -222,7 +223,7 @@ function Column({
   return (
     <section
       ref={setNodeRef}
-      aria-label={`${stage.name}, ${count} deals`}
+      aria-label={tr("{p0}, {p1} deals", { p0: stage.name, p1: count })}
       data-testid={`stage-column-${stage.name}`}
       className={cn("flex w-72 shrink-0 flex-col rounded-xl border border-border bg-surface-muted/60 transition-colors", isOver && "border-brand bg-brand-subtle/40")}
     >
@@ -230,17 +231,17 @@ function Column({
         <div className="flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-medium">
             <span className={cn("size-2 rounded-full", stage.is_won ? "bg-success" : stage.is_lost ? "bg-text-muted" : "bg-brand")} aria-hidden />
-            {stage.name}
+            {tr(stage.name)}
           </h2>
           <span className="rounded bg-surface-muted px-1.5 text-xs text-text-subtle tabular-nums" data-testid="stage-count">
             {count}
           </span>
         </div>
         <div className="flex justify-between text-xs text-text-muted tabular-nums">
-          <span data-testid="stage-total">{formatMoney(total, currency, "en-US", true)}</span>
-          {!stage.is_won && !stage.is_lost && <span title="Weighted: amount × probability">wtd {formatMoney(weighted, currency, "en-US", true)}</span>}
+          <span data-testid="stage-total">{formatMoney(total, currency, intlLocale(), true)}</span>
+          {!stage.is_won && !stage.is_lost && <span title={tr("Weighted: amount × probability")}>{tr("wtd")} {formatMoney(weighted, currency, intlLocale(), true)}</span>}
         </div>
-        {avgDays !== undefined && !stage.is_won && !stage.is_lost && <div className="text-[11px] text-text-muted" title="Average days the deals in this column have been in this stage">Avg. {avgDays} days here</div>}
+        {avgDays !== undefined && !stage.is_won && !stage.is_lost && <div className="text-[11px] text-text-muted" title={tr("Average days the deals in this column have been in this stage")}>{tr("Avg.")} {avgDays} {tr("days here")}</div>}
       </header>
       <div className="flex min-h-24 flex-1 flex-col gap-2 p-2">{children}</div>
     </section>
@@ -264,7 +265,7 @@ function CardBody({ deal, currency, overlay = false }: { deal: BoardDeal; curren
           <CalendarDays className="size-3" aria-hidden />
           {formatDate(deal.expected_close_date)}
         </span>
-        <span>{deal.days_in_stage}d in stage</span>
+        <span>{deal.days_in_stage}{tr("d in stage")}</span>
       </div>
     </div>
   );
@@ -288,7 +289,7 @@ function DealCard({
   const { attributes, listeners, setNodeRef, setActivatorNodeRef } = useDraggable({ id: deal.id, disabled: !deal.can_edit });
   return (
     <div ref={setNodeRef} className={cn("group relative", dragging && "opacity-40")} data-testid="deal-card" data-deal-name={deal.name}>
-      <button type="button" onClick={onOpen} className="block w-full rounded-md focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none" aria-label={`Open ${deal.name}`}>
+      <button type="button" onClick={onOpen} className="block w-full rounded-md focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none" aria-label={tr("Open {p0}", { p0: deal.name })}>
         <CardBody deal={deal} currency={currency} />
       </button>
       {deal.can_edit && (
@@ -296,16 +297,16 @@ function DealCard({
           <QuickEdit deal={deal} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-xs" aria-label={`Move ${deal.name} to another stage`} className="bg-surface">
+              <Button variant="ghost" size="icon-xs" aria-label={tr("Move {p0} to another stage", { p0: deal.name })} className="bg-surface">
                 <MoreHorizontal aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Move to</DropdownMenuLabel>
+              <DropdownMenuLabel>{tr("Move to")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {stages.map((s) => (
                 <DropdownMenuItem key={s.id} disabled={s.id === deal.stage_id} onSelect={() => onMove(s.id)}>
-                  {s.name}
+                  {tr(s.name)}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -316,7 +317,7 @@ function DealCard({
             className="flex size-6 cursor-grab items-center justify-center rounded bg-surface text-text-muted hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none active:cursor-grabbing"
             {...attributes}
             {...listeners}
-            aria-label={`Drag ${deal.name}`}
+            aria-label={tr("Drag {p0}", { p0: deal.name })}
           >
             <GripVertical className="size-3.5" aria-hidden />
           </button>
@@ -345,7 +346,7 @@ function QuickEdit({ deal }: { deal: BoardDeal }) {
       }}
     >
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon-xs" aria-label={`Quick edit ${deal.name}`} className="bg-surface">
+        <Button variant="ghost" size="icon-xs" aria-label={tr("Quick edit {p0}", { p0: deal.name })} className="bg-surface">
           <span aria-hidden className="text-[10px] font-semibold">$</span>
         </Button>
       </PopoverTrigger>
@@ -360,19 +361,19 @@ function QuickEdit({ deal }: { deal: BoardDeal }) {
                 setError(result.error);
                 return;
               }
-              toast.success("Deal updated");
+              toast.success(tr("Deal updated"));
               setOpen(false);
               router.refresh();
             });
           }}
         >
-          <FormField id={`qe-amount-${deal.id}`} label="Amount">
+          <FormField id={`qe-amount-${deal.id}`} label={tr("Amount")}>
             <Input id={`qe-amount-${deal.id}`} inputMode="decimal" value={values.amount} onChange={(e) => setValues({ ...values, amount: e.target.value })} />
           </FormField>
-          <FormField id={`qe-prob-${deal.id}`} label="Probability (%)">
+          <FormField id={`qe-prob-${deal.id}`} label={tr("Probability (%)")}>
             <Input id={`qe-prob-${deal.id}`} inputMode="numeric" value={values.probability} onChange={(e) => setValues({ ...values, probability: e.target.value })} />
           </FormField>
-          <FormField id={`qe-close-${deal.id}`} label="Expected close">
+          <FormField id={`qe-close-${deal.id}`} label={tr("Expected close")}>
             <DatePicker id={`qe-close-${deal.id}`} value={values.close} onChange={(v) => setValues({ ...values, close: v })} />
           </FormField>
           {error && (
@@ -381,11 +382,9 @@ function QuickEdit({ deal }: { deal: BoardDeal }) {
             </p>
           )}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>{tr("Cancel")}</Button>
             <Button type="submit" size="sm" disabled={pending}>
-              {pending ? "Saving…" : "Save"}
+              {pending ? tr("Saving…") : tr("Save")}
             </Button>
           </div>
         </form>

@@ -13,8 +13,9 @@ import { loadPage, peopleFor, permissionsFor } from "@/server/page-data";
 import { requirePermission } from "@/server/guards";
 import { listCompanies } from "@/server/services/companies";
 import { ExportButton, ImportButton } from "@/components/list/export-import";
+import { tr } from "@/lib/i18n";
 
-export const metadata = { title: "Companies" };
+export const metadata = { title: tr("Companies") };
 
 export default async function CompaniesPage({ searchParams }: PageProps<"/companies">) {
   await requirePermission("view", "company");
@@ -38,8 +39,8 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Companies"
-        description="Accounts you sell to, with their contacts, deals, orders and history."
+        title={tr("Companies")}
+        description={tr("Accounts you sell to, with their contacts, deals, orders and history.")}
         actions={
           <>
             <ExportButton entity="companies" query={exportQuery} />
@@ -49,17 +50,17 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
         }
       />
       <ListToolbar
-        searchPlaceholder="Search companies…"
+        searchPlaceholder={tr("Search companies…")}
         filters={[
-          { key: "lifecycle", label: "Stages", options: LIFECYCLE_STAGES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
-          { key: "industry", label: "Industries", options: page.facets.industries.map((i) => ({ value: i, label: i })) },
-          { key: "size", label: "Sizes", options: COMPANY_SIZES.map((s) => ({ value: s, label: `${s} employees` })) },
-          { key: "country", label: "Countries", options: page.facets.countries.map((c) => ({ value: c, label: countryName(c) })) },
-          ...(people.assignable.length > 1 ? [{ key: "owner", label: "Owners", options: people.assignable }] : []),
+          { key: "lifecycle", label: tr("Stages"), options: LIFECYCLE_STAGES.map((s) => ({ value: s, label: humanizeStatus(s) })) },
+          { key: "industry", label: tr("Industries"), options: page.facets.industries.map((i) => ({ value: i, label: i })) },
+          { key: "size", label: tr("Sizes"), options: COMPANY_SIZES.map((s) => ({ value: s, label: `${s} employees` })) },
+          { key: "country", label: tr("Countries"), options: page.facets.countries.map((c) => ({ value: c, label: countryName(c) })) },
+          ...(people.assignable.length > 1 ? [{ key: "owner", label: tr("Owners"), options: people.assignable }] : []),
         ]}
       />
       <ListTable
-        caption="Companies"
+        caption={tr("Companies")}
         basePath="/companies"
         params={params}
         {...page}
@@ -68,7 +69,7 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
         columns={[
           {
             id: "name",
-            header: "Company",
+            header: tr("Company"),
             sort: "name",
             cell: (c) => (
               <div className="min-w-0">
@@ -79,18 +80,18 @@ const exportQuery = new URLSearchParams(Object.entries(params).flatMap(([k, v]) 
               </div>
             ),
           },
-          { id: "lifecycle", header: "Stage", sort: "lifecycle", cell: (c) => <StatusBadge status={c.lifecycle_stage} /> },
-          { id: "country", header: "Location", sort: "country", hideBelow: "md", cell: (c) => <span className="text-text-subtle">{[c.city, countryName(c.country)].filter(Boolean).join(", ")}</span> },
-          { id: "size", header: "Size", hideBelow: "lg", cell: (c) => <span className="text-text-subtle">{c.size}</span> },
-          { id: "contacts", header: "Contacts", align: "right", hideBelow: "lg", cell: (c) => c.contacts },
-          { id: "deals", header: "Open deals", align: "right", hideBelow: "sm", cell: (c) => c.open_deals },
-          { id: "owner", header: "Owner", hideBelow: "md", cell: (c) => <span className="text-text-subtle">{people.names[c.owner_id] ?? "—"}</span> },
+          { id: "lifecycle", header: tr("Stage"), sort: "lifecycle", cell: (c) => <StatusBadge status={c.lifecycle_stage} /> },
+          { id: "country", header: tr("Location"), sort: "country", hideBelow: "md", cell: (c) => <span className="text-text-subtle">{[c.city, countryName(c.country)].filter(Boolean).join(", ")}</span> },
+          { id: "size", header: tr("Size"), hideBelow: "lg", cell: (c) => <span className="text-text-subtle">{c.size}</span> },
+          { id: "contacts", header: tr("Contacts"), align: "right", hideBelow: "lg", cell: (c) => c.contacts },
+          { id: "deals", header: tr("Open deals"), align: "right", hideBelow: "sm", cell: (c) => c.open_deals },
+          { id: "owner", header: tr("Owner"), hideBelow: "md", cell: (c) => <span className="text-text-subtle">{people.names[c.owner_id] ?? "—"}</span> },
         ]}
         empty={
           <EmptyState
             icon={Building2}
-            title={filtered ? "No companies match these filters" : "No companies yet"}
-            description={filtered ? "Try a different search or clear the filters." : "Add the first account you sell to."}
+            title={filtered ? tr("No companies match these filters") : tr("No companies yet")}
+            description={filtered ? tr("Try a different search or clear the filters.") : tr("Add the first account you sell to.")}
             action={!filtered && perms.canCreate ? <CompanyFormButton owners={people.assignable} /> : undefined}
             className="m-4 border-0 bg-transparent"
           />

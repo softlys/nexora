@@ -14,10 +14,11 @@ import { loadPage, peopleFor, recordTitle } from "@/server/page-data";
 import { companyOptions } from "@/server/services/companies";
 import { contactOptions } from "@/server/services/contacts";
 import { getLead } from "@/server/services/leads";
+import { tr } from "@/lib/i18n";
 
 export async function generateMetadata({ params }: PageProps<"/leads/[id]">) {
   const { id } = await params;
-  return { title: (await recordTitle("leads", id)) ?? "Lead" };
+  return { title: (await recordTitle("leads", id)) ?? tr("Lead") };
 }
 
 export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
@@ -37,7 +38,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
   return (
     <div className="space-y-6">
       <DetailHeader
-        back={{ href: "/leads", label: "Leads" }}
+        back={{ href: "/leads", label: tr("Leads") }}
         path={`/leads/${lead.id}`}
         title={lead.title}
         subtitle={`${lead.company_name} · ${lead.contact_name}`}
@@ -51,7 +52,7 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
           <RecordActions
             table="leads"
             id={lead.id}
-            label="Lead"
+            label={tr("Lead")}
             archived={!!lead.archived_at}
             canArchive={can(user.actor, "archive", "lead", record)}
             canDelete={can(user.actor, "delete", "lead", record)}
@@ -65,36 +66,33 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
         }
       />
       {converted && lead.converted_deal_id && (
-        <div className="rounded-lg border border-success-border bg-success-bg px-4 py-3 text-sm text-success">
-          Converted on {formatDate(lead.converted_at)}.{" "}
-          <Link href={`/deals/${lead.converted_deal_id}`} className="font-medium underline">
-            Open the deal
-          </Link>
+        <div className="rounded-lg border border-success-border bg-success-bg px-4 py-3 text-sm text-success">{tr("Converted on")} {formatDate(lead.converted_at)}.{" "}
+          <Link href={`/deals/${lead.converted_deal_id}`} className="font-medium underline">{tr("Open the deal")}</Link>
         </div>
       )}
       <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-6 lg:col-span-2">
           {!lead.archived_at && <ActivityComposer links={{ lead_id: lead.id }} />}
-          <Panel title="Activity timeline">
+          <Panel title={tr("Activity timeline")}>
             <Timeline entries={timeline} names={people.names} />
           </Panel>
-          <Panel title="Comments">
+          <Panel title={tr("Comments")}>
             <CommentComposer entityType="lead" entityId={lead.id} />
           </Panel>
         </div>
-        <Panel title="Details">
+        <Panel title={tr("Details")}>
           <Facts
             className="sm:grid-cols-1"
             items={[
-              ["Email", lead.email],
-              ["Phone", lead.phone],
-              ["Country", lead.country ? countryName(lead.country) : null],
-              ["Source", humanizeStatus(lead.source)],
-              ["Qualification", humanizeStatus(lead.qualification)],
-              ["Estimated value", formatMoney(lead.estimated_value, lead.currency)],
-              ["Next action", lead.next_action ? `${lead.next_action}${lead.next_action_at ? ` (${formatDate(lead.next_action_at)})` : ""}` : null],
-              ["Owner", lead.owner_id ? people.names[lead.owner_id] : "Unassigned"],
-              ["Created", formatDate(lead.created_at)],
+              [tr("Email"), lead.email],
+              [tr("Phone"), lead.phone],
+              [tr("Country"), lead.country ? countryName(lead.country) : null],
+              [tr("Source"), humanizeStatus(lead.source)],
+              [tr("Qualification"), humanizeStatus(lead.qualification)],
+              [tr("Estimated value"), formatMoney(lead.estimated_value, lead.currency)],
+              [tr("Next action"), lead.next_action ? `${lead.next_action}${lead.next_action_at ? ` (${formatDate(lead.next_action_at)})` : ""}` : null],
+              [tr("Owner"), lead.owner_id ? people.names[lead.owner_id] : tr("Unassigned")],
+              [tr("Created"), formatDate(lead.created_at)],
             ]}
           />
         </Panel>

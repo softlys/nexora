@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ROLES, type Role } from "@/domain/entities";
 import { ROLE_LABELS } from "@/lib/format";
 import { changeRoleAction } from "@/server/actions/settings";
+import { tr, trNode } from "@/lib/i18n";
 
 type Member = {
   id: string;
@@ -35,7 +36,7 @@ export function TeamTable({ members, canManage, currentUserId }: { members: Memb
         toast.error(result.error);
         return;
       }
-      toast.success(`${member.full_name} is now ${ROLE_LABELS[role]}`);
+      toast.success(tr("{p0} is now {p1}", { p0: member.full_name, p1: ROLE_LABELS[role] }));
       router.refresh();
     });
   };
@@ -43,29 +44,29 @@ export function TeamTable({ members, canManage, currentUserId }: { members: Memb
   const columns: DataTableColumn<Member>[] = [
     {
       id: "name",
-      header: "Name",
+      header: tr("Name"),
       sortValue: (m) => m.full_name,
       searchValue: (m) => `${m.full_name} ${m.email}`,
       cell: (m) => (
         <div className="min-w-0">
           <div className="font-medium">
             {m.full_name}
-            {m.id === currentUserId && <span className="ml-1.5 text-xs font-normal text-text-muted">(you)</span>}
+            {m.id === currentUserId && <span className="ml-1.5 text-xs font-normal text-text-muted">{tr("(you)")}</span>}
           </div>
           <div className="truncate text-xs text-text-muted">{m.email}</div>
         </div>
       ),
     },
-    { id: "title", header: "Title", sortValue: (m) => m.title, cell: (m) => <span className="text-text-subtle">{m.title}</span>, hideBelow: "md" },
-    { id: "manager", header: "Reports to", sortValue: (m) => m.manager, cell: (m) => <span className="text-text-subtle">{m.manager ?? "—"}</span>, hideBelow: "lg" },
+    { id: "title", header: tr("Title"), sortValue: (m) => m.title, cell: (m) => <span className="text-text-subtle">{trNode(m.title)}</span>, hideBelow: "md" },
+    { id: "manager", header: tr("Reports to"), sortValue: (m) => m.manager, cell: (m) => <span className="text-text-subtle">{m.manager ?? "—"}</span>, hideBelow: "lg" },
     {
       id: "role",
-      header: "Role",
+      header: tr("Role"),
       sortValue: (m) => m.role,
       cell: (m) =>
         canManage ? (
           <Select value={m.role} onValueChange={(v) => changeRole(m, v as Role)} disabled={pendingId === m.id}>
-            <SelectTrigger size="sm" className="w-32" aria-label={`Role for ${m.full_name}`} onClick={(e) => e.stopPropagation()}>
+            <SelectTrigger size="sm" className="w-32" aria-label={tr("Role for {p0}", { p0: m.full_name })} onClick={(e) => e.stopPropagation()}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -80,15 +81,15 @@ export function TeamTable({ members, canManage, currentUserId }: { members: Memb
           <span>{ROLE_LABELS[m.role]}</span>
         ),
     },
-    { id: "status", header: "Status", cell: (m) => <StatusBadge status={m.is_active ? "active" : "inactive"} dot />, hideBelow: "sm" },
+    { id: "status", header: tr("Status"), cell: (m) => <StatusBadge status={m.is_active ? "active" : "inactive"} dot />, hideBelow: "sm" },
   ];
 
   return (
     <SettingsCard
-      title="Team"
-      description={canManage ? "Change a member's role. Every change is recorded in the audit log." : "Members of your organization. Only an admin can change roles."}
+      title={tr("Team")}
+      description={canManage ? tr("Change a member's role. Every change is recorded in the audit log.") : tr("Members of your organization. Only an admin can change roles.")}
     >
-      <DataTable data={members} columns={columns} getRowId={(m) => m.id} searchPlaceholder="Search members…" caption="Team members" />
+      <DataTable data={members} columns={columns} getRowId={(m) => m.id} searchPlaceholder={tr("Search members…")} caption={tr("Team members")} />
     </SettingsCard>
   );
 }

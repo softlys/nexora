@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/patterns/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { archiveRecordAction, deleteRecordAction, restoreRecordAction } from "@/server/actions/crm";
+import { tr } from "@/lib/i18n";
 
 type Table = "companies" | "contacts" | "leads" | "deals" | "orders" | "tasks";
 
@@ -55,29 +56,23 @@ export function RecordActions({
       {children}
       {archived && canArchive && (
         <Button variant="outline" onClick={() => run("restore")}>
-          <ArchiveRestore aria-hidden />
-          Restore
-        </Button>
+          <ArchiveRestore aria-hidden />{tr("Restore")}</Button>
       )}
       {(canArchive || canDelete) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" aria-label="More actions">
+            <Button variant="outline" size="icon" aria-label={tr("More actions")}>
               <MoreHorizontal aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {!archived && canArchive && (
               <DropdownMenuItem onSelect={() => setConfirm("archive")}>
-                <Archive aria-hidden />
-                Archive
-              </DropdownMenuItem>
+                <Archive aria-hidden />{tr("Archive")}</DropdownMenuItem>
             )}
             {canDelete && (
               <DropdownMenuItem variant="destructive" onSelect={() => setConfirm("delete")}>
-                <Trash2 aria-hidden />
-                Delete permanently
-              </DropdownMenuItem>
+                <Trash2 aria-hidden />{tr("Delete permanently")}</DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -87,13 +82,13 @@ export function RecordActions({
           key={confirm}
           defaultOpen
           onOpenChange={(open) => !open && setConfirm(null)}
-          title={confirm === "archive" ? `Archive this ${label.toLowerCase()}?` : `Delete this ${label.toLowerCase()} permanently?`}
+          title={confirm === "archive" ? tr("Archive this {p0}?", { p0: label.toLowerCase() }) : tr("Delete this {p0} permanently?", { p0: label.toLowerCase() })}
           description={
             confirm === "archive"
-              ? "It disappears from lists but keeps its history. You can restore it later."
-              : "This cannot be undone. Related records keep working, but this record and its links are removed."
+              ? tr("It disappears from lists but keeps its history. You can restore it later.")
+              : tr("This cannot be undone. Related records keep working, but this record and its links are removed.")
           }
-          confirmLabel={confirm === "archive" ? "Archive" : "Delete"}
+          confirmLabel={confirm === "archive" ? tr("Archive") : tr("Delete")}
           destructive
           onConfirm={() => run(confirm)}
         />

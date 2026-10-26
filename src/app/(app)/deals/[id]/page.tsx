@@ -16,10 +16,11 @@ import { dealFormOptions, loadPage, peopleFor, recordTitle } from "@/server/page
 import { getDeal } from "@/server/services/deals";
 import { aiConfig } from "@/server/integrations/ai";
 import { yandexConfig } from "@/server/integrations/yandex";
+import { plural, tr, trNode } from "@/lib/i18n";
 
 export async function generateMetadata({ params }: PageProps<"/deals/[id]">) {
   const { id } = await params;
-  return { title: (await recordTitle("deals", id)) ?? "Deal" };
+  return { title: (await recordTitle("deals", id)) ?? tr("Deal") };
 }
 
 export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
@@ -38,7 +39,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
   return (
     <div className="space-y-6">
       <DetailHeader
-        back={{ href: "/deals", label: "Deals" }}
+        back={{ href: "/deals", label: tr("Deals") }}
         path={`/deals/${deal.id}`}
         title={deal.name}
         subtitle={
@@ -58,7 +59,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
           <RecordActions
             table="deals"
             id={deal.id}
-            label="Deal"
+            label={tr("Deal")}
             archived={!!deal.archived_at}
             canArchive={can(user.actor, "archive", "deal", record)}
             canDelete={can(user.actor, "delete", "deal", record)}
@@ -74,55 +75,55 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
         <div className="space-y-6 lg:col-span-2">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              ["Amount", formatMoney(deal.amount, deal.currency)],
-              ["Probability", `${deal.probability}%`],
-              ["Weighted", formatMoney(weighted, deal.currency)],
-              ["In stage", `${daysInStage(deal, new Date())} days`],
+              [tr("Amount"), formatMoney(deal.amount, deal.currency)],
+              [tr("Probability"), `${deal.probability}%`],
+              [tr("Weighted"), formatMoney(weighted, deal.currency)],
+              [tr("In stage"), plural(daysInStage(deal, new Date()), "day")],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg border border-border bg-surface p-3">
-                <div className="text-xs text-text-muted">{label}</div>
+                <div className="text-xs text-text-muted">{trNode(label)}</div>
                 <div className="mt-1 text-lg font-semibold tabular-nums">{value}</div>
               </div>
             ))}
           </div>
           {!deal.archived_at && <ActivityComposer links={{ deal_id: deal.id, company_id: deal.company_id, ...(contact ? { contact_id: contact.id } : {}) }} />}
-          <Panel title="Timeline">
+          <Panel title={tr("Timeline")}>
             <Timeline entries={timeline} names={people.names} />
           </Panel>
-          <Panel title="Comments">
+          <Panel title={tr("Comments")}>
             <CommentComposer entityType="deal" entityId={deal.id} />
           </Panel>
         </div>
         <div className="space-y-6">
-          <Panel title="AI assistant">
+          <Panel title={tr("AI assistant")}>
             <DealAssistant dealId={deal.id} provider={aiConfig().provider ? aiConfig().label : null} />
           </Panel>
           {yandexConfig().telemostConfigured && canEdit && (
-            <Panel title="Video meeting">
+            <Panel title={tr("Video meeting")}>
               <DealMeetingButton dealId={deal.id} />
             </Panel>
           )}
-          <Panel title="Details">
+          <Panel title={tr("Details")}>
             <Facts
               className="sm:grid-cols-1"
               items={[
-                ["Primary contact", contact ? <Link key="c" href={`/contacts/${contact.id}`} className="text-brand hover:underline">{contact.first_name} {contact.last_name}</Link> : null],
-                ...(deal.closed_at ? ([["Closed", formatDate(deal.closed_at)]] as Array<[string, string]>) : []),
-                ["Expected close", formatDate(deal.expected_close_date)],
-                ["Owner", people.names[deal.owner_id]],
-                ["Source", humanizeStatus(deal.source)],
-                ["Next activity", deal.next_activity || null],
-                ...(deal.lost_reason ? ([["Lost reason", deal.lost_reason]] as Array<[string, string]>) : []),
-                ...(deal.lead_id ? ([["Lead", <Link key="l" href={`/leads/${deal.lead_id}`} className="text-brand hover:underline">Converted lead</Link>]] as Array<[string, React.ReactNode]>) : []),
-                ["Created", formatDate(deal.created_at)],
+                [tr("Primary contact"), contact ? <Link key="c" href={`/contacts/${contact.id}`} className="text-brand hover:underline">{contact.first_name} {contact.last_name}</Link> : null],
+                ...(deal.closed_at ? ([[tr("Closed"), formatDate(deal.closed_at)]] as Array<[string, string]>) : []),
+                [tr("Expected close"), formatDate(deal.expected_close_date)],
+                [tr("Owner"), people.names[deal.owner_id]],
+                [tr("Source"), humanizeStatus(deal.source)],
+                [tr("Next activity"), deal.next_activity || null],
+                ...(deal.lost_reason ? ([[tr("Lost reason"), deal.lost_reason]] as Array<[string, string]>) : []),
+                ...(deal.lead_id ? ([[tr("Lead"), <Link key="l" href={`/leads/${deal.lead_id}`} className="text-brand hover:underline">{tr("Converted lead")}</Link>]] as Array<[string, React.ReactNode]>) : []),
+                [tr("Created"), formatDate(deal.created_at)],
               ]}
             />
             {deal.notes && <p className="mt-4 border-t border-border pt-3 text-sm whitespace-pre-wrap">{deal.notes}</p>}
           </Panel>
-          <Panel title="Open tasks">
+          <Panel title={tr("Open tasks")}>
             <MiniList
               rows={tasks.filter((t) => t.status === "todo" || t.status === "in_progress")}
-              empty="No open tasks."
+              empty={tr("No open tasks.")}
               render={(t) => (
                 <div className="flex items-center justify-between gap-2 text-sm">
                   <span className="truncate">{t.title}</span>
@@ -131,7 +132,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
               )}
             />
           </Panel>
-          <Panel title="Change history">
+          <Panel title={tr("Change history")}>
             <ChangeHistory entries={changes} names={people.names} />
           </Panel>
         </div>
