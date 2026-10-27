@@ -82,6 +82,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   { href: "/settings/pipeline", label: "Pipelines", description: "Pipelines and their stages: rename, reorder, probabilities, won and lost.", requires: { action: "manage", resource: "pipeline_stage" } },
   { href: "/settings/fields", label: "Fields", description: "Your own fields on companies, contacts, leads and deals.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/email-templates", label: "E-mail templates", description: "Ready-made e-mails for writing to customers from record pages.", requires: { action: "manage", resource: "organization" } },
+  { href: "/settings/import", label: "Move from another CRM", description: "Bitrix24 and amoCRM: pipelines, companies, contacts and deals.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/api-keys", label: "API keys", description: "Keys for the public API and the SIEM, with scopes. Shown once, stored hashed.", requires: { action: "view", resource: "api_key" } },
   { href: "/settings/security", label: "Security log", description: "Tamper-evident log of security events, with chain verification.", requires: { action: "view", resource: "audit_log" } },
   { href: "/settings/demo", label: "Demo data", description: "Reset the demo dataset to its seeded state.", requires: { action: "manage", resource: "demo" } },

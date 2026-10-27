@@ -6,7 +6,7 @@ import { blockedAddressReason, checkOutboundUrl } from "@/domain/integrations/ss
 import { DELIVERY_LIMITS } from "@/domain/integrations/webhooks";
 
 /**
- * HTTP POST for outbound webhooks with SSRF protection:
+ * HTTP POST (and GET, for API imports) to outside services with SSRF protection:
  * - static URL checks (https in production, no credentials, no internal hostnames)
  * - DNS is resolved inside the socket's lookup hook and every address is checked, so the
  *   address that is checked is the address that is connected to (no DNS rebinding window)
@@ -24,7 +24,7 @@ export class SsrfBlockedError extends Error {
   }
 }
 
-export type TransportRequest = { url: string; body: string; headers: Record<string, string> };
+export type TransportRequest = { url: string; body: string; headers: Record<string, string>; /** POST unless set (GET sends no body). */ method?: "GET" | "POST" };
 export type TransportResponse = { status: number; body: string; durationMs: number };
 export type Transport = (request: TransportRequest) => Promise<TransportResponse>;
 
@@ -68,8 +68,8 @@ function postOnce(url: URL, request: TransportRequest, options: Required<Transpo
     const req = client.request(
       url,
       {
-        method: "POST",
-        headers: { ...request.headers, "Content-Length": Buffer.byteLength(request.body).toString() },
+        method: request.method ?? "POST",
+        headers: request.method === "GET" ? request.headers : { ...request.headers, "Content-Length": Buffer.byteLength(request.body).toString() },
         lookup: guardedLookup(options.allowPrivate) as never,
         signal,
       },
@@ -94,7 +94,7 @@ function postOnce(url: URL, request: TransportRequest, options: Required<Transpo
       },
     );
     req.on("error", reject);
-    req.end(request.body);
+    req.end(request.method === "GET" ? undefined : request.body);
   });
 }
 

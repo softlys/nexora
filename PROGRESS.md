@@ -28,6 +28,15 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Move from Bitrix24 and amoCRM (2026-10-27)
+
+- **Settings → Move from another CRM** (admins). Bitrix24 through an incoming webhook URL (REST), amoCRM through the account subdomain and a long-lived token (API v4). The address and token are used for the request only, never stored.
+- **Check first:** counts of pipelines, companies, contacts and deals, what is new and what was moved before. **Then move.**
+- **What moves:** pipelines (matched by name, or created with the source stages: open stages in order plus one won and one lost stage; extra failure stages such as Bitrix24's "Analyse the reason" map to the lost stage), companies (phone, website, address), contacts linked to their company, deals with amount, currency, contact, company and stage. Deals without a company get one named after the deal.
+- Every record is remembered by its id in the source CRM (`integration_records`, `import:bitrix24` / `import:amocrm`), so a second run only adds new records. Imported records use the normal services (validation, audit, events) but do not run automations. Up to 5 000 records of each kind per run.
+- Outbound requests use the SSRF-guarded transport (now also for GET).
+- **Tests.** Reading both APIs with paging and the won/lost mapping, the move with a dry run and a repeated run, admin-only (unit).
+
 ## Robots on pipeline stages (2026-10-27)
 
 - **Robots** (`/pipeline/robots`, "Robots" on the pipeline page): columns per stage of the chosen pipeline; each robot runs when a deal enters that stage, as in Bitrix24.
