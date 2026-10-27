@@ -64,6 +64,7 @@ export function WorkflowEditor({
   reps,
   testRecords,
   startEditing,
+  stages = [],
 }: {
   workflow: { id: string; name: string; description: string; enabled: boolean; version: number; definition: Json };
   canEdit: boolean;
@@ -71,6 +72,8 @@ export function WorkflowEditor({
   reps: Option[];
   testRecords: Option[];
   startEditing: boolean;
+  /** Pipeline stages ("Pipeline · Stage") for robots that fire when a deal enters one stage. */
+  stages?: Option[];
 }) {
   const router = useRouter();
   const initial = useMemo(() => structuredClone(workflow.definition) as unknown as Definition, [workflow.definition]);
@@ -325,7 +328,7 @@ export function WorkflowEditor({
         <section aria-label={tr("Step configuration")} className="rounded-lg border border-border bg-surface p-4 lg:col-span-3">
           <fieldset disabled={!editing} className="space-y-4">
             {selected === "trigger" ? (
-              <TriggerPanel trigger={def.trigger} onChange={setTrigger} />
+              <TriggerPanel trigger={def.trigger} onChange={setTrigger} stages={stages} />
             ) : selectedStep ? (
               <StepPanel
                 step={selectedStep}
@@ -444,7 +447,7 @@ function SelectBox({ value, options, onChange, label }: { value: string; options
 
 const opt = (values: readonly string[]) => values.map((v) => ({ value: v, label: v.replace(/_/g, " ") }));
 
-function TriggerPanel({ trigger, onChange }: { trigger: Definition["trigger"]; onChange: (patch: Json) => void }) {
+function TriggerPanel({ trigger, onChange, stages }: { trigger: Definition["trigger"]; onChange: (patch: Json) => void; stages: Option[] }) {
   const type = trigger.type;
   return (
     <div className="space-y-4">
@@ -475,7 +478,17 @@ function TriggerPanel({ trigger, onChange }: { trigger: Definition["trigger"]; o
       )}
       {type === "deal.stage_changed" && (
         <Field label={tr("Moved to")}>
-          <SelectBox label={tr("Moved to")} value={String(trigger.to)} options={[{ value: "won", label: tr("A won stage") }, { value: "lost", label: tr("A lost stage") }, { value: "any", label: tr("Any stage") }]} onChange={(v) => onChange({ to: v })} />
+          <SelectBox
+            label={tr("Moved to")}
+            value={String(trigger.to)}
+            options={[{ value: "won", label: tr("A won stage") }, { value: "lost", label: tr("A lost stage") }, { value: "any", label: tr("Any stage") }, ...(stages.length ? [{ value: "stage", label: tr("A particular stage") }] : [])]}
+            onChange={(v) => onChange({ to: v, stage_id: v === "stage" ? (trigger.stage_id ?? stages[0]?.value) : undefined })}
+          />
+        </Field>
+      )}
+      {type === "deal.stage_changed" && trigger.to === "stage" && (
+        <Field label={tr("Stage")}>
+          <SelectBox label={tr("Stage")} value={String(trigger.stage_id ?? "")} options={stages} onChange={(v) => onChange({ stage_id: v })} />
         </Field>
       )}
       {type === "date.reached" && (

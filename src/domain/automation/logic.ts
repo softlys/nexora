@@ -32,6 +32,7 @@ export function validateDefinition(input: unknown): { ok: true; definition: Work
     index.set(s.id, i);
   });
 
+  if (def.trigger.type === "deal.stage_changed" && def.trigger.to === "stage" && !def.trigger.stage_id) issues.push({ path: "trigger.stage_id", message: "Choose the stage" });
   const entity = def.trigger.entity;
   const allowedVars = new Set(variablesFor(entity));
   const checkTarget = (from: number, field: string, value: string | undefined) => {

@@ -13,6 +13,7 @@ import { PermissionError } from "@/domain/permissions";
 import { companyForName } from "./companies";
 import { withCustom } from "./custom-fields";
 import { dealItemsOf, dealItemTotals } from "./deal-items";
+import { tr } from "@/lib/i18n";
 
 export async function sortedPipelines(tx: Tx): Promise<Pipeline[]> {
   return (await tx.find("pipelines", { archived_at: null })).sort((a, b) => a.position - b.position);
@@ -345,6 +346,14 @@ export async function moveDealStage(ctx: ServiceContext, input: z.output<typeof 
 
 export async function stageOptions(ctx: ServiceContext) {
   return ctx.db.read(ctx.actor.organization_id, (tx) => sortedStages(tx));
+}
+
+/** Every stage as "Pipeline · Stage", in board order (for robots and stage pickers). */
+export async function stageChoices(ctx: ServiceContext): Promise<Array<{ value: string; label: string }>> {
+  return ctx.db.read(ctx.actor.organization_id, async (tx) => {
+    const pipelines = new Map((await sortedPipelines(tx)).map((p) => [p.id, p.name]));
+    return (await sortedStages(tx)).map((s) => ({ value: s.id, label: `${tr(pipelines.get(s.pipeline_id) ?? "")} · ${tr(s.name)}` }));
+  });
 }
 
 export async function pipelineOptions(ctx: ServiceContext) {

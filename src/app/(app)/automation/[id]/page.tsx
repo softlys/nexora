@@ -13,6 +13,7 @@ import { WorkflowCanvas } from "@/components/crm/workflow-canvas";
 import { RunHistory } from "./run-history";
 import { WorkflowEditor } from "./workflow-editor";
 import { tr, trNode } from "@/lib/i18n";
+import { stageChoices } from "@/server/services/deals";
 
 async function testRecordOptions(ctx: ServiceContext, entity: TriggerEntity) {
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
@@ -43,14 +44,15 @@ export default async function WorkflowPage({ params, searchParams }: PageProps<"
   const { user } = await requirePermission("view", "automation");
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const filters = { status: enumFilter(sp, "status", EXECUTION_STATUSES), mode: enumFilter(sp, "mode", ["live", "test"] as const) };
-  const { data, reps, testRecords, definition } = await loadPage(async (ctx) => {
+  const { data, reps, stages, testRecords, definition } = await loadPage(async (ctx) => {
     const data = await getWorkflow(ctx, id, filters);
     const parsed = validateDefinition(data.workflow.definition);
     const entity = parsed.ok ? parsed.definition.trigger.entity : "lead";
     const reps = await ctx.db.read(ctx.actor.organization_id, async (tx) =>
       (await tx.find("profiles")).filter((p) => p.role === "sales_rep" && p.is_active && !p.archived_at).map((p) => ({ value: p.id, label: p.full_name })),
     );
-    return { data, reps, testRecords: await testRecordOptions(ctx, entity), definition: parsed.ok ? parsed.definition : null };
+    const stages = await stageChoices(ctx);
+    return { data, reps, stages, testRecords: await testRecordOptions(ctx, entity), definition: parsed.ok ? parsed.definition : null };
   });
   const { workflow, stats, executions } = data;
 
@@ -84,6 +86,7 @@ export default async function WorkflowPage({ params, searchParams }: PageProps<"
         reps={reps}
         testRecords={testRecords}
         startEditing={first(sp.edit) === "1"}
+        stages={stages}
       />
       <RunHistory executions={executions} canRetry={can(user.actor, "update", "automation")} />
     </div>

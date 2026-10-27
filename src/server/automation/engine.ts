@@ -122,7 +122,7 @@ export function triggerMatches(def: WorkflowDefinition, event: DomainEvent): boo
       return t.fields.length === 0 || t.fields.some((f) => changed.includes(f));
     }
     case "deal.stage_changed":
-      return t.to === "any" || (t.to === "won" && p.is_won === true) || (t.to === "lost" && p.is_lost === true);
+      return t.to === "any" || (t.to === "won" && p.is_won === true) || (t.to === "lost" && p.is_lost === true) || (t.to === "stage" && !!t.stage_id && p.to_stage_id === t.stage_id);
     case "date.reached":
       return p.entity === "task" && p.field === "due_at" && (t.task_type === "any" || p.task_type === t.task_type);
     case "webhook.received":

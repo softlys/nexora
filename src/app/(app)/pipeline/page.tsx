@@ -1,4 +1,5 @@
-import { KanbanSquare, Table2 } from "lucide-react";
+import { Bot, KanbanSquare, Table2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { DealFormButton } from "@/components/crm/deal-form";
 import { ListTable } from "@/components/list/list-table";
@@ -37,6 +38,7 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
   }));
   const stages = board?.stages ?? table!.stages;
   const pipelines = board?.pipelines ?? table!.pipelines;
+  const canAutomate = can(user.actor, "view", "automation");
   const currentPipeline = board?.pipeline.id ?? filters.pipeline ?? pipelines[0]?.id ?? null;
 
   return (
@@ -59,6 +61,14 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
                 </Link>
               ))}
             </div>
+            {canAutomate && (
+              <Button variant="outline" asChild>
+                <Link href={`/pipeline/robots${currentPipeline ? `?pipeline=${currentPipeline}` : ""}`} data-testid="robots-link">
+                  <Bot aria-hidden />
+                  {tr("Robots")}
+                </Link>
+              </Button>
+            )}
             {perms.canCreate && <DealFormButton options={options} defaultPipelineId={currentPipeline ?? undefined} />}
           </>
         }

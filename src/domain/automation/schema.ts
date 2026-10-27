@@ -43,7 +43,8 @@ export function variablesFor(entity: TriggerEntity): string[] {
 export const triggerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("record.created"), entity: z.enum(TRIGGER_ENTITIES) }).strict(),
   z.object({ type: z.literal("record.updated"), entity: z.enum(TRIGGER_ENTITIES), fields: z.array(z.string().max(64)).max(10).default([]) }).strict(),
-  z.object({ type: z.literal("deal.stage_changed"), entity: z.literal("deal"), to: z.enum(["won", "lost", "any"]) }).strict(),
+  // "stage": the deal entered `stage_id` (a robot on that stage, as in Bitrix24).
+  z.object({ type: z.literal("deal.stage_changed"), entity: z.literal("deal"), to: z.enum(["won", "lost", "any", "stage"]), stage_id: z.uuid().optional() }).strict(),
   z
     .object({
       type: z.literal("date.reached"),

@@ -28,6 +28,14 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Robots on pipeline stages (2026-10-27)
+
+- **Robots** (`/pipeline/robots`, "Robots" on the pipeline page): columns per stage of the chosen pipeline; each robot runs when a deal enters that stage, as in Bitrix24.
+  - Actions: create a task for the deal owner (type, due in N business days), notify the owner/managers/admins, e-mail the owner, WhatsApp to the customer, message the team in Telegram, set the probability. Texts take `{{deal.*}}` variables; defaults are in the interface language.
+  - Switch on/off and remove per robot; runs and failures are shown on the card, and the name opens the workflow in Automation Studio.
+- **Engine.** The `deal.stage_changed` trigger takes `to: "stage"` with a `stage_id`; Automation Studio offers "A particular stage" with a stage picker. Robots are ordinary workflows (admins and managers).
+- **Tests.** Trigger matching per stage, a robot creating a task on a stage move, permissions (unit); e2e: add a robot from the pipeline.
+
 ## Products in deals (2026-10-27)
 
 - **Products panel** on the deal page: lines from the catalog or custom, with quantity, price, discount and tax, line totals and a live total.

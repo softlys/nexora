@@ -7,7 +7,7 @@ import { NAV_ITEMS, SETTINGS_SECTIONS } from "@/domain/navigation";
 import { useRecordLabels } from "./record-label";
 import { tr } from "@/lib/i18n";
 
-const EXTRA_LABELS: Record<string, string> = { "/help": tr("Help"), "/duplicates": tr("Duplicates") };
+const EXTRA_LABELS: Record<string, string> = { "/help": tr("Help"), "/duplicates": tr("Duplicates"), "/pipeline/robots": tr("Robots") };
 
 function labelFor(href: string): string | null {
   return (
