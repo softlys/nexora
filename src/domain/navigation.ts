@@ -9,6 +9,7 @@ export type NavIcon =
   | "companies"
   | "contacts"
   | "leads"
+  | "inbox"
   | "deals"
   | "pipeline"
   | "orders"
@@ -41,6 +42,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/companies", label: "Companies", icon: "companies", requires: { action: "view", resource: "company" }, keywords: ["accounts", "customers"] },
       { href: "/contacts", label: "Contacts", icon: "contacts", requires: { action: "view", resource: "contact" }, keywords: ["people"] },
       { href: "/leads", label: "Leads", icon: "leads", requires: { action: "view", resource: "lead" }, keywords: ["prospects"] },
+      { href: "/inbox", label: "Inbox", icon: "inbox", requires: { action: "view", resource: "activity" }, keywords: ["chats", "messages", "telegram", "whatsapp", "vk"] },
       { href: "/deals", label: "Deals", icon: "deals", requires: { action: "view", resource: "deal" }, keywords: ["opportunities"] },
     ],
   },

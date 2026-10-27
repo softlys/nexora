@@ -195,6 +195,21 @@ describe("row-level security matches the permission matrix", () => {
     await expect(asUser(db, DEMO_USER_IDS.repDaniel, (tx) => tx.query(own, ["10a", DEMO_USER_IDS.repDaniel]))).rejects.toThrow(/check constraint/);
   });
 
+  it("shows conversations only with visible contacts and lets users reply only there", async () => {
+    const visibleTo = async (userId: string) => (await asUser(db, userId, (tx) => tx.query<{ id: string }>("select id from public.conversations"))).rows.map((r) => r.id).sort();
+    const withContact = seed.conversations.filter((c) => c.contact_id);
+    const ownerOf = (c: (typeof withContact)[number]) => seed.contacts.find((x) => x.id === c.contact_id)!.owner_id;
+    expect(await visibleTo(DEMO_USER_IDS.admin)).toEqual(seed.conversations.map((c) => c.id).sort());
+    const target = withContact[0]!;
+    const owner = ownerOf(target);
+    expect(await visibleTo(owner)).toContain(target.id);
+    const stranger = [DEMO_USER_IDS.repDaniel, DEMO_USER_IDS.repSofia, DEMO_USER_IDS.repEthan].find((u) => u !== owner)!;
+    expect(await visibleTo(stranger)).not.toContain(target.id);
+    const reply = "insert into public.chat_messages (organization_id, conversation_id, direction, body, author_id) values ($1, $2, 'out', 'Hi', $3)";
+    await asUser(db, owner, (tx) => tx.query(reply, [target.organization_id, target.id, owner]));
+    await expect(asUser(db, stranger, (tx) => tx.query(reply, [target.organization_id, target.id, stranger]))).rejects.toThrow(/row-level security/);
+  });
+
   it("does not expose API key hashes to the client role", async () => {
     await expect(asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select key_hash from public.api_keys"))).rejects.toThrow(/permission denied/);
   });

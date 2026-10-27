@@ -19,6 +19,8 @@ export const RATE_LIMITS = {
   ai: { limit: 10, windowSeconds: 60 },
   /** Background checks by the app shell (the incoming call pop-up polls every few seconds), per user. */
   poll: { limit: 40, windowSeconds: 60 },
+  /** Website chat widget requests (sending and checking for replies), per client IP. */
+  site_chat: { limit: 60, windowSeconds: 60 },
   /** Demo access code attempts, per client IP. */
   demo_access: { limit: 10, windowSeconds: 600 },
 } satisfies Record<string, RateLimitRule>;

@@ -4,6 +4,7 @@ import { HookError, readHookBody, text, type HookHandler } from "./common";
 import { formsHook } from "./forms";
 import { mangoHook, twilioHook, zadarmaHook } from "./telephony";
 import { whatsappHook } from "./whatsapp";
+import { telegramHook, vkHook } from "./chats";
 import { stripeHook, yookassaHook } from "./payments";
 
 /** Inbound webhooks by provider: /api/hooks/<provider>/… */
@@ -13,6 +14,8 @@ export const HOOKS: Record<string, HookHandler> = {
   zadarma: zadarmaHook,
   twilio: twilioHook,
   whatsapp: whatsappHook,
+  telegram: telegramHook,
+  vk: vkHook,
   yookassa: yookassaHook,
   stripe: stripeHook,
 };

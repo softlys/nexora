@@ -28,6 +28,22 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Unified inbox (2026-10-27)
+
+- **Inbox** (`/inbox`, in the sidebar): customer chats from Telegram, WhatsApp, VK and the website chat in one list, filtered by channel and open/closed, with unread marks. The page refreshes every 5 seconds.
+  - A conversation shows the thread, a link to the contact or lead, and a reply box. The reply goes back through the same channel and is logged as a `message` activity on the timeline.
+  - Close/reopen; a new customer message reopens a conversation.
+  - Visibility follows the linked contact or lead (admins see all), in the services and in RLS.
+- **Channels** (`src/server/integrations/chat.ts`):
+  - Telegram: the bot's private chats via `/api/hooks/telegram` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`); the team chat is ignored. Contacts are matched by their saved Telegram username.
+  - WhatsApp: the existing webhook now files messages into the inbox too; replies use the Cloud API.
+  - VK: community Callback API at `/api/hooks/vk` (`VK_GROUP_TOKEN`, `VK_CONFIRMATION_CODE`, `VK_SECRET`); replies via `messages.send`.
+  - Website chat: `<script src="https://<host>/api/chat/widget" async>` adds a chat button to any site; `/api/chat` takes visitor messages and returns replies (session UUID, CORS, rate limit per IP). `NEXORA_SITE_CHAT=on` (always on in demo). Sample page: `/api/chat/demo`.
+  - Unknown senders become leads; repeated deliveries are ignored.
+- **Demo.** Three seeded chats (Telegram, WhatsApp, website).
+- **Data.** Tables `conversations` and `chat_messages` with RLS (`private.can_see_conversation`), migration `20261026000005_inbox.sql`.
+- **Tests.** Matching, dedupe, leads from unknown senders, visibility, replies per channel, closed/reopened (unit); RLS (PGlite); e2e: visitor message → reply in the inbox → visitor receives it.
+
 ## Click-to-call and caller card (2026-10-26)
 
 - **Internal number.** Each user sets their extension on the office PBX in Settings → Profile (`profiles.phone_extension`, digits only).

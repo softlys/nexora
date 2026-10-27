@@ -191,6 +191,41 @@ export const customFieldSchema = z.object({
 });
 export type CustomField = z.infer<typeof customFieldSchema>;
 
+export const CHAT_CHANNELS = ["telegram", "whatsapp", "vk", "site"] as const;
+export type ChatChannel = (typeof CHAT_CHANNELS)[number];
+
+/**
+ * A chat with a customer in one channel (Telegram, WhatsApp, VK, the website chat), linked to the
+ * contact or lead it belongs to. `external_id` is the channel's chat: Telegram chat id, WhatsApp
+ * number, VK peer id or the website visitor's session.
+ */
+export const conversationSchema = z.object({
+  ...base,
+  channel: z.enum(CHAT_CHANNELS),
+  external_id: z.string().min(1).max(255),
+  title: requiredText(160),
+  contact_id: id.nullable(),
+  lead_id: id.nullable(),
+  status: z.enum(["open", "closed"]),
+  unread: z.boolean(),
+  last_message_at: timestamp,
+  last_message_preview: shortText(200),
+});
+export type Conversation = z.infer<typeof conversationSchema>;
+
+/** One message of a conversation: from the customer ("in") or a reply from NEXORA ("out"). */
+export const chatMessageSchema = z.object({
+  id,
+  organization_id: id,
+  conversation_id: id,
+  direction: z.enum(["in", "out"]),
+  body: requiredText(4096),
+  author_id: id.nullable(),
+  external_id: z.string().max(255).nullable(),
+  created_at: timestamp,
+});
+export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
 /** A reusable e-mail for writing to customers from record pages (see src/domain/email-templates.ts). */
 export const emailTemplateSchema = z.object({
   ...base,
@@ -560,6 +595,8 @@ export const TABLES = [
   "leads",
   "custom_fields",
   "email_templates",
+  "conversations",
+  "chat_messages",
   "pipelines",
   "pipeline_stages",
   "deals",
@@ -592,6 +629,8 @@ export type Dataset = {
   leads: Lead[];
   custom_fields: CustomField[];
   email_templates: EmailTemplate[];
+  conversations: Conversation[];
+  chat_messages: ChatMessage[];
   pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
@@ -623,6 +662,8 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   leads: leadSchema,
   custom_fields: customFieldSchema,
   email_templates: emailTemplateSchema,
+  conversations: conversationSchema,
+  chat_messages: chatMessageSchema,
   pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,

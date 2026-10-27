@@ -1,7 +1,6 @@
 import "server-only";
-import { leadInput } from "@/domain/inputs";
-import { insertLead } from "@/server/services/leads";
-import { claimExternal, finishInbound, findParty, inboundContext, inboundMeta, linkExternal, openDealOf, recordActivity, secretMatches } from "../inbound";
+import { receiveMessage } from "../chat";
+import { finishInbound, inboundContext, inboundMeta, secretMatches } from "../inbound";
 import { metaSignatureValid, whatsappConfig } from "../messaging";
 import { HookError, text, type HookHandler } from "./common";
 
@@ -17,8 +16,8 @@ function messageText(m: WaMessage): string {
 
 /**
  * WhatsApp Business (Meta Cloud API) webhook: https://<host>/api/hooks/whatsapp, verify token
- * WHATSAPP_VERIFY_TOKEN, field "messages". Incoming messages become message activities on the contact
- * or lead with that number; a message from an unknown number creates a lead.
+ * WHATSAPP_VERIFY_TOKEN, field "messages". Incoming messages go to the unified inbox and the timeline of
+ * the contact or lead with that number; a message from an unknown number creates a lead.
  */
 export const whatsappHook: HookHandler = {
   async GET({ request }) {
@@ -36,29 +35,9 @@ export const whatsappHook: HookHandler = {
     if (items.length === 0) return text("ok"); // status updates (sent, delivered, read)
     const ctx = await inboundContext(inboundMeta(request));
     for (const { m, name } of items.slice(0, 50)) {
-      await ctx.db.write(ctx.actor.organization_id, async (tx) => {
-        const claim = await claimExternal(tx, ctx, "whatsapp", m.id);
-        if (!claim) return;
-        const phone = `+${m.from}`;
-        const party = await findParty(tx, { phone });
-        let leadId = party.lead?.id ?? null;
-        if (!party.contact && !party.lead) {
-          const display = name || phone;
-          const lead = await insertLead(tx, ctx, leadInput.parse({ title: `WhatsApp: ${display}`.slice(0, 160), company_name: display.slice(0, 160), contact_name: display.slice(0, 160), email: "", phone, country: "", source: "website", status: "new", qualification: "cold", next_action: "Reply in WhatsApp", next_action_at: "", estimated_value: 0, owner_id: null }));
-          leadId = lead.id;
-        }
-        const body = messageText(m);
-        const activity = await recordActivity(tx, ctx, {
-          type: "message",
-          subject: `WhatsApp from ${name || phone}: ${body.replace(/\s+/g, " ").slice(0, 120)}`,
-          body,
-          occurred_at: new Date(Number(m.timestamp) * 1000 || Date.now()).toISOString(),
-          contact_id: party.contact?.id ?? null,
-          lead_id: leadId,
-          deal_id: party.contact ? await openDealOf(tx, party.contact.id) : null,
-        });
-        await linkExternal(tx, claim.id, "activity", activity.id);
-      });
+      await ctx.db.write(ctx.actor.organization_id, (tx) =>
+        receiveMessage(tx, ctx, { channel: "whatsapp", chat: m.from, name, text: messageText(m), messageId: m.id, phone: `+${m.from}`, occurredAt: new Date(Number(m.timestamp) * 1000 || Date.now()).toISOString() }),
+      );
     }
     await finishInbound(ctx);
     return text("ok");

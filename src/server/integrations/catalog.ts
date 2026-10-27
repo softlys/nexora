@@ -7,6 +7,7 @@ import { moyskladConfigured } from "./moysklad";
 import { paymentsConfig } from "./payments";
 import { telephonyConfig } from "./telephony";
 import { yandexConfig } from "./yandex";
+import { siteChatEnabled, telegramChatConfig, vkConfig } from "./chat";
 
 /**
  * Every connector NEXORA offers beyond webhooks: what it does, whether it is configured, which
@@ -34,6 +35,9 @@ const set = (name: string) => Boolean(process.env[name]?.trim());
 export function connectorCatalog(): Connector[] {
   const secret = hookSecret();
   const mail = mailConfig();
+  const tgChat = telegramChatConfig();
+  const vk = vkConfig();
+  const siteChat = siteChatEnabled();
   const tel = telephonyConfig();
   const wa = whatsappConfig();
   const ai = aiConfig();
@@ -159,6 +163,56 @@ export function connectorCatalog(): Connector[] {
         "Add a Send WhatsApp message step to a workflow. To write first, create and approve a template in WhatsApp Manager and put its name in the step.",
         "In Russia WhatsApp Business API access depends on your Meta business account; Telegram (Integrations → Telegram) works without it.",
       ],
+    },
+    {
+      id: "telegram_chats",
+      name: "Telegram: customer chats",
+      group: "Messengers and mail",
+      russia: true,
+      summary: "Customers write to your Telegram bot; the chats land in the Inbox and you reply from NEXORA.",
+      state: tgChat.token && tgChat.webhookSecret ? "configured" : tgChat.token || tgChat.webhookSecret ? "error" : "not_configured",
+      detail: tgChat.token && tgChat.webhookSecret ? "Messages are received and replies are sent through your bot." : "Needs TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET.",
+      env: [
+        { name: "TELEGRAM_BOT_TOKEN", hint: "The bot from @BotFather (the same bot as team notifications is fine).", required: true },
+        { name: "TELEGRAM_WEBHOOK_SECRET", hint: "Any random string of letters and digits; Telegram sends it with every update.", required: true },
+      ],
+      endpoints: [{ label: "Webhook URL", path: "/api/hooks/telegram" }],
+      steps: [
+        "Register the webhook once: https://api.telegram.org/bot<TOKEN>/setWebhook?url=<Webhook URL>&secret_token=<TELEGRAM_WEBHOOK_SECRET>",
+        "Put a link to the bot (t.me/<bot>) on your website and in e-mails. Private chats appear in the Inbox; the team chat is ignored.",
+        "A contact is matched by the Telegram username saved on it; unknown people become leads.",
+      ],
+    },
+    {
+      id: "vk",
+      name: "VK community messages",
+      group: "Messengers and mail",
+      russia: true,
+      summary: "Messages to your VK community go to the Inbox; replies are sent from NEXORA as the community.",
+      state: vk.token && vk.confirmation && vk.secret ? "configured" : vk.token || vk.confirmation || vk.secret ? "error" : "not_configured",
+      detail: vk.token && vk.confirmation && vk.secret ? "Callback API and replies are configured." : "Needs VK_GROUP_TOKEN, VK_CONFIRMATION_CODE and VK_SECRET.",
+      env: [
+        { name: "VK_GROUP_TOKEN", hint: "Community → Manage → API usage → access token with messages permission.", required: true },
+        { name: "VK_CONFIRMATION_CODE", hint: "Callback API → the string the server must return.", required: true },
+        { name: "VK_SECRET", hint: "Callback API → secret key.", required: true },
+      ],
+      endpoints: [{ label: "Callback API address", path: "/api/hooks/vk" }],
+      steps: ["Community → Manage → API usage → Callback API: paste the address, API version 5.199, set the secret key, then confirm.", "Event types: incoming message (message_new).", "Turn on community messages. A contact is matched by the VK id saved on it; unknown people become leads."],
+    },
+    {
+      id: "site_chat",
+      name: "Website chat",
+      group: "Messengers and mail",
+      russia: true,
+      summary: "A chat button for your website: visitors write, managers answer from the Inbox.",
+      state: siteChat ? "configured" : "not_configured",
+      detail: siteChat ? "The widget is on. Add the script below to your website." : "Set NEXORA_SITE_CHAT=on.",
+      env: [{ name: "NEXORA_SITE_CHAT", hint: "on to enable the widget (always on in demo mode).", required: true }],
+      endpoints: [
+        { label: "Widget script (put <script src=\"…\" async></script> on your pages)", path: "/api/chat/widget" },
+        { label: "Sample page with the widget", path: "/api/chat/demo" },
+      ],
+      steps: ["Add the script tag before </body> on every page of your website.", "Each visitor's chat appears in the Inbox as a new lead; if they leave an e-mail or phone that matches a contact, it is linked to that contact."],
     },
     {
       id: "mail",

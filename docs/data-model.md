@@ -60,6 +60,8 @@ erDiagram
 | `companies` | Customer and prospect accounts. | `size`, `lifecycle_stage` enumerations |
 | `contacts` | People at companies. `tags` text array. | Company must be in the same organization |
 | `leads` | Interest that is not a deal yet. | `converted_deal_id` unique: a lead converts once |
+| `conversations` | Customer chats per channel (Telegram, WhatsApp, VK, website chat), linked to a contact or lead. | `(organization_id, channel, external_id)` unique; visible with the linked record |
+| `chat_messages` | Messages of a conversation, in (customer) or out (reply). | Users insert only their own replies in visible conversations |
 | `email_templates` | Ready-made e-mails for "Write e-mail" on record pages, with `{{entity.field}}` variables. | Members read, admins manage |
 | `pipelines` | Sales pipelines (воронки), each with its own stages; the first by position is the default. | Name unique per org; the last pipeline and pipelines with deals cannot be deleted |
 | `pipeline_stages` | Ordered stages of a pipeline with default probability and won/lost flags. | Position and name unique per pipeline; exactly one won and one lost stage per pipeline, enforced by the stage functions |
@@ -96,6 +98,7 @@ erDiagram
 | `20261026000002_custom_fields.sql` | `custom_fields` with RLS, `custom jsonb` (object) on companies, contacts, leads and deals |
 | `20261026000003_email_templates.sql` | `email_templates` with RLS and the default templates for existing organizations |
 | `20261026000004_telephony.sql` | `profiles.phone_extension` (internal PBX number) and its column grant |
+| `20261026000005_inbox.sql` | `conversations`, `chat_messages`, `private.can_see_conversation()` and their RLS |
 | `20261021000001_security_events_and_automation.sql` | `security_events` (hash chain, unique `(organization_id, sequence)`, insert-only), `automation_executions.resume_at` / `resume_step_id` for delayed runs, `set_profile_active()` for disabling users |
 
 ## Derived values
