@@ -67,6 +67,7 @@ erDiagram
 | `pipeline_stages` | Ordered stages of a pipeline with default probability and won/lost flags. | Position and name unique per pipeline; exactly one won and one lost stage per pipeline, enforced by the stage functions |
 | `custom_fields` | Admin-defined fields (text, number, date, list, yes/no, link) on companies, contacts, leads and deals. Values live in each record's `custom` jsonb object, keyed by the field key and validated by the services. | `(organization_id, entity, key)` unique; members read, admins manage; archived fields keep their values on records |
 | `deals` | Opportunities. `probability` defaults from the stage. | `lead_id` unique |
+| `deal_items` | Product lines of a deal; with lines the deal amount is their total, and the order from the won deal copies them. | RLS like the deal |
 | `deal_stage_history` | Every stage move with who and when. | |
 | `products` | Catalog. | `sku` unique per organization |
 | `orders` | Orders with stored totals and derived payment status. | `source_deal_id` **unique**: one order per deal, which makes deal-to-order conversion idempotent; `order_number` unique per org |
@@ -99,6 +100,7 @@ erDiagram
 | `20261026000003_email_templates.sql` | `email_templates` with RLS and the default templates for existing organizations |
 | `20261026000004_telephony.sql` | `profiles.phone_extension` (internal PBX number) and its column grant |
 | `20261026000005_inbox.sql` | `conversations`, `chat_messages`, `private.can_see_conversation()` and their RLS |
+| `20261027000001_deal_items.sql` | `deal_items` and its RLS |
 | `20261021000001_security_events_and_automation.sql` | `security_events` (hash chain, unique `(organization_id, sequence)`, insert-only), `automation_executions.resume_at` / `resume_step_id` for delayed runs, `set_profile_active()` for disabling users |
 
 ## Derived values

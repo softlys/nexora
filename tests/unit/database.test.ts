@@ -210,6 +210,14 @@ describe("row-level security matches the permission matrix", () => {
     await expect(asUser(db, stranger, (tx) => tx.query(reply, [target.organization_id, target.id, stranger]))).rejects.toThrow(/row-level security/);
   });
 
+  it("lets users add products only to deals they can see", async () => {
+    const mine = seed.deals.find((d) => d.owner_id === DEMO_USER_IDS.repDaniel)!;
+    const other = seed.deals.find((d) => d.owner_id === DEMO_USER_IDS.repSofia)!;
+    const insert = "insert into public.deal_items (organization_id, deal_id, description, quantity, unit_price, line_total) values ($1, $2, 'Pump', 1, 100, 100)";
+    await asUser(db, DEMO_USER_IDS.repDaniel, (tx) => tx.query(insert, [mine.organization_id, mine.id]));
+    await expect(asUser(db, DEMO_USER_IDS.repDaniel, (tx) => tx.query(insert, [other.organization_id, other.id]))).rejects.toThrow(/row-level security/);
+  });
+
   it("does not expose API key hashes to the client role", async () => {
     await expect(asUser(db, DEMO_USER_IDS.admin, (tx) => tx.query("select key_hash from public.api_keys"))).rejects.toThrow(/permission denied/);
   });

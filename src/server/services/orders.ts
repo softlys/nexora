@@ -13,6 +13,7 @@ import { DomainError } from "@/server/repositories/types";
 import { emit, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { assertLinksVisible, byId, getOwned } from "./records";
 import { createPaymentLink } from "@/server/integrations/payments";
+import { dealItemsOf } from "./deal-items";
 
 const today = (ctx: ServiceContext) => nowOf(ctx).toISOString().slice(0, 10);
 
@@ -306,6 +307,8 @@ export async function convertDealToOrder(ctx: ServiceContext, dealId: string): P
       if (!stage?.is_won) throw new DomainError("Only won deals can be converted into an order.", "conflict");
       const org = await tx.get("organizations", ctx.actor.organization_id);
       const mode = org?.settings.order_conversion_mode ?? "draft";
+      // The deal's product lines become the order lines; without lines the order has one line for the deal amount.
+      const lines = await dealItemsOf(tx, deal.id);
       const order = await insertOrder(
         tx,
         ctx,
@@ -319,7 +322,9 @@ export async function convertDealToOrder(ctx: ServiceContext, dealId: string): P
           source_deal_id: deal.id,
           status: mode,
         },
-        [{ product_id: null, description: deal.name, quantity: 1, unit_price: deal.amount, discount_pct: 0, tax_rate: 0 }],
+        lines.length
+          ? lines.map((l) => ({ product_id: l.product_id, description: l.description, quantity: Number(l.quantity), unit_price: Number(l.unit_price), discount_pct: Number(l.discount_pct), tax_rate: Number(l.tax_rate) }))
+          : [{ product_id: null, description: deal.name, quantity: 1, unit_price: deal.amount, discount_pct: 0, tax_rate: 0 }],
       );
       await emit(tx, ctx, { type: "order.created_from_deal", payload: { order_id: order.id, deal_id: deal.id, mode } });
       return { order, created: true };

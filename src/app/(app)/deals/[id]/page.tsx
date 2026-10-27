@@ -20,6 +20,8 @@ import { plural, tr, trNode } from "@/lib/i18n";
 import { EmailComposerButton } from "@/components/crm/email-composer";
 import { emailComposer } from "@/server/services/email";
 import { emailConfigured } from "@/server/services/integrations";
+import { productOptions } from "@/server/services/orders";
+import { DealProducts } from "@/components/crm/deal-products";
 
 export async function generateMetadata({ params }: PageProps<"/deals/[id]">) {
   const { id } = await params;
@@ -29,11 +31,12 @@ export async function generateMetadata({ params }: PageProps<"/deals/[id]">) {
 export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
   const { user } = await requirePermission("view", "deal");
   const { id } = await params;
-  const { data, people, options, composer } = await loadPage(async (ctx) => ({
+  const { data, people, options, composer, products } = await loadPage(async (ctx) => ({
     data: await getDeal(ctx, id),
     people: await peopleFor(ctx, "deal"),
     options: await dealFormOptions(ctx),
     composer: await emailComposer(ctx, { deal_id: id }, emailConfigured()),
+    products: await productOptions(ctx),
   }));
   const { deal, stage, stages, pipelines, company, contact, order, tasks, timeline, changes } = data;
   // With several pipelines, the stage menu also offers moving the deal to another pipeline.
@@ -75,7 +78,7 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
             {!deal.archived_at && <EmailComposerButton composer={composer} />}
             {canEdit && <StageSelect dealId={deal.id} dealName={deal.name} stageId={deal.stage_id} stages={stageChoices} />}
             {stage?.is_won && (order || can(user.actor, "create", "order", record)) && <CreateOrderButton dealId={deal.id} existing={order ? { id: order.id, order_number: order.order_number } : null} />}
-            {canEdit && <DealFormButton deal={deal} options={options} />}
+            {canEdit && <DealFormButton deal={deal} options={options} amountFromProducts={data.items.length > 0} />}
           </RecordActions>
         }
       />
@@ -94,6 +97,15 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
               </div>
             ))}
           </div>
+          <Panel title={tr("Products")}>
+            <DealProducts
+              dealId={deal.id}
+              currency={deal.currency}
+              items={data.items.map((i) => ({ product_id: i.product_id, description: i.description, quantity: Number(i.quantity), unit_price: Number(i.unit_price), discount_pct: Number(i.discount_pct), tax_rate: Number(i.tax_rate), line_total: Number(i.line_total) }))}
+              products={products}
+              canEdit={canEdit && !deal.archived_at}
+            />
+          </Panel>
           {!deal.archived_at && <ActivityComposer links={{ deal_id: deal.id, company_id: deal.company_id, ...(contact ? { contact_id: contact.id } : {}) }} />}
           <Panel title={tr("Timeline")}>
             <Timeline entries={timeline} names={people.names} />

@@ -12,6 +12,7 @@ import { assertLinksVisible, byId, getOwned } from "./records";
 import { PermissionError } from "@/domain/permissions";
 import { companyForName } from "./companies";
 import { withCustom } from "./custom-fields";
+import { dealItemsOf, dealItemTotals } from "./deal-items";
 
 export async function sortedPipelines(tx: Tx): Promise<Pipeline[]> {
   return (await tx.find("pipelines", { archived_at: null })).sort((a, b) => a.position - b.position);
@@ -152,7 +153,7 @@ export async function getPipelineBoard(ctx: ServiceContext, filters: DealFilters
 export async function getDeal(ctx: ServiceContext, id: string) {
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
     const deal = await getOwned(tx, ctx, "deals", id);
-    const [stages, company, contact, history, activities, tasks, comments, audit, order, profiles, pipelines] = await Promise.all([
+    const [stages, company, contact, history, activities, tasks, comments, audit, order, profiles, pipelines, items] = await Promise.all([
       sortedStages(tx),
       tx.get("companies", deal.company_id),
       deal.primary_contact_id ? tx.get("contacts", deal.primary_contact_id) : Promise.resolve(null),
@@ -164,9 +165,12 @@ export async function getDeal(ctx: ServiceContext, id: string) {
       tx.find("orders", { source_deal_id: id }),
       tx.find("profiles"),
       sortedPipelines(tx),
+      dealItemsOf(tx, id),
     ]);
     return {
       deal,
+      items,
+      itemTotals: dealItemTotals(items),
       stage: stages.find((s) => s.id === deal.stage_id) ?? null,
       stages,
       pipelines,
@@ -278,6 +282,8 @@ export async function updateDeal(ctx: ServiceContext, input: z.output<typeof dea
   return ctx.db.write(ctx.actor.organization_id, async (tx) => {
     const current = await getOwned(tx, ctx, "deals", input.id);
     requireCan(ctx, "update", "deal", current.owner_id, current.id);
+    // With product lines the amount is their total; the form cannot override it.
+    if ((await tx.find("deal_items", { deal_id: current.id })).length) input = { ...input, amount: current.amount };
     await guardWonDealAmount(tx, ctx, current, input.amount, input.currency);
     const companyId = input.company_id ?? (await companyForName(tx, ctx, input.new_company!));
     if (companyId !== current.company_id || input.primary_contact_id !== current.primary_contact_id) {

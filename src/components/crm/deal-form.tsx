@@ -66,6 +66,7 @@ export function DealFormButton({
   open: controlledOpen,
   onOpenChange,
   hideTrigger = false,
+  amountFromProducts = false,
   autoOpen = false,
 }: {
   autoOpen?: boolean;
@@ -77,6 +78,8 @@ export function DealFormButton({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
+  /** The deal has product lines: its amount is their total and is not edited here. */
+  amountFromProducts?: boolean;
 }) {
   const router = useRouter();
   const [internalOpen, setInternalOpen] = useAutoOpen(autoOpen);
@@ -179,7 +182,7 @@ export function DealFormButton({
           disabled={!companyId}
         />
         <div className="grid gap-4 sm:grid-cols-3">
-          <TextField control={control} name="amount" label={tr("Amount")} inputMode="decimal" className="sm:col-span-2" />
+          <TextField control={control} name="amount" label={tr("Amount")} inputMode="decimal" className="sm:col-span-2" hint={amountFromProducts ? tr("Calculated from the deal's products; change them in the Products panel.") : undefined} />
           <TextField control={control} name="currency" label={tr("Currency")} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">

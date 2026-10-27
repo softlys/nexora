@@ -283,6 +283,24 @@ export const dealSchema = z.object({
 });
 export type Deal = z.infer<typeof dealSchema>;
 
+/** A product line on a deal (товары в сделке). With lines, the deal amount is their total. */
+export const dealItemSchema = z.object({
+  id,
+  organization_id: id,
+  deal_id: id,
+  product_id: id.nullable(),
+  description: requiredText(255),
+  quantity: z.number().positive().max(1_000_000),
+  unit_price: money,
+  discount_pct: z.number().min(0).max(100),
+  tax_rate: z.number().min(0).max(100),
+  line_total: money,
+  position: z.number().int().min(0),
+  created_at: timestamp,
+  updated_at: timestamp,
+});
+export type DealItem = z.infer<typeof dealItemSchema>;
+
 export const dealStageHistorySchema = z.object({
   id,
   organization_id: id,
@@ -600,6 +618,7 @@ export const TABLES = [
   "pipelines",
   "pipeline_stages",
   "deals",
+  "deal_items",
   "deal_stage_history",
   "products",
   "orders",
@@ -634,6 +653,7 @@ export type Dataset = {
   pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
+  deal_items: DealItem[];
   deal_stage_history: DealStageHistory[];
   products: Product[];
   orders: Order[];
@@ -667,6 +687,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,
+  deal_items: dealItemSchema,
   deal_stage_history: dealStageHistorySchema,
   products: productSchema,
   orders: orderSchema,

@@ -28,6 +28,15 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Products in deals (2026-10-27)
+
+- **Products panel** on the deal page: lines from the catalog or custom, with quantity, price, discount and tax, line totals and a live total.
+- **The deal amount is the total of its lines** once it has any; the deal form shows that the amount is calculated, and the services ignore an amount typed there. Without lines the amount is entered by hand, as before.
+- **Order from a won deal** copies the lines (before: one line for the deal amount).
+- Sales reps cannot change the lines of a closed deal (like its amount).
+- **Data.** Table `deal_items` (migration `20261027000001_deal_items.sql`), RLS like the deal.
+- **Tests.** Totals and amount, deal form keeps the calculated amount, lines copied into the order, permissions (unit); RLS (PGlite); e2e: add a line, amount updates.
+
 ## Unified inbox (2026-10-27)
 
 - **Inbox** (`/inbox`, in the sidebar): customer chats from Telegram, WhatsApp, VK and the website chat in one list, filtered by channel and open/closed, with unread marks. The page refreshes every 5 seconds.

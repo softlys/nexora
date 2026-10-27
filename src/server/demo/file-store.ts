@@ -65,6 +65,10 @@ export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
     data.chat_messages = seeded.chat_messages;
     changed = true;
   }
+  if (!data.deal_items) {
+    data.deal_items = [];
+    changed = true;
+  }
   // Tables added after a store was written start empty.
   if (!data.integration_records) {
     data.integration_records = [];

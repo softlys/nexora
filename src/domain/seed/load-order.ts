@@ -18,6 +18,7 @@ export const LOAD_ORDER: TableName[] = [
   "conversations",
   "chat_messages",
   "deals",
+  "deal_items",
   "deal_stage_history",
   "products",
   "orders",
