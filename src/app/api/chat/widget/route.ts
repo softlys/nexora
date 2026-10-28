@@ -9,14 +9,15 @@ import { locale } from "@/lib/i18n";
  */
 
 const TEXTS = {
-  en: { open: "Chat with us", title: "Questions? Write to us", name: "Your name", contact: "E-mail or phone (optional)", placeholder: "Type a message…", send: "Send", hello: "Hello! How can we help?", error: "The message was not sent. Please try again." },
-  ru: { open: "Напишите нам", title: "Есть вопрос? Напишите нам", name: "Ваше имя", contact: "E-mail или телефон (необязательно)", placeholder: "Введите сообщение…", send: "Отправить", hello: "Здравствуйте! Чем можем помочь?", error: "Сообщение не отправлено. Попробуйте ещё раз." },
+  en: { open: "Chat with us", title: "Questions? Write to us", name: "Your name", contact: "E-mail or phone (optional)", placeholder: "Type a message…", send: "Send", hello: "Hello! How can we help?", error: "The message was not sent. Please try again.", consent: "By sending a message you agree to the processing of your personal data", policy: "policy" },
+  ru: { open: "Напишите нам", title: "Есть вопрос? Напишите нам", name: "Ваше имя", contact: "E-mail или телефон (необязательно)", placeholder: "Введите сообщение…", send: "Отправить", hello: "Здравствуйте! Чем можем помочь?", error: "Сообщение не отправлено. Попробуйте ещё раз.", consent: "Отправляя сообщение, вы соглашаетесь на обработку персональных данных", policy: "политика" },
 };
 
-function script(texts: (typeof TEXTS)["en"]): string {
+function script(texts: (typeof TEXTS)["en"], policyUrl: string | null): string {
   return `(() => {
   if (window.__nexoraChat) return; window.__nexoraChat = true;
   const T = ${JSON.stringify(texts)};
+  const POLICY = ${JSON.stringify(policyUrl)};
   const src = (document.currentScript && document.currentScript.src) || "";
   const base = src ? new URL(src).origin : location.origin;
   const KEY = "nexora-chat-session";
@@ -36,11 +37,11 @@ function script(texts: (typeof TEXTS)["en"]): string {
     + "#nx-form{border-top:1px solid #eee;padding:8px;display:flex;flex-direction:column;gap:6px}"
     + "#nx-form input,#nx-form textarea{font:inherit;border:1px solid #ccc;border-radius:8px;padding:7px 9px;resize:none}"
     + "#nx-row{display:flex;gap:6px}#nx-row textarea{flex:1}#nx-send{background:#5b4bff;color:#fff;border:0;border-radius:8px;padding:0 12px}"
-    + "#nx-err{color:#c00;font-size:12px;display:none}";
+    + "#nx-err{color:#c00;font-size:12px;display:none}#nx-consent{color:#777;font-size:11px}#nx-consent a{color:#5b4bff}";
   const style = document.createElement("style"); style.textContent = css; document.head.appendChild(style);
   const root = document.createElement("div"); root.id = "nx-chat";
   root.innerHTML = '<div id="nx-panel" role="dialog"><div id="nx-head"><strong></strong><button type="button" aria-label="Close">×</button></div><div id="nx-list" aria-live="polite"></div>'
-    + '<form id="nx-form"><input id="nx-name" maxlength="80"><input id="nx-contact" maxlength="120"><div id="nx-row"><textarea id="nx-text" rows="2" maxlength="2000" required></textarea><button id="nx-send" type="submit"></button></div><div id="nx-err"></div></form></div>'
+    + '<form id="nx-form"><input id="nx-name" maxlength="80"><input id="nx-contact" maxlength="120"><div id="nx-row"><textarea id="nx-text" rows="2" maxlength="2000" required></textarea><button id="nx-send" type="submit"></button></div><div id="nx-err"></div><div id="nx-consent"></div></form></div>'
     + '<button id="nx-open" type="button"></button>';
   document.body.appendChild(root);
   const $ = (id) => root.querySelector("#" + id);
@@ -48,6 +49,9 @@ function script(texts: (typeof TEXTS)["en"]): string {
   $("nx-open").textContent = T.open; $("nx-send").textContent = T.send;
   $("nx-name").placeholder = T.name; $("nx-contact").placeholder = T.contact; $("nx-text").placeholder = T.placeholder;
   $("nx-err").textContent = T.error;
+  // 152-FZ: consent to the processing of personal data, with a link to the policy when one is set.
+  $("nx-consent").textContent = T.consent + (POLICY ? " (" : ".");
+  if (POLICY) { const a = document.createElement("a"); a.href = POLICY; a.target = "_blank"; a.rel = "noopener"; a.textContent = T.policy; $("nx-consent").append(a, ")."); }
   const add = (direction, body) => { const m = document.createElement("div"); m.className = "nx-m " + (direction === "in" ? "nx-in" : "nx-out"); m.textContent = body; $("nx-list").appendChild(m); $("nx-list").scrollTop = 1e9; };
   add("out", T.hello);
   const poll = async () => {
@@ -81,5 +85,6 @@ function script(texts: (typeof TEXTS)["en"]): string {
 
 export function GET() {
   if (!siteChatEnabled()) return new Response("/* NEXORA website chat is not enabled (NEXORA_SITE_CHAT=on). */", { status: 404, headers: { "Content-Type": "text/javascript; charset=utf-8" } });
-  return new Response(script(TEXTS[locale() === "ru" ? "ru" : "en"]), { headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*" } });
+  const policy = process.env.NEXORA_PRIVACY_URL?.trim();
+  return new Response(script(TEXTS[locale() === "ru" ? "ru" : "en"], policy && /^https:\/\//.test(policy) ? policy : null), { headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*" } });
 }

@@ -28,6 +28,16 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Two-factor sign-in and 152-FZ (2026-10-28)
+
+- **Two-factor sign-in** (Supabase mode) with Supabase Auth MFA (TOTP: Яндекс Ключ, Google Authenticator…). `/two-factor` (linked from Settings → Profile): QR code and key, confirm with a code, turn off with a current code.
+- After the password, a user with a factor must pass `/login/mfa` before any page opens (the session's assurance level is checked on every request in `requireUser`).
+- Admins can **require two-factor for everyone**; users without it are sent to `/two-factor` until they set it up. Changes raise `settings.changed` security events.
+- Demo mode has no passwords; the page explains how it works with real accounts.
+- **152-FZ:** docs/self-hosting.md "Personal data in Russia" (database and app on Russian hosting, which integrations send data abroad and the Russian alternatives, consent, operator duties, backups). The website chat widget shows a consent line linking to `NEXORA_PRIVACY_URL`.
+- New variables in `.env.example`: inbox channels, website chat, privacy policy, Zadarma key, 1C login.
+- **Tests.** Pending/aal2 logic, setup clears unfinished factors, code checks, turning off only with a valid code (unit, with a fake Supabase MFA API). Not run against a live Supabase project.
+
 ## Requisites, invoices with stamp, quotes from deals (2026-10-28)
 
 - **Settings → Requisites** (admins): legal name, ИНН, КПП, ОГРН, legal address, VAT note, bank (name, БИК, р/с, к/с), director and chief accountant, the director's signature and the stamp (PNG/JPEG, resized in the browser, stored in `organizations.settings.requisites`).

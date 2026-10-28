@@ -103,6 +103,8 @@ export const organizationSettingsSchema = z
     role_restrictions: z.record(z.string(), z.record(z.string(), z.record(z.string(), z.enum(["own", "team", "all", "none"])))).optional(),
     /** Settings → Requisites: legal details, stamp and signature for documents. */
     requisites: requisitesSchema.optional(),
+    /** Every user must set up two-factor sign-in (Supabase mode). */
+    require_mfa: z.boolean().optional(),
   })
   .strict();
 

@@ -28,6 +28,11 @@ export type SessionUser = {
   profile: Profile;
   actor: Actor;
   mode: "demo" | "supabase";
+  /**
+   * Two-factor state (Supabase mode): "pending" until the code is entered after the password,
+   * "setup_required" when the organization requires two-factor and the user has not set it up.
+   */
+  mfa?: "pending" | "setup_required";
 };
 
 function toActor(profile: Profile, all: Profile[], settings?: Organization["settings"] | null): Actor {
@@ -66,7 +71,11 @@ async function supabaseSession(): Promise<SessionUser | null> {
   if (!profile || !profile.is_active || profile.archived_at) return null;
   const { data: team } = await db.from("profiles").select("*").eq("organization_id", profile.organization_id);
   const { data: org } = await db.from("organizations").select("settings").eq("id", profile.organization_id).maybeSingle();
-  return { profile: profile as Profile, actor: toActor(profile as Profile, (team ?? []) as Profile[], (org?.settings ?? null) as Organization["settings"] | null), mode: "supabase" };
+  const settings = (org?.settings ?? null) as Organization["settings"] | null;
+  // The assurance level is read from the session token, without a network call.
+  const { data: level } = await db.auth.mfa.getAuthenticatorAssuranceLevel();
+  const mfa = level?.nextLevel === "aal2" && level.currentLevel !== "aal2" ? "pending" : settings?.require_mfa && level?.nextLevel !== "aal2" ? "setup_required" : undefined;
+  return { profile: profile as Profile, actor: toActor(profile as Profile, (team ?? []) as Profile[], settings), mode: "supabase", ...(mfa && { mfa }) };
 }
 
 /** The current user, resolved once per request. Null only in Supabase mode when signed out. */
@@ -78,6 +87,8 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 export async function requireUser(): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  if (user.mfa === "pending") redirect("/login/mfa");
+  if (user.mfa === "setup_required") redirect("/two-factor");
   return user;
 }
 

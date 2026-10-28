@@ -129,3 +129,13 @@ Inside the demo, anyone with the code can act as any user and reset the data. It
 3. Keep the scheduler running: VIGIL raises an integrity alert after 15 minutes without a `system.heartbeat`.
 
 See VIGIL's `docs/deployment.md`.
+
+## Personal data in Russia (152-FZ)
+
+Federal law 152-FZ requires that personal data of Russian citizens is first recorded, stored and updated in databases located in Russia (article 18, part 5). For NEXORA this means:
+
+- **Run the database in Russia.** Use Supabase mode with a self-hosted Supabase (Docker) or PostgreSQL on a Russian provider (Yandex Cloud, Selectel, VK Cloud, Timeweb Cloud), and run the NEXORA container there too (see "First install"). Do not use Supabase Cloud or Vercel for production data of Russian customers. Demo mode is for fictional data only.
+- **Integrations that send personal data abroad.** In Integrations, connectors marked as not for Russia send data to foreign services: Twilio, WhatsApp Business (Meta), Stripe, Slack, Notion, e-mail through Resend, and the Claude AI provider. Use the Russian alternatives that NEXORA supports: Mango Office or Zadarma for calls, Telegram/VK/website chat for messages, YooKassa for payments, YandexGPT for AI, Yandex 360 for mail and documents, MoySklad and 1C for the catalogue.
+- **Consent.** The website chat widget shows a consent line; set `NEXORA_PRIVACY_URL` to your personal data processing policy so it links there. Forms connected through Tilda or Yandex Forms must collect consent on their side.
+- **Operator duties.** Notify Roskomnadzor that you process personal data, appoint a person responsible for it, and keep the policy published. NEXORA helps with access control (roles, RLS), two-factor sign-in, the audit log and the tamper-evident security log, and archiving instead of deletion; it does not file anything for you.
+- **Access from abroad and backups.** Keep backups in Russia as well (the backup script writes to the server's disk or a Russian object storage).
