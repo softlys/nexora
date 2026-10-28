@@ -26,6 +26,7 @@ import {
 } from "./fixtures";
 import { DEFAULT_EMAIL_TEMPLATES } from "../email-templates";
 import { seedConversations } from "./conversations";
+import { seedTargets } from "./targets";
 
 export const SEED_NUMBER = 20261018;
 
@@ -824,6 +825,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     pipeline_stages,
     deals,
     deal_items: [],
+    sales_targets: seedTargets(org, profiles, deals, pipeline_stages, now),
     deal_stage_history,
     products,
     orders,

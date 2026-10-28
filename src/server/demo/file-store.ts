@@ -11,6 +11,7 @@ import type { Dataset } from "../../domain/entities";
 import { defaultEmailTemplates, DEMO_ORG_ID, DEMO_PIPELINE_IDS, generateSeed, SEED_NUMBER, seedMessengers } from "../../domain/seed/generate";
 import { capPastTimestamps, daysBetween, shiftDataset } from "../../domain/seed/shift";
 import { seedConversations } from "../../domain/seed/conversations";
+import { seedTargets } from "../../domain/seed/targets";
 
 /** Bump when the dataset shape changes; older files are replaced by a fresh seed. */
 export const STORE_VERSION = 3;
@@ -67,6 +68,10 @@ export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
   }
   if (!data.deal_items) {
     data.deal_items = [];
+    changed = true;
+  }
+  if (!data.sales_targets) {
+    data.sales_targets = data.organizations.some((o) => o.id === DEMO_ORG_ID) ? seedTargets(DEMO_ORG_ID, data.profiles, data.deals, data.pipeline_stages, now) : [];
     changed = true;
   }
   // Tables added after a store was written start empty.

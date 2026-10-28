@@ -254,6 +254,19 @@ export const chatMessageSchema = z.object({
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
+/** A monthly sales target (план продаж) for one user: the won deal value they should close. */
+export const salesTargetSchema = z.object({
+  ...base,
+  profile_id: id,
+  /** The month, YYYY-MM. */
+  period: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  amount: money,
+  /** Optional target for the number of deals won. */
+  deals: z.number().int().min(0).max(100_000).nullable(),
+  set_by: id.nullable(),
+});
+export type SalesTarget = z.infer<typeof salesTargetSchema>;
+
 /** A reusable e-mail for writing to customers from record pages (see src/domain/email-templates.ts). */
 export const emailTemplateSchema = z.object({
   ...base,
@@ -643,6 +656,7 @@ export const TABLES = [
   "email_templates",
   "conversations",
   "chat_messages",
+  "sales_targets",
   "pipelines",
   "pipeline_stages",
   "deals",
@@ -678,6 +692,7 @@ export type Dataset = {
   email_templates: EmailTemplate[];
   conversations: Conversation[];
   chat_messages: ChatMessage[];
+  sales_targets: SalesTarget[];
   pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
@@ -712,6 +727,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   email_templates: emailTemplateSchema,
   conversations: conversationSchema,
   chat_messages: chatMessageSchema,
+  sales_targets: salesTargetSchema,
   pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,

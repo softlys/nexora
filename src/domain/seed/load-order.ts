@@ -12,6 +12,7 @@ export const LOAD_ORDER: TableName[] = [
   "contacts",
   "custom_fields",
   "email_templates",
+  "sales_targets",
   "pipelines",
   "pipeline_stages",
   "leads",

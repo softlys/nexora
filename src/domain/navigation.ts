@@ -10,6 +10,7 @@ export type NavIcon =
   | "contacts"
   | "leads"
   | "inbox"
+  | "plan"
   | "deals"
   | "pipeline"
   | "orders"
@@ -60,6 +61,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/automation", label: "Automation Studio", icon: "automation", requires: { action: "view", resource: "automation" }, keywords: ["workflows", "rules"] },
       { href: "/integrations", label: "Integrations", icon: "integrations", requires: { action: "view", resource: "integration" }, keywords: ["webhooks", "make", "n8n", "api"] },
       { href: "/analytics", label: "Analytics", icon: "analytics", requires: { action: "view", resource: "analytics" }, keywords: ["reports", "charts"] },
+      { href: "/plan", label: "Sales plan", icon: "plan", requires: { action: "view", resource: "analytics" }, keywords: ["kpi", "targets", "quota", "план"] },
       { href: "/ui-kit", label: "Figma & UI Kit", icon: "uikit", requires: { action: "view", resource: "ui_kit" }, keywords: ["design system", "tokens", "style guide"] },
       { href: "/settings", label: "Settings", icon: "settings", requires: { action: "view", resource: "profile" }, keywords: ["preferences", "team", "organization"] },
     ],

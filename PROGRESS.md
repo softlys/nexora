@@ -28,6 +28,13 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Sales plan and KPI (2026-10-28)
+
+- **Sales plan** (`/plan`, in the sidebar next to Analytics): per month and person, the plan (won deal value), what was won (deals closed in that month), completion with a progress bar, deals won, win rate (won ÷ won + lost), calls and meetings logged, and a forecast (won + open deals expected this month × probability). Totals on top; people ranked by completion, the leader marked.
+- **Who sees and sets what:** people within the user's deal scope (a rep sees themselves, a manager the team, an admin everyone). Admins set any plan; managers the plans of their team. Plans are typed straight into the table.
+- **Data.** Table `sales_targets` (unique per person and month; RLS: members read, admins/managers write within scope), migration `20261028000001_sales_targets.sql`. The demo seeds plans for this month and the previous one.
+- **Tests.** Month bounds, seeded plans vs. won deals and calls, ranking, scope and who may set plans (unit).
+
 ## Two-factor sign-in and 152-FZ (2026-10-28)
 
 - **Two-factor sign-in** (Supabase mode) with Supabase Auth MFA (TOTP: Яндекс Ключ, Google Authenticator…). `/two-factor` (linked from Settings → Profile): QR code and key, confirm with a code, turn off with a current code.
