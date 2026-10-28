@@ -22,6 +22,7 @@ const sendInput = z
     text: z.string().trim().min(1).max(2000),
     name: z.string().trim().max(80).optional(),
     contact: z.string().trim().max(120).optional(),
+    utm: z.partialRecord(z.enum(["source", "medium", "campaign", "content", "term"]), z.string().trim().max(200)).optional(),
   })
   .strict();
 
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
   if (blocked) return blocked;
   const parsed = sendInput.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return reply({ error: "Invalid message." }, 400);
-  const { session, text, name, contact } = parsed.data;
+  const { session, text, name, contact, utm } = parsed.data;
   try {
     const ctx = await inboundContext({ ip: null, user_agent: request.headers.get("user-agent")?.slice(0, 512) ?? null, request_id: crypto.randomUUID() });
     const result = await ctx.db.write(ctx.actor.organization_id, (tx) =>
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
         text,
         email: contact?.includes("@") ? contact : null,
         phone: contact && !contact.includes("@") ? contact : null,
+        utm: utm as Record<string, string> | undefined,
       }),
     );
     await finishInbound(ctx);

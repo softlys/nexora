@@ -123,6 +123,8 @@ export const leadFields = {
   next_action_at: optionalDateTime,
   estimated_value: amount,
   owner_id: z.uuid().nullable().optional(),
+  /** UTM tags from the website or the API; empty tags are dropped. */
+  utm: z.partialRecord(z.enum(["source", "medium", "campaign", "content", "term"]), z.string().trim().max(200)).nullable().optional(),
 };
 export const leadInput = z.object(leadFields).strict();
 export const leadUpdateInput = z.object({ id: z.uuid(), ...leadFields }).strict();

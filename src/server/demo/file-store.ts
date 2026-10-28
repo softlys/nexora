@@ -12,6 +12,7 @@ import { defaultEmailTemplates, DEMO_ORG_ID, DEMO_PIPELINE_IDS, generateSeed, SE
 import { capPastTimestamps, daysBetween, shiftDataset } from "../../domain/seed/shift";
 import { seedConversations } from "../../domain/seed/conversations";
 import { seedTargets } from "../../domain/seed/targets";
+import { seedSpend, seedUtm } from "../../domain/seed/utm";
 
 /** Bump when the dataset shape changes; older files are replaced by a fresh seed. */
 export const STORE_VERSION = 3;
@@ -72,6 +73,17 @@ export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
   }
   if (!data.sales_targets) {
     data.sales_targets = data.organizations.some((o) => o.id === DEMO_ORG_ID) ? seedTargets(DEMO_ORG_ID, data.profiles, data.deals, data.pipeline_stages, now) : [];
+    changed = true;
+  }
+  if (!data.ad_spend) {
+    data.ad_spend = [];
+    changed = true;
+  }
+  // Demo stores written before UTM tags existed get the demo tags and ad spend once.
+  const demo = data.organizations.some((o) => o.id === DEMO_ORG_ID);
+  if (demo && data.leads.every((l) => l.utm === undefined)) {
+    seedUtm(data.leads, data.deals);
+    if (data.ad_spend.length === 0) data.ad_spend = seedSpend(DEMO_ORG_ID, now);
     changed = true;
   }
   // Tables added after a store was written start empty.

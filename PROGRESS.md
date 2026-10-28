@@ -28,6 +28,13 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## End-to-end analytics (UTM) (2026-10-28)
+
+- **UTM tags** (`source`, `medium`, `campaign`, `content`, `term`) are stored on leads and copied to the deal at conversion. They arrive from website forms (Tilda, Yandex Forms: `utm_*` fields), the website chat widget (tags of the landing URL, remembered in the browser) and the public API (`utm` on POST /leads).
+- **End-to-end analytics** (`/analytics/channels`, linked from Analytics): for a month, leads grouped by utm_source, utm_medium, utm_campaign or lead source; leads → deals → won deals, revenue, lead-to-won rate and average deal; with the month's **ad spend** per channel (typed into the table by admins and managers), cost per lead and ROI. Spend without leads still shows.
+- **Data.** `leads.utm`, `deals.utm` (jsonb objects) and table `ad_spend` (unique per month and channel; members read, admins/managers write), migration `20261028000002_utm.sql`. The demo seeds tags and spend.
+- **Tests.** Tag cleaning, grouping, spend/CPL/ROI, revenue of tagged won deals, who may record spend (unit).
+
 ## Sales plan and KPI (2026-10-28)
 
 - **Sales plan** (`/plan`, in the sidebar next to Analytics): per month and person, the plan (won deal value), what was won (deals closed in that month), completion with a progress bar, deals won, win rate (won ÷ won + lost), calls and meetings logged, and a forecast (won + open deals expected this month × probability). Totals on top; people ranked by completion, the leader marked.

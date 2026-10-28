@@ -44,6 +44,7 @@ export const submitLead = apiRoute(endpoint("POST", "/leads"), async ({ ctx, bod
     next_action_at: "",
     estimated_value: b.estimated_value,
     owner_id: null,
+    utm: b.utm ?? null,
   });
   const lead = await createLead(ctx, input);
   return { body: { data: leadView(lead) } };

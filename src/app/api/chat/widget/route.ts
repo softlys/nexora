@@ -24,6 +24,14 @@ function script(texts: (typeof TEXTS)["en"], policyUrl: string | null): string {
   let session = null;
   try { session = localStorage.getItem(KEY); } catch (e) {}
   if (!session) { session = crypto.randomUUID(); try { localStorage.setItem(KEY, session); } catch (e) {} }
+  // UTM tags of the visit that brought the visitor, kept for the first message (end-to-end analytics).
+  let utm = null;
+  try {
+    const q = new URLSearchParams(location.search), found = {};
+    for (const k of ["source", "medium", "campaign", "content", "term"]) { const v = q.get("utm_" + k); if (v) found[k] = v.slice(0, 200); }
+    if (Object.keys(found).length) localStorage.setItem("nexora-chat-utm", JSON.stringify(found));
+    utm = JSON.parse(localStorage.getItem("nexora-chat-utm") || "null");
+  } catch (e) {}
   let after = "", sent = 0, timer = null;
   const css = "#nx-chat{position:fixed;right:20px;bottom:20px;z-index:2147483000;font:14px/1.4 system-ui,sans-serif;color:#111}"
     + "#nx-chat button{font:inherit;cursor:pointer}"
@@ -71,6 +79,7 @@ function script(texts: (typeof TEXTS)["en"], policyUrl: string | null): string {
     const text = $("nx-text").value.trim(); if (!text) return;
     $("nx-err").style.display = "none";
     const body = { session, text };
+    if (utm) body.utm = utm;
     if ($("nx-name").value.trim()) body.name = $("nx-name").value.trim();
     if ($("nx-contact").value.trim()) body.contact = $("nx-contact").value.trim();
     try {

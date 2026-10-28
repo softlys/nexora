@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BarsChart, PairedBarsChart, RevenueChart } from "@/components/charts/charts";
 import { RangeFilter } from "@/components/charts/range-filter";
 import { Panel } from "@/components/crm/detail";
@@ -33,7 +34,14 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/analyt
       <PageHeader
         title={tr("Analytics")}
         description={tr("Revenue, conversion, pipeline, receivables and work, computed from your data. Definitions: docs/metrics.md.")}
-        actions={<RangeFilter preset={preset} from={period.from} to={period.to} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/analytics/channels" className="text-sm text-brand hover:underline" data-testid="channels-link">
+              {tr("End-to-end analytics")}
+            </Link>
+            <RangeFilter preset={preset} from={period.from} to={period.to} />
+          </div>
+        }
       />
 
       <section aria-label={tr("Totals")} className="grid grid-cols-2 gap-3 md:grid-cols-4">

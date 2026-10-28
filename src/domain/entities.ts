@@ -139,6 +139,20 @@ export type Profile = z.infer<typeof profileSchema>;
 // CRM
 // ---------------------------------------------------------------------------
 
+/** Where a lead came from in advertising (UTM tags); copied to the deal it becomes. */
+export const UTM_KEYS = ["source", "medium", "campaign", "content", "term"] as const;
+export const utmSchema = z.partialRecord(z.enum(UTM_KEYS), z.string().trim().min(1).max(200));
+export type Utm = z.infer<typeof utmSchema>;
+
+/** Advertising spend per channel (utm_source) and month, for cost per lead and ROI. */
+export const adSpendSchema = z.object({
+  ...base,
+  period: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  channel: requiredText(200),
+  amount: money,
+});
+export type AdSpend = z.infer<typeof adSpendSchema>;
+
 export const companySchema = z.object({
   ...base,
   ...archivable,
@@ -182,6 +196,8 @@ export type Contact = z.infer<typeof contactSchema>;
 export const leadSchema = z.object({
   ...base,
   ...archivable,
+  /** UTM tags of the visit that brought the lead (see utmSchema). */
+  utm: utmSchema.nullable().optional(),
   /** Custom field values (see src/domain/custom-fields.ts). */
   custom: customValuesSchema.optional(),
   title: requiredText(160),
@@ -303,6 +319,8 @@ export type PipelineStage = z.infer<typeof pipelineStageSchema>;
 export const dealSchema = z.object({
   ...base,
   ...archivable,
+  /** UTM tags of the visit that brought the lead (see utmSchema). */
+  utm: utmSchema.nullable().optional(),
   /** Custom field values (see src/domain/custom-fields.ts). */
   custom: customValuesSchema.optional(),
   name: requiredText(160),
@@ -657,6 +675,7 @@ export const TABLES = [
   "conversations",
   "chat_messages",
   "sales_targets",
+  "ad_spend",
   "pipelines",
   "pipeline_stages",
   "deals",
@@ -693,6 +712,7 @@ export type Dataset = {
   conversations: Conversation[];
   chat_messages: ChatMessage[];
   sales_targets: SalesTarget[];
+  ad_spend: AdSpend[];
   pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
@@ -728,6 +748,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   conversations: conversationSchema,
   chat_messages: chatMessageSchema,
   sales_targets: salesTargetSchema,
+  ad_spend: adSpendSchema,
   pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,

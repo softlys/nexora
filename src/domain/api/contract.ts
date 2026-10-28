@@ -68,6 +68,11 @@ export const leadSubmission = z
     source: z.enum(LEAD_SOURCES).default("api"),
     estimated_value: z.number().min(0).max(1_000_000_000).default(0),
     message: z.string().trim().max(2000).optional().describe("Free text from the form; stored as the next action note."),
+    utm: z
+      .object({ source: z.string().max(200).optional(), medium: z.string().max(200).optional(), campaign: z.string().max(200).optional(), content: z.string().max(200).optional(), term: z.string().max(200).optional() })
+      .strict()
+      .optional()
+      .describe("UTM tags of the visit (utm_source, utm_medium, …) for end-to-end analytics."),
   })
   .strict()
   .meta({ id: "LeadSubmission" });

@@ -60,6 +60,12 @@ export async function createLead(ctx: ServiceContext, input: z.output<typeof lea
 }
 
 /** createLead inside an existing transaction (inbound integrations claim the external id in the same one). */
+/** UTM tags without empty values; null when none is left. */
+export function cleanUtm(utm: Record<string, string | undefined> | null | undefined): Record<string, string> | null {
+  const clean = Object.fromEntries(Object.entries(utm ?? {}).filter((e): e is [string, string] => Boolean(e[1]?.trim())).map(([k, v]) => [k, v.trim().slice(0, 200)]));
+  return Object.keys(clean).length ? clean : null;
+}
+
 export async function insertLead(tx: Tx, ctx: ServiceContext, input: z.output<typeof leadInput>): Promise<Lead> {
   requireCan(ctx, "create", "lead");
   const owner = await resolveOwner(tx, ctx, "lead", input.owner_id === undefined ? ctx.actor.id : input.owner_id, ctx.actor.id, null);
@@ -72,6 +78,7 @@ export async function insertLead(tx: Tx, ctx: ServiceContext, input: z.output<ty
     id: newId(),
     organization_id: ctx.actor.organization_id,
     ...fields,
+    utm: cleanUtm(fields.utm),
     owner_id: owner,
     currency: org?.currency ?? "USD",
     company_id: null,
@@ -200,7 +207,7 @@ export async function convertLead(ctx: ServiceContext, input: z.output<typeof co
         },
         tx,
       );
-      await tx.update("deals", deal.id, { lead_id: lead.id });
+      await tx.update("deals", deal.id, { lead_id: lead.id, ...(lead.utm && { utm: lead.utm }) });
       await tx.update("leads", lead.id, {
         status: "converted",
         converted_deal_id: deal.id,

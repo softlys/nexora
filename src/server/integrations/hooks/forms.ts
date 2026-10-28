@@ -92,6 +92,7 @@ export const formsHook: HookHandler = {
           next_action_at: "",
           estimated_value: s.value,
           owner_id: null,
+          utm: Object.fromEntries(Object.entries(s.utm).map(([k, v]) => [k.replace(/^utm_/, ""), v.slice(0, 200)])),
         }),
       );
       const lines = Object.entries(s.all).map(([k, v]) => `${k}: ${v}`);

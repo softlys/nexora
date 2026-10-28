@@ -12,7 +12,7 @@ import { isSecurityAction, type SecurityAction, type SecurityOutcome, type Secur
 
 export type FieldChanges = Record<string, { before: unknown; after: unknown }>;
 
-export type RecordEntity = EntityType | "comment" | "activity" | "payment" | "order_item" | "workflow" | "notification" | "integration" | "api_key" | "profile" | "custom_field" | "email_template" | "conversation" | "sales_target";
+export type RecordEntity = EntityType | "comment" | "activity" | "payment" | "order_item" | "workflow" | "notification" | "integration" | "api_key" | "profile" | "custom_field" | "email_template" | "conversation" | "sales_target" | "ad_spend";
 
 /** Payload for security events without a dedicated type below. */
 export type SecurityPayload = {

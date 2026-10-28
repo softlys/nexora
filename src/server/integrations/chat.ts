@@ -89,6 +89,8 @@ export type IncomingMessage = {
   email?: string | null;
   /** Handle to match a contact's messengers (Telegram username, VK id). */
   handle?: string | null;
+  /** UTM tags of the visit (website chat). */
+  utm?: Record<string, string> | null;
   occurredAt?: string;
 };
 
@@ -142,6 +144,7 @@ export async function receiveMessage(tx: Tx, ctx: ServiceContext, msg: IncomingM
           next_action_at: "",
           estimated_value: 0,
           owner_id: null,
+          utm: msg.utm ?? null,
         }),
       );
       leadId = lead.id;

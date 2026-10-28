@@ -27,6 +27,7 @@ import {
 import { DEFAULT_EMAIL_TEMPLATES } from "../email-templates";
 import { seedConversations } from "./conversations";
 import { seedTargets } from "./targets";
+import { seedSpend, seedUtm } from "./utm";
 
 export const SEED_NUMBER = 20261018;
 
@@ -812,6 +813,8 @@ export function generateSeed(now: Date = new Date()): Dataset {
     );
   }
 
+  seedUtm(leads, deals);
+
   const dataset: Dataset = {
     organizations,
     profiles,
@@ -826,6 +829,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     deals,
     deal_items: [],
     sales_targets: seedTargets(org, profiles, deals, pipeline_stages, now),
+    ad_spend: seedSpend(org, now),
     deal_stage_history,
     products,
     orders,

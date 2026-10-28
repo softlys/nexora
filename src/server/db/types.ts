@@ -71,4 +71,5 @@ export const UNIQUE_KEYS: Partial<Record<TableName, string[][]>> = {
   custom_fields: [["entity", "key"]],
   conversations: [["channel", "external_id"]],
   sales_targets: [["profile_id", "period"]],
+  ad_spend: [["period", "channel"]],
 };
