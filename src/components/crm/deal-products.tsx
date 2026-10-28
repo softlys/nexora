@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -108,6 +108,7 @@ export function DealProducts({ dealId, currency, items, products, canEdit }: { d
             </table>
           </div>
         )}
+        <div className="flex flex-wrap gap-2">
         {canEdit && (
           <Button
             size="sm"
@@ -122,6 +123,13 @@ export function DealProducts({ dealId, currency, items, products, canEdit }: { d
             {items.length ? tr("Edit products") : tr("Add products")}
           </Button>
         )}
+        <Button size="sm" variant="ghost" asChild>
+          <a href={`/print/deals/${dealId}?doc=quote`} target="_blank" rel="noreferrer" data-testid="deal-quote">
+            <FileText aria-hidden />
+            {tr("Quote (КП)")}
+          </a>
+        </Button>
+        </div>
       </div>
     );
   }

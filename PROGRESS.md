@@ -28,6 +28,14 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Requisites, invoices with stamp, quotes from deals (2026-10-28)
+
+- **Settings → Requisites** (admins): legal name, ИНН, КПП, ОГРН, legal address, VAT note, bank (name, БИК, р/с, к/с), director and chief accountant, the director's signature and the stamp (PNG/JPEG, resized in the browser, stored in `organizations.settings.requisites`).
+- **Invoice in the Russian format** (order or deal, `?doc=invoice`): the bank block (банк получателя, БИК, счета, ИНН/КПП, получатель), supplier and buyer lines with ИНН/КПП (buyer's from company custom fields `inn`/`kpp`), lines table, VAT or the VAT note, "Всего наименований N, на сумму…", the amount in words for rubles (`src/domain/amount-in-words.ts`), signatures with the signature image and the stamp. Print or "Save as PDF" in the browser.
+- **Quote (КП) from a deal**: the Products panel has a "КП" button (`/print/deals/<id>`), built from the deal's lines (or the deal amount); `?doc=invoice` gives an invoice before any order exists.
+- **Not done: EDO (Диадок, СБИС).** Sending through EDO needs a qualified electronic signature (КЭП) that the user applies with CryptoPro on their own computer; it needs a Kontur/Tensor test account to build against.
+- **Tests.** Amount in words, requisites validation and admin-only saving (unit); e2e: requisites shown on an invoice from a deal.
+
 ## 1C exchange (2026-10-28)
 
 - **Standard 1C site exchange** ("Обмен с сайтом", CommerceML 2.08) at `/api/1c/exchange`, the same protocol 1C uses with 1C-Bitrix. Works with 1С:Управление торговлей, Бухгалтерия, КА and УНФ. Login and password: `ONEC_LOGIN`, `ONEC_PASSWORD` (Basic auth on checkauth, then a day-scoped session cookie).

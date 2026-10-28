@@ -78,6 +78,7 @@ export type SettingsSection = {
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   { href: "/settings/profile", label: "Profile", description: "Your name and job title.", requires: { action: "update", resource: "profile" } },
   { href: "/settings/organization", label: "Organization", description: "Company name, currency, locale and order conversion mode.", requires: { action: "update", resource: "organization" } },
+  { href: "/settings/requisites", label: "Requisites", description: "Legal details, bank account, signature and stamp for documents.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/team", label: "Team", description: "Members, roles and reporting lines.", requires: { action: "view", resource: "team" } },
   { href: "/settings/roles", label: "Roles", description: "What managers and sales reps may see and do, per record type.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/pipeline", label: "Pipelines", description: "Pipelines and their stages: rename, reorder, probabilities, won and lost.", requires: { action: "manage", resource: "pipeline_stage" } },

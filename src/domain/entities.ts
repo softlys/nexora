@@ -74,11 +74,35 @@ export type EntityType = (typeof ENTITY_TYPES)[number];
 // Organization and people
 // ---------------------------------------------------------------------------
 
+/** Legal details (реквизиты) printed on invoices and quotes; stamp and signature are small images. */
+const imageDataUrl = (maxBytes: number) => z.string().regex(/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/, "PNG or JPEG image").max(Math.ceil((maxBytes * 4) / 3) + 40, "The image is too large");
+export const requisitesSchema = z
+  .object({
+    legal_name: shortText(255),
+    inn: z.string().regex(/^(\d{10}|\d{12})?$/, "10 or 12 digits"),
+    kpp: z.string().regex(/^(\d{9})?$/, "9 digits"),
+    ogrn: z.string().regex(/^(\d{13}|\d{15})?$/, "13 or 15 digits"),
+    address: shortText(500),
+    bank_name: shortText(255),
+    bik: z.string().regex(/^(\d{9})?$/, "9 digits"),
+    account: z.string().regex(/^(\d{20})?$/, "20 digits"),
+    corr_account: z.string().regex(/^(\d{20})?$/, "20 digits"),
+    director: shortText(120),
+    accountant: shortText(120),
+    vat_note: shortText(120),
+    stamp: imageDataUrl(300_000).nullable(),
+    signature: imageDataUrl(150_000).nullable(),
+  })
+  .strict();
+export type Requisites = z.infer<typeof requisitesSchema>;
+
 export const organizationSettingsSchema = z
   .object({
     order_conversion_mode: z.enum(ORDER_CONVERSION_MODES),
     /** Settings → Roles: rights taken away from managers and sales reps (see RoleRestrictions). */
     role_restrictions: z.record(z.string(), z.record(z.string(), z.record(z.string(), z.enum(["own", "team", "all", "none"])))).optional(),
+    /** Settings → Requisites: legal details, stamp and signature for documents. */
+    requisites: requisitesSchema.optional(),
   })
   .strict();
 
