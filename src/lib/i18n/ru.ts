@@ -1940,4 +1940,15 @@ export const RU: Record<string, string> = {
   "No access": "Нет доступа",
   "Automation": "Автоматизация",
 
+  "1C: Trade Management, Accounting": "1С: Управление торговлей, Бухгалтерия",
+  "The standard 1C site exchange (CommerceML): products and prices from 1C, orders with counterparties to 1C, posting and payments back.": "Штатный обмен 1С с сайтом (CommerceML): товары и цены из 1С, заказы с контрагентами в 1С, проведение и оплаты обратно.",
+  "1C can connect with the login and password below.": "1С может подключаться с логином и паролем ниже.",
+  "Set ONEC_LOGIN and ONEC_PASSWORD (at least 8 characters).": "Задайте ONEC_LOGIN и ONEC_PASSWORD (не короче 8 символов).",
+  "Any user name; the same in 1C's exchange settings.": "Любое имя пользователя; то же в настройках обмена 1С.",
+  "A long random password; the same in 1C.": "Длинный случайный пароль; тот же в 1С.",
+  "Site address for 1C": "Адрес сайта для 1С",
+  "1C: Администрирование → Обмен с сайтом → create an exchange node: site address above, login and password.": "1С: Администрирование → Обмен с сайтом → создайте узел обмена: адрес сайта выше, логин и пароль.",
+  "Export products and prices (каталог) and exchange orders (документы). Run it by hand or on a schedule in 1C.": "Выгружайте товары и цены (каталог) и обменивайтесь заказами (документы). Запускайте вручную или по расписанию в 1С.",
+  "Counterparty ИНН and КПП come from company custom fields with the keys inn and kpp (Settings → Fields: add fields named ИНН and КПП).": "ИНН и КПП контрагента берутся из своих полей компании с ключами inn и kpp (Настройки → Поля: добавьте поля «ИНН» и «КПП»).",
+  "Orders go to 1C once they are confirmed; a posted document confirms a draft order, and a payment date in 1C records the payment.": "Заказы уходят в 1С после подтверждения; проведённый документ подтверждает черновик, а дата оплаты в 1С фиксирует оплату.",
 };

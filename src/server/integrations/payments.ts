@@ -12,6 +12,8 @@ import { claimExternal, linkExternal } from "./inbound";
  * (is_simulated = false) is recorded on the order once, whatever the number of notifications.
  */
 export type PaymentProvider = "yookassa" | "stripe";
+/** Where a recorded payment came from: an online provider or the 1C exchange. */
+export type PaymentSource = PaymentProvider | "1c";
 
 export function paymentsConfig(env: NodeJS.ProcessEnv = process.env) {
   return {
@@ -103,7 +105,7 @@ export async function fetchYookassaPayment(id: string, fetchImpl: typeof fetch =
 }
 
 /** Records a confirmed online payment once. Returns false when it was already recorded or the order is gone. */
-export async function recordOnlinePayment(ctx: ServiceContext, input: { provider: PaymentProvider; externalId: string; orderId: string; amount: number; currency: string }): Promise<boolean> {
+export async function recordOnlinePayment(ctx: ServiceContext, input: { provider: PaymentSource; externalId: string; orderId: string; amount: number; currency: string }): Promise<boolean> {
   return ctx.db.write(ctx.actor.organization_id, async (tx) => {
     const order = await tx.get("orders", input.orderId);
     if (!order) return false;
@@ -120,8 +122,8 @@ export async function recordOnlinePayment(ctx: ServiceContext, input: { provider
       amount: Math.round(input.amount * 100) / 100,
       currency: order.currency,
       paid_at: at,
-      method: "card",
-      reference: `${input.provider === "yookassa" ? "YooKassa" : "Stripe"} ${input.externalId}`.slice(0, 120),
+      method: input.provider === "1c" ? "bank_transfer" : "card",
+      reference: `${input.provider === "yookassa" ? "YooKassa" : input.provider === "stripe" ? "Stripe" : "1C"} ${input.externalId}`.slice(0, 120),
       is_simulated: false,
       recorded_by: null,
       created_at: at,

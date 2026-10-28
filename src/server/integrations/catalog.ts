@@ -8,6 +8,7 @@ import { paymentsConfig } from "./payments";
 import { telephonyConfig } from "./telephony";
 import { yandexConfig } from "./yandex";
 import { siteChatEnabled, telegramChatConfig, vkConfig } from "./chat";
+import { onecConfig } from "./onec";
 
 /**
  * Every connector NEXORA offers beyond webhooks: what it does, whether it is configured, which
@@ -36,6 +37,7 @@ export function connectorCatalog(): Connector[] {
   const secret = hookSecret();
   const mail = mailConfig();
   const tgChat = telegramChatConfig();
+  const onec = onecConfig();
   const vk = vkConfig();
   const siteChat = siteChatEnabled();
   const tel = telephonyConfig();
@@ -162,6 +164,26 @@ export function connectorCatalog(): Connector[] {
         "Meta for Developers → your app → WhatsApp → Configuration: Callback URL above, Verify token = WHATSAPP_VERIFY_TOKEN; subscribe to messages.",
         "Add a Send WhatsApp message step to a workflow. To write first, create and approve a template in WhatsApp Manager and put its name in the step.",
         "In Russia WhatsApp Business API access depends on your Meta business account; Telegram (Integrations → Telegram) works without it.",
+      ],
+    },
+    {
+      id: "onec",
+      name: "1C: Trade Management, Accounting",
+      group: "Team and warehouse",
+      russia: true,
+      summary: "The standard 1C site exchange (CommerceML): products and prices from 1C, orders with counterparties to 1C, posting and payments back.",
+      state: onec.configured ? "configured" : onec.login || onec.password ? "error" : "not_configured",
+      detail: onec.configured ? "1C can connect with the login and password below." : "Set ONEC_LOGIN and ONEC_PASSWORD (at least 8 characters).",
+      env: [
+        { name: "ONEC_LOGIN", hint: "Any user name; the same in 1C's exchange settings.", required: true },
+        { name: "ONEC_PASSWORD", hint: "A long random password; the same in 1C.", required: true },
+      ],
+      endpoints: [{ label: "Site address for 1C", path: "/api/1c/exchange" }],
+      steps: [
+        "1C: Администрирование → Обмен с сайтом → create an exchange node: site address above, login and password.",
+        "Export products and prices (каталог) and exchange orders (документы). Run it by hand or on a schedule in 1C.",
+        "Counterparty ИНН and КПП come from company custom fields with the keys inn and kpp (Settings → Fields: add fields named ИНН and КПП).",
+        "Orders go to 1C once they are confirmed; a posted document confirms a draft order, and a payment date in 1C records the payment.",
       ],
     },
     {

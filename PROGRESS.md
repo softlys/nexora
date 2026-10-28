@@ -28,6 +28,15 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## 1C exchange (2026-10-28)
+
+- **Standard 1C site exchange** ("Обмен с сайтом", CommerceML 2.08) at `/api/1c/exchange`, the same protocol 1C uses with 1C-Bitrix. Works with 1С:Управление торговлей, Бухгалтерия, КА and УНФ. Login and password: `ONEC_LOGIN`, `ONEC_PASSWORD` (Basic auth on checkauth, then a day-scoped session cookie).
+- **Catalog from 1C:** `import.xml` creates or updates products (name, group, VAT; SKU from the артикул, transliterated, or from the 1C id), `offers.xml` sets prices. 1C ids are remembered, so later exchanges update the same products.
+- **Orders to 1C:** confirmed (non-draft) orders changed since the last confirmed export, with counterparty (ИНН/КПП from company custom fields `inn`/`kpp`), lines, discounts and totals. The export point moves only when 1C answers `success`.
+- **Documents from 1C:** a posted document confirms a draft order; "Дата оплаты по 1С" records the outstanding amount as a bank-transfer payment, once.
+- Integrations → 1C shows the address and setup steps. XML parsing uses `fast-xml-parser` 5.11.2 (pinned).
+- **Tests.** Parsing real-shaped CommerceML, product create/update and prices, order export with ИНН and the export cursor, posting and payment from 1C, endpoint auth (unit).
+
 ## Roles and rights (2026-10-28)
 
 - **Settings → Roles** (admins): for managers and sales reps, per record type (companies, contacts, leads, deals, orders, tasks, products, analytics, automation) and action (view, create, edit, archive), choose All / Team / Own only / No access.

@@ -21,7 +21,7 @@ const STATE_LABEL = { configured: tr("Configured"), not_configured: tr("Not conf
 export async function generateMetadata({ params }: PageProps<"/integrations/[connector]">) {
   const { connector: id } = await params;
   const c = connectorCatalog().find((x) => x.id === id);
-  return { title: c?.name ?? tr("Integration") };
+  return { title: c ? tr(c.name) : tr("Integration") };
 }
 
 export default async function ConnectorPage({ params }: PageProps<"/integrations/[connector]">) {
