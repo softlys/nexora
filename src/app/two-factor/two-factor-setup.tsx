@@ -77,6 +77,7 @@ export function TwoFactorSetup({ enabled, required, isAdmin }: { enabled: boolea
             <li>{tr("Enter the 6-digit code the app shows.")}</li>
           </ol>
           <div className="flex flex-wrap items-center gap-6">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a data: URL image, nothing for next/image to optimize */}
             <img src={setup.qr} alt={tr("QR code for the authenticator app")} className="size-44 rounded-md border border-border bg-white p-2" />
             <code className="rounded bg-surface-muted px-2 py-1 font-mono text-sm break-all">{setup.secret}</code>
           </div>

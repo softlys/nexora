@@ -15,7 +15,7 @@ describe("mailings", () => {
     ({ db, data } = createTestDb());
   });
   const admin = () => ctxFor(db, data(), DEMO_USER_IDS.admin);
-  const segment = { tags: [], lifecycle: ["customer"], countries: [], owner_ids: [] };
+  const segment = { tags: [] as string[], lifecycle: ["customer" as const], countries: [] as string[], owner_ids: [] as string[] };
   const deps = (sent: EmailMessage[], configured = true) => ({
     email: { configured, send: async (m: EmailMessage) => (sent.push(m), { id: "m" }) },
     sms: { configured: false, send: async () => ({ id: "s" }) },

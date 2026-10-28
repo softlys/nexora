@@ -239,7 +239,10 @@ export function PrintDocument(p: PrintDocumentProps) {
           <div className="relative">
             <span>{t.director}</span>
             <span className="relative mx-2 inline-block w-36 border-b border-black align-bottom">
-              {r.signature && <img src={r.signature} alt="" className="absolute bottom-0 left-2 h-14 max-w-32 object-contain" />}
+              {r.signature && (
+                // eslint-disable-next-line @next/next/no-img-element -- a data: URL image, nothing for next/image to optimize
+                <img src={r.signature} alt="" className="absolute bottom-0 left-2 h-14 max-w-32 object-contain" />
+              )}
               &nbsp;
             </span>
             <span>{r.director}</span>
@@ -250,7 +253,10 @@ export function PrintDocument(p: PrintDocumentProps) {
             <span>{r.accountant}</span>
           </div>
         </div>
-        {r.stamp && <img src={r.stamp} alt="" className="absolute top-0 left-24 h-36 w-36 object-contain opacity-90" data-testid="stamp" />}
+        {r.stamp && (
+          // eslint-disable-next-line @next/next/no-img-element -- a data: URL image, nothing for next/image to optimize
+          <img src={r.stamp} alt="" className="absolute top-0 left-24 h-36 w-36 object-contain opacity-90" data-testid="stamp" />
+        )}
       </section>
     </main>
   );

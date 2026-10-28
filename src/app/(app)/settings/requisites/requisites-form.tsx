@@ -40,7 +40,10 @@ function ImageField({ id, label, hint, value, onChange, maxWidth }: { id: string
     <FormField id={id} label={label} hint={hint}>
       <div className="flex items-center gap-3">
         <div className="flex h-24 w-40 items-center justify-center rounded-md border border-dashed border-border bg-white">
-          {value ? <img src={value} alt={label} className="max-h-22 max-w-38 object-contain" /> : <span className="text-xs text-text-muted">{tr("No image")}</span>}
+          {value ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a data: URL image, nothing for next/image to optimize
+            <img src={value} alt={label} className="max-h-22 max-w-38 object-contain" />
+          ) : <span className="text-xs text-text-muted">{tr("No image")}</span>}
         </div>
         <div className="flex flex-col gap-1">
           <label className="inline-flex cursor-pointer items-center gap-1 text-sm text-brand hover:underline">
