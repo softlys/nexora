@@ -67,6 +67,11 @@ export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
     data.chat_messages = seeded.chat_messages;
     changed = true;
   }
+  if (data.conversations.some((c) => c.assignee_id === undefined)) {
+    const owners = new Map<string, string | null>([...data.contacts, ...data.leads].map((r) => [r.id, r.owner_id]));
+    data.conversations = data.conversations.map((c) => (c.assignee_id === undefined ? { ...c, assignee_id: owners.get(c.contact_id ?? c.lead_id ?? "") ?? null } : c));
+    changed = true;
+  }
   if (!data.deal_items) {
     data.deal_items = [];
     changed = true;

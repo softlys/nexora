@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Dataset } from "@/domain/entities";
 import type { Db } from "@/server/db/types";
 import { channelSenders, receiveMessage, type ChannelSenders } from "@/server/integrations/chat";
-import { listConversations, openConversation, replyToConversation, setConversationStatus } from "@/server/services/inbox";
+import { assignConversation, dealFromConversation, getQuickReplies, listConversations, openConversation, replyToConversation, saveQuickReplies, setConversationStatus } from "@/server/services/inbox";
 import { createTestDb, ctxFor, DEMO_USER_IDS } from "./helpers/services";
 
 function fakeSenders(configured = true) {
@@ -81,5 +81,33 @@ describe("unified inbox", () => {
     expect(senders.telegram.configured).toBe(true);
     expect(senders.vk.configured).toBe(false);
     expect(senders.whatsapp.configured).toBe(false);
+  });
+
+  it("assigns chats to the record owner, and lets reps only take them", async () => {
+    const chat = data().conversations.find((c) => c.contact_id)!;
+    const owner = data().contacts.find((c) => c.id === chat.contact_id)!.owner_id;
+    expect(chat.assignee_id).toBe(owner);
+    await assignConversation(admin(), { id: chat.id, assignee_id: DEMO_USER_IDS.manager });
+    expect(data().conversations.find((c) => c.id === chat.id)?.assignee_id).toBe(DEMO_USER_IDS.manager);
+    const mine = await listConversations(ctxFor(db, data(), DEMO_USER_IDS.manager), { mine: true });
+    expect(mine.rows.map((r) => r.id)).toContain(chat.id);
+    expect(mine.rows.every((r) => r.assignee_id === DEMO_USER_IDS.manager)).toBe(true);
+    await expect(assignConversation(rep(), { id: chat.id, assignee_id: DEMO_USER_IDS.repSofia })).rejects.toThrow(/admins and managers/);
+  });
+
+  it("keeps the organization's quick replies (admins and managers)", async () => {
+    expect(await getQuickReplies(admin())).toEqual([]);
+    await saveQuickReplies(admin(), { replies: ["Здравствуйте!", "Спасибо за заказ"] });
+    expect(await getQuickReplies(rep())).toEqual(["Здравствуйте!", "Спасибо за заказ"]);
+    await expect(saveQuickReplies(rep(), { replies: [] })).rejects.toThrow();
+  });
+
+  it("opens a deal for the chat's contact", async () => {
+    const chat = data().conversations.find((c) => c.contact_id && data().contacts.find((x) => x.id === c.contact_id)?.company_id)!;
+    const contact = data().contacts.find((x) => x.id === chat.contact_id)!;
+    const deal = await dealFromConversation(admin(), { id: chat.id });
+    expect(deal).toMatchObject({ primary_contact_id: contact.id, company_id: contact.company_id, owner_id: DEMO_USER_IDS.admin });
+    const leadChat = data().conversations.find((c) => c.lead_id)!;
+    await expect(dealFromConversation(admin(), { id: leadChat.id })).rejects.toThrow(/convert the lead/);
   });
 });

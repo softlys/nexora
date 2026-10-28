@@ -11,10 +11,19 @@ import { cn } from "@/lib/utils";
 import { requirePermission } from "@/server/guards";
 import { CHANNEL_NAMES, channelSenders } from "@/server/integrations/chat";
 import { loadPage } from "@/server/page-data";
-import { listConversations, openConversation } from "@/server/services/inbox";
-import { InboxRefresh, ReplyBox, ScrollToEnd, StatusButton } from "./inbox-client";
+import { getQuickReplies, listConversations, openConversation } from "@/server/services/inbox";
+import { activeProfiles } from "@/server/services/records";
+import { AssigneeSelect, DealFromChatButton, InboxRefresh, ReplyBox, ScrollToEnd, StatusButton } from "./inbox-client";
 
 export const metadata = { title: tr("Inbox") };
+
+/** Shown until the organization saves its own quick replies. */
+const DEFAULT_QUICK_REPLIES = [
+  "Hello! Thank you for your message, we will answer within a few minutes.",
+  "Could you leave your phone number? A manager will call you back.",
+  "We have sent the price list to your e-mail.",
+  "Thank you for your order! We will let you know when it ships.",
+];
 
 const CHANNEL_TONE: Record<ChatChannel, "accent" | "success" | "neutral" | "warning"> = { telegram: "accent", whatsapp: "success", vk: "accent", site: "neutral" };
 
@@ -24,16 +33,18 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const params = await searchParams;
   const channel = (CHAT_CHANNELS as readonly string[]).includes(first(params.channel) ?? "") ? (first(params.channel) as ChatChannel) : undefined;
   const status = first(params.status) === "closed" ? "closed" : "open";
+  const mine = first(params.mine) === "1";
   const selected = first(params.c);
-  const { list, view } = await loadPage(async (ctx) => {
-    const list = await listConversations(ctx, { channel, status });
+  const { list, view, users, quickReplies, me, role } = await loadPage(async (ctx) => {
+    const list = await listConversations(ctx, { channel, status, mine });
     const id = selected && /^[0-9a-f-]{36}$/.test(selected) ? selected : list.rows[0]?.id;
     const view = id ? await openConversation(ctx, id).catch(() => null) : null;
-    return { list, view };
+    const users = (await ctx.db.read(ctx.actor.organization_id, activeProfiles)).map((p) => ({ id: p.id, name: p.full_name }));
+    return { list, view, users, quickReplies: await getQuickReplies(ctx), me: ctx.actor.id, role: ctx.actor.role };
   });
   const senders = channelSenders();
   const query = (patch: Record<string, string | undefined>) => {
-    const q = new URLSearchParams(Object.entries({ channel, status: status === "closed" ? "closed" : undefined, ...patch }).filter(([, v]) => v) as Array<[string, string]>);
+    const q = new URLSearchParams(Object.entries({ channel, status: status === "closed" ? "closed" : undefined, mine: mine ? "1" : undefined, ...patch }).filter(([, v]) => v) as Array<[string, string]>);
     return `/inbox${q.size ? `?${q}` : ""}`;
   };
 
@@ -59,6 +70,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           </Link>
         ))}
         <span className="mx-1 h-5 w-px bg-border" aria-hidden />
+        <Link href={query({ mine: mine ? undefined : "1", c: undefined })} aria-current={mine ? "page" : undefined} className={cn("rounded-md px-3 py-1.5 text-sm text-text-subtle hover:bg-surface-muted", mine && "bg-surface-muted font-medium text-foreground")} data-testid="mine-filter">
+          {tr("Mine")}
+        </Link>
         <Link href={query({ status: status === "open" ? "closed" : undefined, c: undefined })} className="rounded-md px-3 py-1.5 text-sm text-text-subtle hover:bg-surface-muted">
           {status === "open" ? tr("Show closed") : tr("Show open")}
         </Link>
@@ -79,6 +93,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                   <span className="mt-0.5 flex items-center gap-2">
                     <StatusBadge label={tr(CHANNEL_NAMES[c.channel])} tone={CHANNEL_TONE[c.channel]} />
                     <span className={cn("truncate text-xs", c.unread ? "text-foreground" : "text-text-muted")}>{c.last_message_preview}</span>
+                    {c.assignee_name && <span className="ml-auto shrink-0 text-[11px] text-text-muted">{c.assignee_name.split(" ")[0]}</span>}
                     {c.unread && <span className="ml-auto size-2 shrink-0 rounded-full bg-brand" aria-label={tr("Unread")} />}
                   </span>
                 </Link>
@@ -96,7 +111,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                     {view.record && ` · ${view.record.detail || view.record.label}`}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <AssigneeSelect id={view.conversation.id} assigneeId={view.conversation.assignee_id} users={users} me={me} canAssignOthers={role !== "sales_rep"} />
+                  {view.conversation.contact_id && <DealFromChatButton id={view.conversation.id} />}
                   {view.conversation.record_href && (
                     <Link href={view.conversation.record_href} className="text-sm text-brand hover:underline">
                       {view.conversation.contact_id ? tr("Open contact") : tr("Open lead")}
@@ -122,6 +139,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
               <ReplyBox
                 conversationId={view.conversation.id}
                 channelName={tr(CHANNEL_NAMES[view.conversation.channel])}
+                quickReplies={quickReplies.length ? quickReplies : DEFAULT_QUICK_REPLIES.map((r) => tr(r))}
+                canEditReplies={role !== "sales_rep"}
                 disabledReason={senders[view.conversation.channel].configured ? null : tr("{p0} is not connected, so replies cannot be sent. An admin can connect it in Integrations.", { p0: tr(CHANNEL_NAMES[view.conversation.channel]) })}
               />
             </section>

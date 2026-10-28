@@ -13,9 +13,10 @@ export function seedConversations(organizationId: string, contacts: Contact[], l
   const id = (n: number) => `00000000-0000-4000-8000-0000000006${String(n).padStart(2, "0")}`;
   const conversations: Conversation[] = [];
   const chat_messages: ChatMessage[] = [];
-  const add = (n: number, conv: Omit<Conversation, "id" | "organization_id" | "created_at" | "updated_at" | "last_message_at" | "last_message_preview" | "status">, messages: Array<[direction: "in" | "out", minutesAgo: number, body: string]>) => {
+  const add = (n: number, conv: Omit<Conversation, "id" | "organization_id" | "assignee_id" | "created_at" | "updated_at" | "last_message_at" | "last_message_preview" | "status">, messages: Array<[direction: "in" | "out", minutesAgo: number, body: string]>) => {
     const last = messages[messages.length - 1]!;
-    conversations.push({ id: id(n), organization_id: organizationId, ...conv, status: "open", last_message_at: at(last[1]), last_message_preview: last[2].slice(0, 200), created_at: at(messages[0]![1]), updated_at: at(last[1]) });
+    const owner = conv.contact_id ? active.find((c) => c.id === conv.contact_id)?.owner_id : leads.find((l) => l.id === conv.lead_id)?.owner_id;
+    conversations.push({ id: id(n), organization_id: organizationId, ...conv, assignee_id: owner ?? null, status: "open", last_message_at: at(last[1]), last_message_preview: last[2].slice(0, 200), created_at: at(messages[0]![1]), updated_at: at(last[1]) });
     messages.forEach(([direction, minutesAgo, body], i) =>
       chat_messages.push({ id: id(n * 10 + i + 10), organization_id: organizationId, conversation_id: id(n), direction, body, author_id: direction === "out" ? (tg?.owner_id ?? null) : null, external_id: null, created_at: at(minutesAgo) }),
     );

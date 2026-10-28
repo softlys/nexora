@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { channelSenders } from "@/server/integrations/chat";
 import { serviceAction } from "@/server/service-action";
-import { conversationStatusInput, replyInput, replyToConversation, setConversationStatus } from "@/server/services/inbox";
+import { assignConversation, assignConversationInput, conversationStatusInput, dealFromConversation, dealFromConversationInput, quickRepliesInput, replyInput, replyToConversation, saveQuickReplies, setConversationStatus } from "@/server/services/inbox";
 
 /** Replies to a customer in the conversation's own channel. */
 export async function replyAction(input: unknown) {
@@ -20,5 +20,32 @@ export async function setConversationStatusAction(input: unknown) {
     await setConversationStatus(ctx, data);
     revalidatePath("/inbox");
     return undefined;
+  });
+}
+
+/** Assigns a chat to a manager (or takes it). */
+export async function assignConversationAction(input: unknown) {
+  return serviceAction({ name: "assignConversation", schema: assignConversationInput }, input, async (ctx, data) => {
+    await assignConversation(ctx, data);
+    revalidatePath("/inbox");
+    return undefined;
+  });
+}
+
+/** Saves the organization's quick replies. */
+export async function saveQuickRepliesAction(input: unknown) {
+  return serviceAction({ name: "saveQuickReplies", schema: quickRepliesInput }, input, async (ctx, data) => {
+    await saveQuickReplies(ctx, data);
+    revalidatePath("/inbox");
+    return undefined;
+  });
+}
+
+/** Opens a deal for the chat's contact and returns its id. */
+export async function dealFromConversationAction(input: unknown) {
+  return serviceAction({ name: "dealFromConversation", schema: dealFromConversationInput, bucket: "create" }, input, async (ctx, data) => {
+    const deal = await dealFromConversation(ctx, data);
+    revalidatePath("/pipeline");
+    return { id: deal.id };
   });
 }

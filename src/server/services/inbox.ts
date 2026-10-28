@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { CHAT_CHANNELS, type ChatChannel, type ChatMessage, type Conversation } from "@/domain/entities";
-import { activityInput } from "@/domain/inputs";
+import { CHAT_CHANNELS, type ChatChannel, type ChatMessage, type Conversation, type Deal } from "@/domain/entities";
+import { activityInput, dealInput } from "@/domain/inputs";
 import type { Tx } from "@/server/db/types";
 import type { ChannelSenders } from "@/server/integrations/chat";
 import { DomainError } from "@/server/repositories/types";
 import { emit, findVisible, newId, nowOf, requireCan, type ServiceContext } from "./context";
+import { createDeal } from "./deals";
 import { logActivity } from "./tasks";
 
 /**
@@ -30,17 +31,20 @@ async function visibleConversation(tx: Tx, ctx: ServiceContext, id: string): Pro
   return found;
 }
 
-export type InboxFilters = { channel?: ChatChannel; status?: "open" | "closed" };
-export type InboxRow = Conversation & { record_href: string | null };
+export type InboxFilters = { channel?: ChatChannel; status?: "open" | "closed"; /** Only chats assigned to the current user. */ mine?: boolean };
+export type InboxRow = Conversation & { record_href: string | null; assignee_name: string | null };
+
+const recordHref = (c: Conversation) => (c.contact_id ? `/contacts/${c.contact_id}` : c.lead_id ? `/leads/${c.lead_id}` : null);
 
 export async function listConversations(ctx: ServiceContext, filters: InboxFilters = {}): Promise<{ rows: InboxRow[]; unread: number }> {
   requireCan(ctx, "view", "activity");
   return ctx.db.read(ctx.actor.organization_id, async (tx) => {
     const all = await visibleConversations(tx, ctx);
+    const names = new Map((await tx.find("profiles")).map((p) => [p.id, p.full_name]));
     const rows = all
-      .filter((c) => (!filters.channel || c.channel === filters.channel) && (c.status === (filters.status ?? "open")))
+      .filter((c) => (!filters.channel || c.channel === filters.channel) && c.status === (filters.status ?? "open") && (!filters.mine || c.assignee_id === ctx.actor.id))
       .sort((a, b) => b.last_message_at.localeCompare(a.last_message_at))
-      .map((c) => ({ ...c, record_href: c.contact_id ? `/contacts/${c.contact_id}` : c.lead_id ? `/leads/${c.lead_id}` : null }));
+      .map((c) => ({ ...c, record_href: recordHref(c), assignee_name: c.assignee_id ? (names.get(c.assignee_id) ?? null) : null }));
     return { rows, unread: all.filter((c) => c.unread && c.status === "open").length };
   });
 }
@@ -64,7 +68,7 @@ export async function openConversation(ctx: ServiceContext, id: string): Promise
       const l = await tx.get("leads", conversation.lead_id);
       if (l) record = { label: l.title, detail: [l.company_name, l.email, l.phone].filter(Boolean).join(" · ") };
     }
-    return { conversation: { ...conversation, record_href: conversation.contact_id ? `/contacts/${conversation.contact_id}` : conversation.lead_id ? `/leads/${conversation.lead_id}` : null }, messages, record };
+    return { conversation: { ...conversation, record_href: recordHref(conversation), assignee_name: conversation.assignee_id ? (names.get(conversation.assignee_id) ?? null) : null }, messages, record };
   });
 }
 
@@ -107,6 +111,73 @@ export async function setConversationStatus(ctx: ServiceContext, input: z.output
     await tx.update("conversations", input.id, { status: input.status, unread: false, updated_at: nowOf(ctx).toISOString() });
     await emit(tx, ctx, { type: "record.updated", payload: { entity: "conversation", id: input.id, changes: { status: { before: current.status, after: input.status } } } });
   });
+}
+
+export const assignConversationInput = z.object({ id: z.uuid(), assignee_id: z.uuid().nullable() }).strict();
+
+/**
+ * Hands a chat to a manager. Anyone who sees the chat can take it; only admins and managers can give
+ * it to someone else.
+ */
+export async function assignConversation(ctx: ServiceContext, input: z.output<typeof assignConversationInput>): Promise<void> {
+  requireCan(ctx, "create", "activity");
+  if (input.assignee_id && input.assignee_id !== ctx.actor.id && ctx.actor.role === "sales_rep") throw new DomainError("Only admins and managers can assign chats to others.");
+  await ctx.db.write(ctx.actor.organization_id, async (tx) => {
+    const current = await visibleConversation(tx, ctx, input.id);
+    if (current.assignee_id === input.assignee_id) return;
+    if (input.assignee_id) {
+      const profile = await tx.get("profiles", input.assignee_id);
+      if (!profile || !profile.is_active) throw new DomainError("Choose an active user.");
+    }
+    await tx.update("conversations", input.id, { assignee_id: input.assignee_id, updated_at: nowOf(ctx).toISOString() });
+    await emit(tx, ctx, { type: "record.updated", payload: { entity: "conversation", id: input.id, changes: { assignee_id: { before: current.assignee_id, after: input.assignee_id } } } });
+  });
+}
+
+/** Ready answers for chat replies, shared by the organization. */
+export async function getQuickReplies(ctx: ServiceContext): Promise<string[]> {
+  const org = await ctx.db.read(ctx.actor.organization_id, (tx) => tx.get("organizations", ctx.actor.organization_id));
+  return org?.settings.quick_replies ?? [];
+}
+
+export const quickRepliesInput = z.object({ replies: z.array(z.string().trim().min(1).max(1000)).max(30) }).strict();
+
+/** Admins and managers: replaces the list of quick replies. */
+export async function saveQuickReplies(ctx: ServiceContext, input: z.output<typeof quickRepliesInput>): Promise<void> {
+  if (ctx.actor.role === "sales_rep") throw new DomainError("Only admins and managers can change quick replies.");
+  await ctx.db.write(ctx.actor.organization_id, async (tx) => {
+    const org = await tx.get("organizations", ctx.actor.organization_id);
+    if (!org) throw new DomainError("Organization not found.", "not_found");
+    await tx.update("organizations", org.id, { settings: { ...org.settings, quick_replies: input.replies }, updated_at: nowOf(ctx).toISOString() });
+  });
+}
+
+export const dealFromConversationInput = z.object({ id: z.uuid() }).strict();
+
+/** Opens a deal for the chat's contact at their company, owned by the user, in the first stage. */
+export async function dealFromConversation(ctx: ServiceContext, input: z.output<typeof dealFromConversationInput>): Promise<Deal> {
+  const { conversation, contact, currency } = await ctx.db.read(ctx.actor.organization_id, async (tx) => {
+    const conversation = await visibleConversation(tx, ctx, input.id);
+    const contact = conversation.contact_id ? await tx.get("contacts", conversation.contact_id) : null;
+    const org = await tx.get("organizations", ctx.actor.organization_id);
+    return { conversation, contact, currency: org?.currency ?? "RUB" };
+  });
+  if (!contact) throw new DomainError(conversation.lead_id ? "This chat is with a lead: convert the lead to get a deal." : "Link the chat to a contact first.");
+  if (!contact.company_id) throw new DomainError("The contact has no company. Add the company on the contact card first.");
+  return createDeal(
+    ctx,
+    dealInput.parse({
+      name: `${contact.first_name} ${contact.last_name} · ${CHANNEL_LABELS[conversation.channel]}`.slice(0, 160),
+      company_id: contact.company_id,
+      primary_contact_id: contact.id,
+      amount: 0,
+      currency,
+      expected_close_date: null,
+      source: "website",
+      next_activity: `Reply in ${CHANNEL_LABELS[conversation.channel]}`,
+      notes: `From the chat: ${conversation.last_message_preview}`.slice(0, 5000),
+    }),
+  );
 }
 
 export const inboxFilterChannels = CHAT_CHANNELS;

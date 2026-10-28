@@ -157,6 +157,7 @@ export async function receiveMessage(tx: Tx, ctx: ServiceContext, msg: IncomingM
       title: (contact ? `${contact.first_name} ${contact.last_name}` : msg.name || msg.handle || msg.phone || channelName).slice(0, 160),
       contact_id: contact?.id ?? null,
       lead_id: leadId,
+      assignee_id: contact?.owner_id ?? (leadId ? ((await tx.get("leads", leadId))?.owner_id ?? null) : null),
       status: "open",
       unread: true,
       last_message_at: at,

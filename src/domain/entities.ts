@@ -105,6 +105,8 @@ export const organizationSettingsSchema = z
     requisites: requisitesSchema.optional(),
     /** Every user must set up two-factor sign-in (Supabase mode). */
     require_mfa: z.boolean().optional(),
+    /** Inbox → quick replies: ready answers managers insert into a chat reply. */
+    quick_replies: z.array(z.string().trim().min(1).max(1000)).max(30).optional(),
   })
   .strict();
 
@@ -250,6 +252,8 @@ export const conversationSchema = z.object({
   title: requiredText(160),
   contact_id: id.nullable(),
   lead_id: id.nullable(),
+  /** The manager answering this chat (the contact's or lead's owner at first). */
+  assignee_id: id.nullable(),
   status: z.enum(["open", "closed"]),
   unread: z.boolean(),
   last_message_at: timestamp,

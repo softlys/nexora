@@ -111,6 +111,18 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 - **Data.** Table `deal_items` (migration `20261027000001_deal_items.sql`), RLS like the deal.
 - **Tests.** Totals and amount, deal form keeps the calculated amount, lines copied into the order, permissions (unit); RLS (PGlite); e2e: add a line, amount updates.
 
+## Inbox: assignment, quick replies, deal from chat (2026-10-29)
+
+- **Assignment.**
+  - Each conversation has an assignee (`conversations.assignee_id`, migration `20261029000001_conversation_assignee.sql`). A new chat goes to the owner of its contact or lead.
+  - Admins and managers can assign a chat to anyone; sales reps can only take a chat themselves.
+  - The list shows who answers each chat, and a "Mine" filter shows only your own.
+- **Quick replies.**
+  - A button next to the reply box inserts a ready answer.
+  - Admins and managers edit the shared list (`settings.quick_replies`, up to 30 replies, separated by empty lines). Default answers are shown until the list is saved.
+- **Create deal from a chat with a contact.** It opens the deal at the contact's company, owned by the user, in the first stage, and goes to the deal. Chats with a lead point to lead conversion instead.
+- **Tests.** Unit tests cover assignment rights, the "Mine" filter, quick replies and deal creation.
+
 ## Unified inbox (2026-10-27)
 
 - **Inbox** (`/inbox`, in the sidebar): customer chats from Telegram, WhatsApp, VK and the website chat in one list, filtered by channel and open/closed, with unread marks. The page refreshes every 5 seconds.
