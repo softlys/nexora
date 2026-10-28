@@ -4,7 +4,7 @@
  */
 import type { Profile, TableName } from "@/domain/entities";
 import type { RecordEntity } from "@/domain/events/types";
-import { isWithinScope, ownerInScope, scopeFor, type Resource } from "@/domain/permissions";
+import { isWithinScope, ownerInScope, actorScope, type Resource } from "@/domain/permissions";
 import type { Row, Tx } from "@/server/db/types";
 import { emit, getVisible, nowOf, requireCan, type ServiceContext } from "./context";
 
@@ -63,7 +63,7 @@ export async function activeProfiles(tx: Tx): Promise<Profile[]> {
 
 /** Profiles the actor may assign records of `resource` to. */
 export async function assignableOwners(tx: Tx, ctx: ServiceContext, resource: Resource): Promise<Profile[]> {
-  const scope = scopeFor(ctx.actor.role, "update", resource);
+  const scope = actorScope(ctx.actor, "update", resource);
   if (!scope) return [];
   return (await activeProfiles(tx)).filter((p) => isWithinScope(ctx.actor, scope, p.id));
 }

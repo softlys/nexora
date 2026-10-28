@@ -13,6 +13,8 @@ import { getDemoStore } from "@/server/repositories/demo";
 import type { RepoContext, RequestMeta } from "@/server/repositories/types";
 import { verifySignedValue } from "@/server/session-signing";
 import { createSupabaseServerClient } from "@/server/supabase/server";
+import { roleRestrictionFor } from "@/domain/permissions";
+import type { Organization } from "@/domain/entities";
 
 export const DEMO_USER_COOKIE = "nx_demo_user";
 export const DEMO_ACCESS_COOKIE = "nx_demo_access";
@@ -28,12 +30,13 @@ export type SessionUser = {
   mode: "demo" | "supabase";
 };
 
-function toActor(profile: Profile, all: Profile[]): Actor {
+function toActor(profile: Profile, all: Profile[], settings?: Organization["settings"] | null): Actor {
   return {
     id: profile.id,
     role: profile.role,
     organization_id: profile.organization_id,
     team_member_ids: all.filter((p) => p.manager_id === profile.id && !p.archived_at).map((p) => p.id),
+    ...roleRestrictionFor(profile.role, settings),
   };
 }
 
@@ -52,7 +55,7 @@ async function demoSession(): Promise<SessionUser> {
     profiles.find((p) => p.id === DEMO_USER_IDS.admin) ??
     profiles.find((p) => p.role === "admin");
   if (!profile) throw new Error("Demo dataset has no admin user. Reset demo data with `npm run demo:reset`.");
-  return { profile, actor: toActor(profile, profiles), mode: "demo" };
+  return { profile, actor: toActor(profile, profiles, data.organizations.find((o) => o.id === profile.organization_id)?.settings), mode: "demo" };
 }
 
 async function supabaseSession(): Promise<SessionUser | null> {
@@ -62,7 +65,8 @@ async function supabaseSession(): Promise<SessionUser | null> {
   const { data: profile } = await db.from("profiles").select("*").eq("id", auth.user.id).maybeSingle();
   if (!profile || !profile.is_active || profile.archived_at) return null;
   const { data: team } = await db.from("profiles").select("*").eq("organization_id", profile.organization_id);
-  return { profile: profile as Profile, actor: toActor(profile as Profile, (team ?? []) as Profile[]), mode: "supabase" };
+  const { data: org } = await db.from("organizations").select("settings").eq("id", profile.organization_id).maybeSingle();
+  return { profile: profile as Profile, actor: toActor(profile as Profile, (team ?? []) as Profile[], (org?.settings ?? null) as Organization["settings"] | null), mode: "supabase" };
 }
 
 /** The current user, resolved once per request. Null only in Supabase mode when signed out. */

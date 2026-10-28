@@ -77,6 +77,8 @@ export type EntityType = (typeof ENTITY_TYPES)[number];
 export const organizationSettingsSchema = z
   .object({
     order_conversion_mode: z.enum(ORDER_CONVERSION_MODES),
+    /** Settings → Roles: rights taken away from managers and sales reps (see RoleRestrictions). */
+    role_restrictions: z.record(z.string(), z.record(z.string(), z.record(z.string(), z.enum(["own", "team", "all", "none"])))).optional(),
   })
   .strict();
 

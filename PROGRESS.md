@@ -28,6 +28,13 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Roles and rights (2026-10-28)
+
+- **Settings → Roles** (admins): for managers and sales reps, per record type (companies, contacts, leads, deals, orders, tasks, products, analytics, automation) and action (view, create, edit, archive), choose All / Team / Own only / No access.
+- **Restrictions only narrow** the built-in matrix, never widen it, so database RLS (which mirrors the matrix) stays the outer limit. Admins cannot be restricted.
+- Stored in `organizations.settings.role_restrictions`; applied to the session actor (`Actor.restriction`), to API keys acting as their creator, and through `can()`, `ownerInScope()` and `visibleOwnerIds()` everywhere (lists, records, navigation, buttons). Changes raise a `settings.changed` security event.
+- **Tests.** Narrowing rules, saving, a manager limited to own deals in lists, a rep without create rights, admin-only (unit).
+
 ## Move from Bitrix24 and amoCRM (2026-10-27)
 
 - **Settings → Move from another CRM** (admins). Bitrix24 through an incoming webhook URL (REST), amoCRM through the account subdomain and a long-lived token (API v4). The address and token are used for the request only, never stored.

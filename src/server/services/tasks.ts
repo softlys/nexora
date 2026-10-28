@@ -3,7 +3,7 @@ import type { Activity, Comment, Task } from "@/domain/entities";
 import { diffFields } from "@/domain/diff";
 import type { activityInput, commentInput, taskInput, taskUpdateInput } from "@/domain/inputs";
 import { applyListQuery, type ListQuery } from "@/domain/list";
-import { isWithinScope, scopeFor } from "@/domain/permissions";
+import { isWithinScope, actorScope } from "@/domain/permissions";
 import { DomainError } from "@/server/repositories/types";
 import { emit, emitSecurity, findVisible, trackRead, newId, nowOf, requireCan, resolveOwner, type ServiceContext } from "./context";
 import { assertLinksVisible, byId, getOwned, type OwnedTable } from "./records";
@@ -72,7 +72,7 @@ export async function listTasks(ctx: ServiceContext, query: ListQuery, filters: 
 /** Rep: only to themselves. Manager: within the team. Admin: anyone active. */
 async function resolveAssignee(ctx: ServiceContext, tx: Parameters<typeof resolveOwner>[0], requested: string, current: string | null, targetId: string | null) {
   if (requested === current) return requested;
-  const scope = scopeFor(ctx.actor.role, "update", "task");
+  const scope = actorScope(ctx.actor, "update", "task");
   if (!scope || !isWithinScope(ctx.actor, scope, requested)) {
     emitSecurity(ctx, { type: "authz.denied", payload: { action: "assign", resource: "task", target_id: targetId, reason: "forbidden_field" } });
     throw new PermissionError("update", "task");
@@ -233,7 +233,7 @@ export async function recentActivities(ctx: ServiceContext, limit = 50) {
       findVisible(tx, ctx, "leads", "lead", (r) => r.owner_id),
       tx.find("profiles"),
     ]);
-    const scope = scopeFor(ctx.actor.role, "view", "activity");
+    const scope = actorScope(ctx.actor, "view", "activity");
     const ids = { deal: new Set(deals.map((d) => d.id)), company: new Set(companies.map((c) => c.id)), order: new Set(orders.map((o) => o.id)), lead: new Set(leads.map((l) => l.id)) };
     const dealName = byId(deals);
     const companyName = byId(companies);

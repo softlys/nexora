@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
-import type { ApiKey, Profile } from "@/domain/entities";
+import type { ApiKey, Organization, Profile } from "@/domain/entities";
 import type { ApiErrorCode, Endpoint } from "@/domain/api/contract";
 import { hashApiKey, parseApiKey } from "@/domain/api/keys";
 import type { EventInput } from "@/domain/events/types";
@@ -16,6 +16,7 @@ import { clientIp } from "@/server/security/client-ip";
 import { supabaseCounter } from "@/server/security/shared-counter";
 import { getValidationLog } from "@/server/security/validation-log";
 import { emit, emitSecurity, flushSecurityEvents, NotFoundError, type ServiceContext } from "@/server/services/context";
+import { roleRestrictionFor } from "@/domain/permissions";
 
 /**
  * Shared pipeline for every /api/v1 route:
@@ -85,8 +86,8 @@ export async function recordApiSecurity(orgId: string, meta: RequestMeta, input:
   }
 }
 
-function toActor(profile: Profile, all: Profile[]): Actor {
-  return { id: profile.id, role: profile.role, organization_id: profile.organization_id, team_member_ids: all.filter((p) => p.manager_id === profile.id && !p.archived_at).map((p) => p.id) };
+function toActor(profile: Profile, all: Profile[], settings?: Organization["settings"] | null): Actor {
+  return { id: profile.id, role: profile.role, organization_id: profile.organization_id, team_member_ids: all.filter((p) => p.manager_id === profile.id && !p.archived_at).map((p) => p.id), ...roleRestrictionFor(profile.role, settings) };
 }
 
 async function authenticate(request: Request, endpoint: Endpoint, meta: RequestMeta): Promise<{ key: ApiKey; ctx: ServiceContext }> {
@@ -124,7 +125,9 @@ async function authenticate(request: Request, endpoint: Endpoint, meta: RequestM
     await recordApiSecurity(key.organization_id, keyMeta, { type: "api.auth_failed", payload: { target: { type: "api_key", id: key.id }, reason: "owner_inactive", prefix: key.prefix, path: endpoint.path } });
     throw await fail("The user who created this API key is no longer active.");
   }
-  const ctx: ServiceContext = { actor: toActor(owner, profiles), meta: keyMeta, db, deferred: [], pendingEvents: [] };
+  // API keys act as their creator, including the organization's role restrictions.
+  const org = await db.read(key.organization_id, (tx) => tx.get("organizations", key.organization_id));
+  const ctx: ServiceContext = { actor: toActor(owner, profiles, org?.settings), meta: keyMeta, db, deferred: [], pendingEvents: [] };
 
   if (endpoint.scope && !key.scopes.includes(endpoint.scope)) {
     emitSecurity(ctx, { type: "api.scope_denied", payload: { target: { type: "api_key", id: key.id }, required: endpoint.scope, scopes: key.scopes, path: endpoint.path } });

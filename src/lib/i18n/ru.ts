@@ -1932,4 +1932,12 @@ export const RU: Record<string, string> = {
   "This does not look like a Bitrix24 incoming webhook (https://…/rest/<user>/<code>/).": "Это не похоже на входящий вебхук Битрикс24 (https://…/rest/<пользователь>/<код>/).",
   "Enter the account subdomain, for example mycompany (from mycompany.amocrm.ru).": "Введите поддомен аккаунта, например mycompany (из mycompany.amocrm.ru).",
   "Paste the long-lived token (amoCRM → Settings → Integrations → your integration → Keys and access).": "Вставьте долгосрочный токен (amoCRM → Настройки → Интеграции → ваша интеграция → Ключи и доступы).",
+  "Who sees and changes what. “Team” means the user's own records and those of the people who report to them. Admins always have full access.": "Кто что видит и меняет. «Команда» — свои записи и записи подчинённых. У администраторов всегда полный доступ.",
+  "Narrow what this role may do. The built-in rights are the maximum.": "Ограничьте, что может эта роль. Встроенные права — это максимум.",
+  "What managers and sales reps may see and do, per record type.": "Что могут видеть и делать руководители и менеджеры, по типам записей.",
+  "Rights of {p0} saved": "Права роли «{p0}» сохранены",
+  "Own only": "Только свои",
+  "No access": "Нет доступа",
+  "Automation": "Автоматизация",
+
 };

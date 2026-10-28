@@ -13,7 +13,7 @@ import type { AuditLog, Profile } from "@/domain/entities";
 import { EventBus } from "@/domain/events/bus";
 import { isSecurityEvent, type DomainEvent, type EventInput } from "@/domain/events/types";
 import type { SecurityActor, SecurityEventDraft } from "@/domain/security/events";
-import { can, ownerInScope, PermissionError, scopeFor, visibleOwnerIds, type Action, type Actor, type Resource } from "@/domain/permissions";
+import { can, ownerInScope, PermissionError, actorScope, visibleOwnerIds, type Action, type Actor, type Resource } from "@/domain/permissions";
 import type { RequestMeta } from "@/server/repositories/types";
 import { DomainError } from "@/server/repositories/types";
 import type { Db, Row, Tx, Where } from "@/server/db/types";
@@ -266,7 +266,7 @@ export async function resolveOwner(
   targetId: string | null,
 ): Promise<string | null> {
   if (requested === undefined || requested === current) return current;
-  const scope = scopeFor(ctx.actor.role, "update", resource);
+  const scope = actorScope(ctx.actor, "update", resource);
   const allowedToReassign = scope === "all" || scope === "team";
   const target = requested === null ? null : ((await tx.get("profiles", requested)) as Profile | null);
   const valid = requested === null || (target !== null && target.is_active && !target.archived_at);

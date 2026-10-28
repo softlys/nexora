@@ -79,6 +79,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   { href: "/settings/profile", label: "Profile", description: "Your name and job title.", requires: { action: "update", resource: "profile" } },
   { href: "/settings/organization", label: "Organization", description: "Company name, currency, locale and order conversion mode.", requires: { action: "update", resource: "organization" } },
   { href: "/settings/team", label: "Team", description: "Members, roles and reporting lines.", requires: { action: "view", resource: "team" } },
+  { href: "/settings/roles", label: "Roles", description: "What managers and sales reps may see and do, per record type.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/pipeline", label: "Pipelines", description: "Pipelines and their stages: rename, reorder, probabilities, won and lost.", requires: { action: "manage", resource: "pipeline_stage" } },
   { href: "/settings/fields", label: "Fields", description: "Your own fields on companies, contacts, leads and deals.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/email-templates", label: "E-mail templates", description: "Ready-made e-mails for writing to customers from record pages.", requires: { action: "manage", resource: "organization" } },

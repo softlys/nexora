@@ -101,6 +101,20 @@ export const PERMISSION_MATRIX: Matrix = {
 // Every role reads and marks its own notifications.
 PERMISSION_MATRIX.admin.notification = { view: "own", update: "own" };
 
+/**
+ * Organization-level narrowing of a role (Settings → Roles). A restriction can only take rights
+ * away: a narrower scope or "none". It never widens the matrix, so database RLS (which mirrors the
+ * matrix) stays the outer limit. Admins cannot be restricted.
+ */
+export type RoleRestriction = Partial<Record<Resource, Partial<Record<Action, Scope | "none">>>>;
+export type RoleRestrictions = Partial<Record<Exclude<Role, "admin">, RoleRestriction>>;
+
+/** Resources and actions that can be restricted per role. */
+export const RESTRICTABLE_RESOURCES = ["company", "contact", "lead", "deal", "order", "task", "product", "analytics", "automation"] as const satisfies readonly Resource[];
+export const RESTRICTABLE_ACTIONS = ["view", "create", "update", "archive"] as const satisfies readonly Action[];
+
+const SCOPE_RANK: Record<Scope, number> = { own: 0, team: 1, all: 2 };
+
 /** The user context `can()` needs. Built on the server from the session, never from client input. */
 export type Actor = {
   id: string;
@@ -108,6 +122,8 @@ export type Actor = {
   organization_id: string;
   /** Profile ids that report to this user (empty for sales reps). */
   team_member_ids: readonly string[];
+  /** The organization's restrictions for this user's role, if any. */
+  restriction?: RoleRestriction;
 };
 
 /** A record being checked. `owner_id` is the owner, assignee or recipient, depending on the entity. */
@@ -120,6 +136,19 @@ export function scopeFor(role: Role, action: Action, resource: Resource): Scope 
   return PERMISSION_MATRIX[role]?.[resource]?.[action] ?? null;
 }
 
+/** The matrix scope narrowed by a restriction (never widened). */
+export function restrictedScope(base: Scope | null, restricted: Scope | "none" | undefined): Scope | null {
+  if (!base || restricted === undefined) return base;
+  if (restricted === "none") return null;
+  return SCOPE_RANK[restricted] < SCOPE_RANK[base] ? restricted : base;
+}
+
+/** The scope an actor has for an action, after the organization's role restrictions. */
+export function actorScope(actor: Actor, action: Action, resource: Resource): Scope | null {
+  const base = scopeFor(actor.role, action, resource);
+  return actor.role === "admin" ? base : restrictedScope(base, actor.restriction?.[resource]?.[action]);
+}
+
 /**
  * Returns true if the actor may perform `action` on `resource`.
  * Without a record it answers "is this allowed for at least some records?",
@@ -127,7 +156,7 @@ export function scopeFor(role: Role, action: Action, resource: Resource): Scope 
  * With a record it also checks organization and ownership scope.
  */
 export function can(actor: Actor, action: Action, resource: Resource, record?: RecordRef): boolean {
-  const scope = scopeFor(actor.role, action, resource);
+  const scope = actorScope(actor, action, resource);
   if (!scope) return false;
   if (!record) return true;
   if (record.organization_id !== actor.organization_id) return false;
@@ -151,7 +180,7 @@ export function isWithinScope(actor: Actor, scope: Scope, ownerId: string | null
  * the "managers read unassigned leads" RLS policy.
  */
 export function ownerInScope(actor: Actor, action: Action, resource: Resource, ownerId: string | null): boolean {
-  const scope = scopeFor(actor.role, action, resource);
+  const scope = actorScope(actor, action, resource);
   if (!scope) return false;
   if (ownerId === null) return resource === "lead" && (scope === "team" || scope === "all");
   return isWithinScope(actor, scope, ownerId);
@@ -162,7 +191,7 @@ export function ownerInScope(actor: Actor, action: Action, resource: Resource, o
  * Repositories use this to filter list queries.
  */
 export function visibleOwnerIds(actor: Actor, resource: Resource, action: Action = "view"): "all" | string[] {
-  const scope = scopeFor(actor.role, action, resource);
+  const scope = actorScope(actor, action, resource);
   if (!scope) return [];
   if (scope === "all") return "all";
   if (scope === "team") return [actor.id, ...actor.team_member_ids];
@@ -182,4 +211,11 @@ export class PermissionError extends Error {
 /** Throws PermissionError when `can()` is false. */
 export function assertCan(actor: Actor, action: Action, resource: Resource, record?: RecordRef): void {
   if (!can(actor, action, resource, record)) throw new PermissionError(action, resource);
+}
+
+/** The restriction an organization set for a role, as the `restriction` field of an Actor. */
+export function roleRestrictionFor(role: Role, settings: { role_restrictions?: Record<string, Record<string, Record<string, string>>> } | null | undefined): { restriction?: RoleRestriction } {
+  if (role === "admin") return {};
+  const r = settings?.role_restrictions?.[role];
+  return r ? { restriction: r as RoleRestriction } : {};
 }
