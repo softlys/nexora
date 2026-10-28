@@ -830,6 +830,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     deal_items: [],
     sales_targets: seedTargets(org, profiles, deals, pipeline_stages, now),
     ad_spend: seedSpend(org, now),
+    campaigns: [],
     deal_stage_history,
     products,
     orders,

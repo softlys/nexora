@@ -28,6 +28,15 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 
 ---
 
+## Mailings and SMTP (2026-10-28)
+
+- **Mailings** (`/campaigns`, in the sidebar): e-mail or SMS to a segment of contacts by tags, company lifecycle stage, company country and owner, with a live count of who it reaches. Saved as drafts; sending is admins and managers only, once per campaign, up to 2 000 recipients. Texts take `{{contact.*}}`, `{{company.*}}`, `{{me.*}}`.
+- Contacts tagged `unsubscribed` are excluded; every e-mail ends with a signed **unsubscribe link** (`/api/unsubscribe`, no sign-in) that adds the tag. Each delivery is logged on the contact's timeline. Results: sent, failed, without address.
+- **Demo mode without a provider** marks a mailing as simulated: recorded, nothing leaves the server.
+- **SMTP e-mail.** Outgoing e-mail (record e-mails, workflow steps, mailings) goes through Resend or any SMTP server — Yandex 360, Mail.ru, Unisender Go — so mail can stay with Russian providers (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`; `nodemailer` 10.1.0 pinned). **SMS** through SMS.ru (`SMSRU_API_ID`).
+- **Data.** Table `campaigns` (members read, admins/managers run), migration `20261028000003_campaigns.sql`.
+- **Tests.** Number normalization, personalised e-mails with unsubscribe links, sending once, unsubscribe token check and exclusion, simulation, permissions (unit).
+
 ## End-to-end analytics (UTM) (2026-10-28)
 
 - **UTM tags** (`source`, `medium`, `campaign`, `content`, `term`) are stored on leads and copied to the deal at conversion. They arrive from website forms (Tilda, Yandex Forms: `utm_*` fields), the website chat widget (tags of the landing URL, remembered in the browser) and the public API (`utm` on POST /leads).

@@ -8,28 +8,14 @@ import { telegramSender } from "@/server/integrations/telegram";
 import { handleEvent, type EmailSender, type EngineDeps, type WebhookSender } from "./engine";
 import { notionWriter, slackSender, whatsappSender } from "@/server/integrations/messaging";
 import { publicBaseUrl } from "@/server/integrations/public-url";
+import { outboundEmail } from "@/server/integrations/outbound-email";
 
 /**
- * Email through Resend when RESEND_API_KEY and NEXORA_EMAIL_FROM are set. Without them the
+ * Email through Resend or SMTP (src/server/integrations/outbound-email.ts). Without a provider the
  * send_email step is skipped and logged as skipped, never as sent.
  */
 export function emailSender(): EmailSender {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.NEXORA_EMAIL_FROM;
-  return {
-    configured: Boolean(key && from),
-    async send(message) {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from, to: message.to, subject: message.subject, text: message.text, ...(message.replyTo && { reply_to: message.replyTo }) }),
-        signal: AbortSignal.timeout(4_000),
-      });
-      if (!response.ok) throw new Error(`Email provider returned ${response.status}`);
-      const body = (await response.json()) as { id?: string };
-      return { id: body.id ?? "unknown" };
-    },
-  };
+  return outboundEmail();
 }
 
 function webhookSender(deps: WebhookDeps): WebhookSender {

@@ -26,7 +26,7 @@ export default async function EmailProviderPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-md font-semibold">{tr("Status")}</h2>
-            <p className="text-sm text-text-muted">{email.status === "not_configured" ? tr("RESEND_API_KEY and NEXORA_EMAIL_FROM are not set.") : STATUS_HINTS[email.status]}</p>
+            <p className="text-sm text-text-muted">{email.status === "not_configured" ? tr("No e-mail provider is set: NEXORA_EMAIL_FROM with RESEND_API_KEY or SMTP_HOST, SMTP_USER and SMTP_PASSWORD.") : STATUS_HINTS[email.status]}</p>
           </div>
           <StatusBadge status={email.status} label={STATUS_LABELS[email.status]} dot />
         </div>
@@ -40,15 +40,15 @@ export default async function EmailProviderPage() {
           <div className="space-y-2 text-sm">
             <p>{tr("To enable email:")}</p>
             <ol className="list-decimal space-y-1 pl-5 text-text-muted">
-              <li>{tr("Create an API key at Resend and verify a sending domain.")}</li>
-              <li>{tr("Set")} <code className="font-mono text-xs">{tr("RESEND_API_KEY")}</code> {tr("and")} <code className="font-mono text-xs">{tr("NEXORA_EMAIL_FROM")}</code> {tr("(for example")} <code className="font-mono text-xs">{tr("NEXORA <crm@your-domain>")}</code>{tr(") in the server environment and restart.")}</li>
+              <li>{tr("Either use SMTP of your mail service — Yandex 360 (smtp.yandex.ru, port 465), Mail.ru (smtp.mail.ru, 465) or Unisender Go — with SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD; this keeps mail in Russia. Or create an API key at Resend (RESEND_API_KEY) and verify a sending domain.")}</li>
+              <li>{tr("Set")} <code className="font-mono text-xs">{tr("NEXORA_EMAIL_FROM")}</code> {tr("(for example")} <code className="font-mono text-xs">{tr("NEXORA <crm@your-domain>")}</code>{tr(") in the server environment and restart.")}</li>
               <li>{tr("Come back here and send a test email.")}</li>
             </ol>
-            <p className="text-text-muted">{tr("Until then, Send email steps are recorded as skipped (email not configured), never as sent. SMTP is not supported in this release.")}</p>
+            <p className="text-text-muted">{tr("Until then, Send email steps are recorded as skipped (email not configured), never as sent.")}</p>
           </div>
         ) : (
           <>
-            <p className="text-sm">{tr("Provider: Resend · From:")} <span className="font-mono text-xs">{email.from}</span>
+            <p className="text-sm">{email.provider === "smtp" ? tr("Provider: SMTP · From:") : tr("Provider: Resend · From:")} <span className="font-mono text-xs">{email.from}</span>
             </p>
             {canManage ? <EmailTest defaultTo={user.profile.email} /> : <p className="text-xs text-text-muted">{tr("Only admins can send a test email.")}</p>}
           </>

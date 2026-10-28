@@ -58,3 +58,8 @@ export async function verifySignedValue(signed: string | undefined | null): Prom
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
   return value;
 }
+
+/** The same server secret as text, for other signed links (for example unsubscribe links). */
+export async function serverSecret(): Promise<string> {
+  return (await getSecret()).toString("hex");
+}

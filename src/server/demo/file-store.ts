@@ -86,6 +86,10 @@ export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
     if (data.ad_spend.length === 0) data.ad_spend = seedSpend(DEMO_ORG_ID, now);
     changed = true;
   }
+  if (!data.campaigns) {
+    data.campaigns = [];
+    changed = true;
+  }
   // Tables added after a store was written start empty.
   if (!data.integration_records) {
     data.integration_records = [];

@@ -283,6 +283,37 @@ export const salesTargetSchema = z.object({
 });
 export type SalesTarget = z.infer<typeof salesTargetSchema>;
 
+/** Who a campaign goes to: contacts matching every filter that is set. */
+export const campaignSegmentSchema = z
+  .object({
+    tags: z.array(z.string().trim().min(1).max(32)).max(20).default([]),
+    lifecycle: z.array(z.enum(LIFECYCLE_STAGES)).max(4).default([]),
+    countries: z.array(countryCode).max(50).default([]),
+    owner_ids: z.array(id).max(50).default([]),
+  })
+  .strict();
+export type CampaignSegment = z.infer<typeof campaignSegmentSchema>;
+
+/** A mass mailing (рассылка) by e-mail or SMS to a segment of contacts. */
+export const campaignSchema = z.object({
+  ...base,
+  name: requiredText(120),
+  channel: z.enum(["email", "sms"]),
+  subject: shortText(200),
+  body: requiredText(10000),
+  segment: campaignSegmentSchema,
+  status: z.enum(["draft", "sent"]),
+  total: z.number().int().min(0),
+  sent: z.number().int().min(0),
+  failed: z.number().int().min(0),
+  skipped: z.number().int().min(0),
+  /** Demo mode without a provider: recorded, not delivered. */
+  simulated: z.boolean(),
+  created_by: id.nullable(),
+  sent_at: timestamp.nullable(),
+});
+export type Campaign = z.infer<typeof campaignSchema>;
+
 /** A reusable e-mail for writing to customers from record pages (see src/domain/email-templates.ts). */
 export const emailTemplateSchema = z.object({
   ...base,
@@ -676,6 +707,7 @@ export const TABLES = [
   "chat_messages",
   "sales_targets",
   "ad_spend",
+  "campaigns",
   "pipelines",
   "pipeline_stages",
   "deals",
@@ -713,6 +745,7 @@ export type Dataset = {
   chat_messages: ChatMessage[];
   sales_targets: SalesTarget[];
   ad_spend: AdSpend[];
+  campaigns: Campaign[];
   pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
@@ -749,6 +782,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   chat_messages: chatMessageSchema,
   sales_targets: salesTargetSchema,
   ad_spend: adSpendSchema,
+  campaigns: campaignSchema,
   pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,

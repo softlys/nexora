@@ -19,6 +19,7 @@ import { encryptSecret, newSigningSecret, secretHash } from "@/server/integratio
 import { transportOptionsFromEnv } from "@/server/integrations/transport";
 import { integrationUrl, redeliver, sendTestEvent, WEBHOOK_PROVIDERS, type WebhookDeps, type WebhookProvider } from "@/server/integrations/webhooks";
 import { emit, emitSecurity, NotFoundError, nowOf, requireCan, type ServiceContext } from "./context";
+import { emailProvider } from "@/server/integrations/outbound-email";
 
 export { STATUS_LABELS, PROVIDER_NAMES, type IntegrationStatus };
 
@@ -61,16 +62,16 @@ function toView(provider: WebhookProvider, i: IntegrationSetting | null): Integr
   };
 }
 
-export type EmailStatus = { status: IntegrationStatus; provider: "resend" | null; from: string | null; last_tested_at: string | null; last_error: string | null };
+export type EmailStatus = { status: IntegrationStatus; provider: "resend" | "smtp" | null; from: string | null; last_tested_at: string | null; last_error: string | null };
 
 export function emailConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY && process.env.NEXORA_EMAIL_FROM);
+  return emailProvider() !== null;
 }
 
 function emailStatus(row: IntegrationSetting | null): EmailStatus {
   const configured = emailConfigured();
   const status: IntegrationStatus = !configured ? "not_configured" : !row?.last_tested_at || row.last_test_ok === null ? "configured" : row.last_test_ok ? "connected" : "error";
-  return { status, provider: configured ? "resend" : null, from: configured ? (process.env.NEXORA_EMAIL_FROM ?? null) : null, last_tested_at: row?.last_tested_at ?? null, last_error: row?.last_error ?? null };
+  return { status, provider: emailProvider(), from: configured ? (process.env.NEXORA_EMAIL_FROM ?? null) : null, last_tested_at: row?.last_tested_at ?? null, last_error: row?.last_error ?? null };
 }
 
 // ---------------------------------------------------------------------------
@@ -312,7 +313,7 @@ export async function redeliverDelivery(ctx: ServiceContext, deps: WebhookDeps, 
 /** Sends a real test email through the configured provider and records the result. */
 export async function testEmail(ctx: ServiceContext, send: (message: { to: string; subject: string; text: string }) => Promise<{ id: string }>, to: string): Promise<{ ok: boolean; error: string | null }> {
   requireCan(ctx, "manage", "integration");
-  if (!emailConfigured()) throw new DomainError("Set RESEND_API_KEY and NEXORA_EMAIL_FROM to enable email.");
+  if (!emailConfigured()) throw new DomainError("Set NEXORA_EMAIL_FROM and an e-mail provider (SMTP or Resend) to enable email.");
   let ok = true;
   let error: string | null = null;
   try {
