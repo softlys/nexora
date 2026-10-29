@@ -2108,4 +2108,13 @@ export const RU: Record<string, string> = {
   "This chat is with a lead: convert the lead to get a deal.": "Это чат с лидом: чтобы получить сделку, конвертируйте лид.",
   "Link the chat to a contact first.": "Сначала привяжите чат к контакту.",
   "The contact has no company. Add the company on the contact card first.": "У контакта нет компании. Сначала укажите компанию в карточке контакта.",
+  "New lead: {p0}": "Новый лид: {p0}",
+  "Overdue task: {p0}": "Просрочена задача: {p0}",
+  "NEXORA notifications are off. Link the bot again from your profile to turn them back on.": "Уведомления NEXORA отключены. Чтобы включить снова, привяжите бота в своём профиле.",
+  "{p0}, NEXORA notifications will now come here: new leads, overdue tasks and others. Send /stop to turn them off.": "{p0}, уведомления NEXORA теперь будут приходить сюда: новые лиды, просроченные задачи и другие. Чтобы отключить, отправьте /stop.",
+  "Notifications in Telegram": "Уведомления в Telegram",
+  "New leads, overdue tasks and other notifications in your Telegram.": "Новые лиды, просроченные задачи и другие уведомления — в вашем Telegram.",
+  "Linked. To turn notifications off, send /stop to the bot.": "Подключено. Чтобы отключить уведомления, отправьте боту /stop.",
+  "Open the bot in Telegram and press Start": "Откройте бота в Telegram и нажмите «Старт»",
+  "An admin needs to connect the Telegram bot first (TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_USERNAME).": "Сначала администратор должен подключить Telegram-бота (TELEGRAM_BOT_TOKEN и TELEGRAM_BOT_USERNAME).",
 };

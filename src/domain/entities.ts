@@ -134,6 +134,8 @@ export const profileSchema = z.object({
   is_active: z.boolean(),
   /** Internal number on the office PBX, for click-to-call and routing incoming calls. Older rows lack it. */
   phone_extension: z.string().regex(/^[0-9]{1,10}$/).nullable().optional(),
+  /** The user's chat with the CRM's Telegram bot, for personal notifications. Older rows lack it. */
+  telegram_chat_id: z.string().regex(/^-?[0-9]{1,20}$/).nullable().optional(),
 });
 export type Profile = z.infer<typeof profileSchema>;
 
@@ -540,6 +542,8 @@ export const notificationSchema = z.object({
   read_at: timestamp.nullable(),
   dedupe_key: shortText(200).nullable(),
   created_at: timestamp,
+  /** When it was sent to the recipient's Telegram (see personal-telegram.ts). Older rows lack it. */
+  pushed_at: timestamp.nullable().optional(),
 });
 export type Notification = z.infer<typeof notificationSchema>;
 

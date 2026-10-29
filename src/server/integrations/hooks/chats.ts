@@ -1,5 +1,7 @@
 import "server-only";
 import { receiveMessage, telegramChatConfig, vkConfig } from "../chat";
+import { linkPersonalChat } from "../personal-telegram-link";
+import { telegramChatSender } from "../personal-telegram";
 import { finishInbound, inboundContext, inboundMeta, secretMatches } from "../inbound";
 import { HookError, json, text, type HookHandler } from "./common";
 
@@ -28,6 +30,15 @@ export const telegramHook: HookHandler = {
     if (!secretMatches(request.headers.get("x-telegram-bot-api-secret-token"), c.webhookSecret)) throw new HookError(401, "Bad secret");
     const m = (JSON.parse(rawBody) as TgUpdate).message;
     if (!m || m.chat.type !== "private" || m.from?.is_bot || String(m.chat.id) === c.teamChat) return json({ ok: true });
+    // A team member linking (/start <token> from Settings → Profile) or unlinking (/stop) their notifications.
+    const command = /^\/(start|stop)(?:\s+(\S+))?$/.exec(m.text?.trim() ?? "");
+    if (command && (command[1] === "stop" || command[2])) {
+      const reply = await linkPersonalChat(String(m.chat.id), command[1] === "stop" ? null : command[2]!);
+      if (reply) {
+        await telegramChatSender(c.token)(String(m.chat.id), reply).catch(() => undefined);
+        return json({ ok: true });
+      }
+    }
     const body = m.text ?? (m.contact?.phone_number ? `Shared phone number: ${m.contact.phone_number}` : m.caption ? `[attachment] ${m.caption}` : "[attachment]");
     const name = [m.from?.first_name, m.from?.last_name].filter(Boolean).join(" ");
     const ctx = await inboundContext(inboundMeta(request));

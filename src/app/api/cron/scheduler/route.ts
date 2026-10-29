@@ -4,6 +4,8 @@ import { engineDeps } from "@/server/automation/runtime";
 import { getRequestMeta } from "@/server/auth";
 import { listOrganizationIds } from "@/server/db";
 import { runIntegrationJobs } from "@/server/integrations/jobs";
+import { createReminderNotifications, personalBotConfig, pushNotificationsToTelegram, telegramChatSender } from "@/server/integrations/personal-telegram";
+import { publicBaseUrl } from "@/server/integrations/public-url";
 import { recordSystemSecurity } from "@/server/security/record";
 
 /**
@@ -41,7 +43,14 @@ async function handle(request: Request): Promise<Response> {
   const meta = await getRequestMeta();
   const deps = engineDeps(meta);
   const results = [];
-  for (const orgId of orgIds) results.push({ organization_id: orgId, ...(await runScheduler(deps, orgId)) });
+  const bot = personalBotConfig();
+  for (const orgId of orgIds) {
+    const run = await runScheduler(deps, orgId);
+    // New-lead and overdue-task reminders, then every unsent notification to linked Telegram chats.
+    const reminders = await createReminderNotifications(deps.db, orgId, new Date());
+    const telegram = bot.token ? await pushNotificationsToTelegram(deps.db, orgId, telegramChatSender(bot.token), publicBaseUrl(request)) : null;
+    results.push({ organization_id: orgId, ...run, reminders, telegram });
+  }
   // Mailbox sync and other connector jobs (each isolated; failures are reported, not thrown).
   const integrations = await runIntegrationJobs(meta);
   return Response.json({ ok: true, ran_at: new Date().toISOString(), results, integrations });
