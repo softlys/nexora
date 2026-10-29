@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmailThreads } from "@/components/crm/email-threads";
 import { Attachments } from "@/components/crm/attachments";
 import { ChangeHistory } from "@/components/crm/change-history";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
@@ -110,6 +111,9 @@ export default async function DealPage({ params }: PageProps<"/deals/[id]">) {
           {!deal.archived_at && <ActivityComposer links={{ deal_id: deal.id, company_id: deal.company_id, ...(contact ? { contact_id: contact.id } : {}) }} />}
           <Panel title={tr("Timeline")}>
             <Timeline entries={timeline} names={people.names} />
+          </Panel>
+          <Panel title={tr("Correspondence")}>
+            <EmailThreads target={{ deal_id: deal.id }} composer={composer} canReply={!deal.archived_at} />
           </Panel>
           <Panel title={tr("Files")}>
             <Attachments entity="deal" id={deal.id} canUpload={!deal.archived_at} />

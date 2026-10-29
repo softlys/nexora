@@ -111,6 +111,15 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 - **Data.** Table `deal_items` (migration `20261027000001_deal_items.sql`), RLS like the deal.
 - **Tests.** Totals and amount, deal form keeps the calculated amount, lines copied into the order, permissions (unit); RLS (PGlite); e2e: add a line, amount updates.
 
+## E-mail threads on cards (2026-10-30)
+
+- **Correspondence panel** on companies, contacts, leads and deals (`src/server/services/email-threads.ts`).
+  - It collects e-mails into threads by subject, ignoring Re:/Fwd:/Ответ:. Sources are the mailbox sync (incoming and Sent) and "Write e-mail".
+  - Each thread reads like a chat, with a Reply button.
+- **Replies.**
+  - Reply answers the last incoming e-mail of the thread: "Re: <subject>" to its sender.
+  - It sets `In-Reply-To`/`References` to that e-mail's Message-ID (kept by the sync in `integration_records`), via Resend headers or the SMTP options. The answer lands in the customer's own thread.
+
 ## Call recordings: transcript and AI summary (2026-10-30)
 
 - A recorded call on a timeline (Mango, Zadarma or Twilio put the link in the call) gets a **"Transcribe and summarize"** button.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmailThreads } from "@/components/crm/email-threads";
 import { Attachments } from "@/components/crm/attachments";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { CompanyFormButton } from "@/components/crm/company-form";
@@ -214,6 +215,9 @@ export default async function CompanyPage({ params }: PageProps<"/companies/[id]
               <div className="space-y-4">
                 <Panel title={tr("Notes")}>
                   {company.notes ? <p className="text-sm whitespace-pre-wrap">{company.notes}</p> : <p className="text-sm text-text-muted">{tr("No notes. Edit the company to add some.")}</p>}
+                </Panel>
+                <Panel title={tr("Correspondence")}>
+                  <EmailThreads target={{ company_id: company.id }} composer={composer} canReply={!company.archived_at} />
                 </Panel>
                 <Panel title={tr("Files")}>
                   <Attachments entity="company" id={company.id} canUpload={!company.archived_at} />

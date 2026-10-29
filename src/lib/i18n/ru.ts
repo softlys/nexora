@@ -2202,4 +2202,10 @@ export const RU: Record<string, string> = {
   "The AI assistant is not set up (Integrations → AI).": "ИИ-помощник не настроен (Интеграции → ИИ).",
   "The recording is empty or larger than 25 MB.": "Запись пустая или больше 25 МБ.",
   "No speech was recognized in the recording.": "В записи не удалось распознать речь.",
+  "To {p0}": "Кому: {p0}",
+  "From {p0}": "От: {p0}",
+  "No e-mails yet. Incoming mail appears here once the mailbox is connected (Integrations → Mailbox).": "Писем пока нет. Входящие письма появятся здесь после подключения почтового ящика (Интеграции → Почтовый ящик).",
+  "(no subject)": "(без темы)",
+  "Correspondence": "Переписка",
+  "Reply to e-mail": "Ответить",
 };

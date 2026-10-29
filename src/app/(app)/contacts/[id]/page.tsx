@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmailThreads } from "@/components/crm/email-threads";
 import { Attachments } from "@/components/crm/attachments";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { ContactFormButton } from "@/components/crm/contact-form";
@@ -70,6 +71,9 @@ export default async function ContactPage({ params }: PageProps<"/contacts/[id]"
           <ActivityComposer links={{ contact_id: contact.id, ...(contact.company_id && company ? { company_id: contact.company_id } : {}) }} />
           <Panel title={tr("Activity timeline")}>
             <Timeline entries={timeline} names={people.names} />
+          </Panel>
+          <Panel title={tr("Correspondence")}>
+            <EmailThreads target={{ contact_id: contact.id }} composer={composer} canReply={!contact.archived_at} />
           </Panel>
           <Panel title={tr("Files")}>
             <Attachments entity="contact" id={contact.id} canUpload={!contact.archived_at} />

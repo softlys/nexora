@@ -122,6 +122,8 @@ export const sendEmailInput = z
     company_id: z.uuid().nullable().optional(),
     deal_id: z.uuid().nullable().optional(),
     lead_id: z.uuid().nullable().optional(),
+    /** Message-ID of the e-mail being answered (from the thread on the card). */
+    in_reply_to: z.string().regex(/^<[^<>\s]{3,500}>$/).optional(),
   })
   .strict()
   .refine((m) => m.contact_id || m.company_id || m.deal_id || m.lead_id, { message: "Link the e-mail to a record" });
@@ -146,7 +148,7 @@ export async function sendRecordEmail(ctx: ServiceContext, sender: EmailSender, 
     order_id: null,
     occurred_at: null,
   });
-  const sent = await sender.send({ to: input.to, subject: input.subject, text: input.body, replyTo: me?.email });
+  const sent = await sender.send({ to: input.to, subject: input.subject, text: input.body, replyTo: me?.email, ...(input.in_reply_to && { inReplyTo: input.in_reply_to }) });
   const logged = await logActivity(ctx, activity);
   return { id: sent.id, activity_id: logged.id };
 }

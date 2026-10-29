@@ -21,7 +21,8 @@ const NONE = "__none";
  * "Write e-mail" on a record page: pick a recipient and a template, edit the text, then send it
  * through the configured provider (logged on the timeline) or open it in the user's mail app.
  */
-export function EmailComposerButton({ composer }: { composer: EmailComposer }) {
+/** Without `reply`, a "Write e-mail" button; with it, a small "Reply" button for a thread. */
+export function EmailComposerButton({ composer, reply }: { composer: EmailComposer; reply?: { to: string | null; subject: string; inReplyTo: string | null } }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [to, setTo] = useState(composer.recipients[0]?.email ?? "");
@@ -44,7 +45,7 @@ export function EmailComposerButton({ composer }: { composer: EmailComposer }) {
   const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   const send = () =>
     start(async () => {
-      const r = await sendEmailAction({ to, subject, body, ...composer.links, contact_id: recipient?.contact_id ?? composer.links.contact_id });
+      const r = await sendEmailAction({ to, subject, body, ...composer.links, contact_id: recipient?.contact_id ?? composer.links.contact_id, ...(reply?.inReplyTo && { in_reply_to: reply.inReplyTo }) });
       if (!r.ok) {
         setErrors({ to: r.fieldErrors?.to?.[0] ?? "", subject: r.fieldErrors?.subject?.[0] ?? "", body: r.fieldErrors?.body?.[0] ?? "", _form: r.fieldErrors ? "" : r.error });
         return;
@@ -57,15 +58,20 @@ export function EmailComposerButton({ composer }: { composer: EmailComposer }) {
   return (
     <>
       <Button
-        variant="outline"
+        variant={reply ? "ghost" : "outline"}
+        size={reply ? "sm" : "default"}
         onClick={() => {
           setErrors({});
+          if (reply) {
+            if (reply.to) setTo(reply.to);
+            setSubject(/^re:/i.test(reply.subject) ? reply.subject : `Re: ${reply.subject}`);
+          }
           setOpen(true);
         }}
-        data-testid="write-email"
+        data-testid={reply ? "reply-email" : "write-email"}
       >
         <Mail aria-hidden />
-        {tr("Write e-mail")}
+        {reply ? tr("Reply to e-mail") : tr("Write e-mail")}
       </Button>
       <Dialog open={open} onOpenChange={(o) => !pending && setOpen(o)}>
         <DialogContent className="sm:max-w-xl">

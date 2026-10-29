@@ -32,7 +32,7 @@ function resendSender(key: string, from: string): EmailSender {
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from, to: message.to, subject: message.subject, text: message.text, ...(message.replyTo && { reply_to: message.replyTo }) }),
+        body: JSON.stringify({ from, to: message.to, subject: message.subject, text: message.text, ...(message.replyTo && { reply_to: message.replyTo }), ...(message.inReplyTo && { headers: { "In-Reply-To": message.inReplyTo, References: message.inReplyTo } }) }),
         signal: AbortSignal.timeout(4_000),
       });
       if (!response.ok) throw new Error(`Email provider returned ${response.status}`);
@@ -47,7 +47,7 @@ function smtpSender(config: NonNullable<ReturnType<typeof smtpConfig>>, from: st
   return {
     configured: true,
     async send(message) {
-      const info = await transport.sendMail({ from, to: message.to, subject: message.subject, text: message.text, ...(message.replyTo && { replyTo: message.replyTo }) });
+      const info = await transport.sendMail({ from, to: message.to, subject: message.subject, text: message.text, ...(message.replyTo && { replyTo: message.replyTo }), ...(message.inReplyTo && { inReplyTo: message.inReplyTo, references: message.inReplyTo }) });
       return { id: info.messageId ?? "unknown" };
     },
   };
