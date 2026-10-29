@@ -239,7 +239,7 @@ export const customFieldSchema = z.object({
 });
 export type CustomField = z.infer<typeof customFieldSchema>;
 
-export const CHAT_CHANNELS = ["telegram", "whatsapp", "vk", "site"] as const;
+export const CHAT_CHANNELS = ["telegram", "whatsapp", "vk", "avito", "instagram", "site"] as const;
 export type ChatChannel = (typeof CHAT_CHANNELS)[number];
 
 /**

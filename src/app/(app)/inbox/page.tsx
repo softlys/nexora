@@ -25,7 +25,7 @@ const DEFAULT_QUICK_REPLIES = [
   "Thank you for your order! We will let you know when it ships.",
 ];
 
-const CHANNEL_TONE: Record<ChatChannel, "accent" | "success" | "neutral" | "warning"> = { telegram: "accent", whatsapp: "success", vk: "accent", site: "neutral" };
+const CHANNEL_TONE: Record<ChatChannel, "accent" | "success" | "neutral" | "warning"> = { telegram: "accent", whatsapp: "success", vk: "accent", avito: "warning", instagram: "warning", site: "neutral" };
 
 /** Customer chats from Telegram, WhatsApp, VK and the website chat, with replies in the same channel. */
 export default async function InboxPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

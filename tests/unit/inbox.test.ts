@@ -8,7 +8,7 @@ import { createTestDb, ctxFor, DEMO_USER_IDS } from "./helpers/services";
 function fakeSenders(configured = true) {
   const sent: Array<{ channel: string; chat: string; text: string }> = [];
   const make = (channel: string) => ({ configured, send: async (chat: string, text: string) => (sent.push({ channel, chat, text }), { id: `m-${sent.length}` }) });
-  const senders: ChannelSenders = { telegram: make("telegram"), whatsapp: make("whatsapp"), vk: make("vk"), site: make("site") };
+  const senders: ChannelSenders = { telegram: make("telegram"), whatsapp: make("whatsapp"), vk: make("vk"), avito: make("avito"), instagram: make("instagram"), site: make("site") };
   return { senders, sent };
 }
 

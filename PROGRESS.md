@@ -111,6 +111,19 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 - **Data.** Table `deal_items` (migration `20261027000001_deal_items.sql`), RLS like the deal.
 - **Tests.** Totals and amount, deal form keeps the calculated amount, lines copied into the order, permissions (unit); RLS (PGlite); e2e: add a line, amount updates.
 
+## Avito and Instagram in the Inbox (2026-10-30)
+
+- **Avito Messenger** (`src/server/integrations/marketplaces.ts`, hook `/api/hooks/avito?secret=…`).
+  - Uses client-credentials OAuth (the token is cached). Replies go through `messenger/v1/.../messages`.
+  - The customer's name and the listing title come from the chat info.
+  - Avito does not sign events, so the secret in the address is the check. Our own messages are ignored.
+- **Instagram Direct** (hook `/api/hooks/instagram`).
+  - Meta verify handshake plus an `X-Hub-Signature-256` check with the app secret. Echoes are ignored.
+  - Replies use `graph.instagram.com/v21.0/me/messages`.
+  - The catalog warns that Meta products are restricted in Russia.
+- Both are channels in `CHAT_CHANNELS` (migration `20261030000002_more_chat_channels.sql`), listed in Integrations with setup steps, and have new variables in `.env.example`.
+- Not tested against the real APIs: there are no Avito or Meta credentials.
+
 ## Files on cards and in chats (2026-10-30)
 
 - **Files panel** on companies, contacts, leads, deals and orders.

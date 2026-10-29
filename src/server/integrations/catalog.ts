@@ -9,6 +9,7 @@ import { telephonyConfig } from "./telephony";
 import { yandexConfig } from "./yandex";
 import { siteChatEnabled, telegramChatConfig, vkConfig } from "./chat";
 import { onecConfig } from "./onec";
+import { avitoConfig, instagramConfig } from "./marketplaces";
 
 /**
  * Every connector NEXORA offers beyond webhooks: what it does, whether it is configured, which
@@ -39,6 +40,8 @@ export function connectorCatalog(): Connector[] {
   const tgChat = telegramChatConfig();
   const onec = onecConfig();
   const vk = vkConfig();
+  const avito = avitoConfig();
+  const ig = instagramConfig();
   const siteChat = siteChatEnabled();
   const tel = telephonyConfig();
   const wa = whatsappConfig();
@@ -220,6 +223,43 @@ export function connectorCatalog(): Connector[] {
       ],
       endpoints: [{ label: "Callback API address", path: "/api/hooks/vk" }],
       steps: ["Community → Manage → API usage → Callback API: paste the address, API version 5.199, set the secret key, then confirm.", "Event types: incoming message (message_new).", "Turn on community messages. A contact is matched by the VK id saved on it; unknown people become leads."],
+    },
+    {
+      id: "avito",
+      name: "Avito Messenger",
+      group: "Messengers and mail",
+      russia: true,
+      summary: "Chats about your Avito listings go to the Inbox; replies are sent from NEXORA as your Avito account.",
+      state: avito.clientId && avito.clientSecret && avito.userId && avito.webhookSecret ? "configured" : avito.clientId || avito.clientSecret || avito.userId || avito.webhookSecret ? "error" : "not_configured",
+      detail: avito.clientId && avito.clientSecret && avito.userId && avito.webhookSecret ? "Messenger API and webhook are configured." : "Needs AVITO_CLIENT_ID, AVITO_CLIENT_SECRET, AVITO_USER_ID and AVITO_WEBHOOK_SECRET.",
+      env: [
+        { name: "AVITO_CLIENT_ID", hint: "avito.ru/professionals/api → your app → Client ID.", required: true },
+        { name: "AVITO_CLIENT_SECRET", hint: "The same page → Client Secret.", required: true },
+        { name: "AVITO_USER_ID", hint: "Profile → Номер профиля (digits).", required: true },
+        { name: "AVITO_WEBHOOK_SECRET", hint: "Any random string; it is part of the webhook address.", required: true },
+      ],
+      endpoints: [{ label: "Webhook address (add ?secret=<AVITO_WEBHOOK_SECRET>)", path: "/api/hooks/avito" }],
+      steps: [
+        "Messenger API needs a paid Avito business tariff with API access.",
+        "Register the webhook once: POST https://api.avito.ru/messenger/v3/webhook with {\"url\": \"<Webhook address>?secret=<AVITO_WEBHOOK_SECRET>\"} and the access token.",
+        "New chats become leads (with the listing title in the first message); replies go back to Avito.",
+      ],
+    },
+    {
+      id: "instagram",
+      name: "Instagram Direct",
+      group: "Messengers and mail",
+      russia: false,
+      summary: "Direct messages to your Instagram professional account go to the Inbox; replies are sent from NEXORA.",
+      state: ig.token && ig.appSecret && ig.verifyToken ? "configured" : ig.token || ig.appSecret || ig.verifyToken ? "error" : "not_configured",
+      detail: ig.token && ig.appSecret && ig.verifyToken ? "Webhook and replies are configured." : "Needs INSTAGRAM_ACCESS_TOKEN, INSTAGRAM_APP_SECRET and INSTAGRAM_VERIFY_TOKEN.",
+      env: [
+        { name: "INSTAGRAM_ACCESS_TOKEN", hint: "Meta app → Instagram API with Instagram Login → long-lived token with instagram_business_manage_messages.", required: true },
+        { name: "INSTAGRAM_APP_SECRET", hint: "Meta app → App settings → Basic → App secret.", required: true },
+        { name: "INSTAGRAM_VERIFY_TOKEN", hint: "Any random string, entered when subscribing the webhook.", required: true },
+      ],
+      endpoints: [{ label: "Webhook callback URL", path: "/api/hooks/instagram" }],
+      steps: ["Meta app → Webhooks → Instagram: paste the callback URL and verify token, subscribe to the messages field.", "In Russia, Meta products are restricted: check that using Instagram is acceptable for your company before connecting it."],
     },
     {
       id: "site_chat",

@@ -8,6 +8,7 @@ import { fileStore } from "@/server/files";
 import { storeAttachment, type NewFile } from "@/server/services/attachments";
 import { insertLead } from "@/server/services/leads";
 import { claimExternal, findParty, linkExternal, openDealOf, recordActivity } from "./inbound";
+import { avitoConfig, avitoSend, instagramConfig, instagramSend } from "./marketplaces";
 import { whatsappSender } from "./messaging";
 
 /**
@@ -16,7 +17,7 @@ import { whatsappSender } from "./messaging";
  * through the same channel. Tokens come from the environment, never from the database.
  */
 
-export const CHANNEL_NAMES: Record<ChatChannel, string> = { telegram: "Telegram", whatsapp: "WhatsApp", vk: "VK", site: "Website chat" };
+export const CHANNEL_NAMES: Record<ChatChannel, string> = { telegram: "Telegram", whatsapp: "WhatsApp", vk: "VK", avito: "Avito", instagram: "Instagram", site: "Website chat" };
 
 export type ChannelSender = {
   readonly configured: boolean;
@@ -89,6 +90,14 @@ export function channelSenders(env: NodeJS.ProcessEnv = process.env, fetchImpl: 
         return { id: String(data.response) };
       },
     },
+    avito: {
+      configured: (() => {
+        const c = avitoConfig(env);
+        return Boolean(c.clientId && c.clientSecret && c.userId);
+      })(),
+      send: (chat, text) => avitoSend(chat, text, env, fetchImpl),
+    },
+    instagram: { configured: Boolean(instagramConfig(env).token), send: (chat, text) => instagramSend(chat, text, env, fetchImpl) },
     // The visitor's widget fetches replies itself; storing the message is the delivery.
     site: { configured: siteChatEnabled(env), send: async () => ({ id: null }) },
   };

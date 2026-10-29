@@ -15,7 +15,7 @@ import { logActivity } from "./tasks";
  * conversation's own channel. Incoming messages are written by src/server/integrations/chat.ts.
  */
 
-const CHANNEL_LABELS: Record<ChatChannel, string> = { telegram: "Telegram", whatsapp: "WhatsApp", vk: "VK", site: "Website chat" };
+const CHANNEL_LABELS: Record<ChatChannel, string> = { telegram: "Telegram", whatsapp: "WhatsApp", vk: "VK", avito: "Avito", instagram: "Instagram", site: "Website chat" };
 
 /** Conversations visible to the user: linked to a contact or lead they can see. */
 async function visibleConversations(tx: Tx, ctx: ServiceContext): Promise<Conversation[]> {

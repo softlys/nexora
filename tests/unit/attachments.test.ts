@@ -42,6 +42,8 @@ describe("files", () => {
       telegram: { configured: true, send: async () => ({ id: "t1" }), sendFile: async (_c: string, f: { file_name: string }, caption: string) => (sentFiles.push(`${f.file_name}|${caption}`), { id: "t2" }) },
       whatsapp: { configured: true, send: async () => ({ id: null }) },
       vk: { configured: true, send: async () => ({ id: null }) },
+      avito: { configured: true, send: async () => ({ id: null }) },
+      instagram: { configured: true, send: async () => ({ id: null }) },
       site: { configured: true, send: async () => ({ id: null }) },
     } satisfies ChannelSenders;
     const upload = await uploadAttachment(admin, store, { entity: "conversation", entity_id: conversation }, pdf("Прайс.pdf"));
