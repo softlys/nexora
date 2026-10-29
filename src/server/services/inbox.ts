@@ -5,6 +5,7 @@ import type { Tx } from "@/server/db/types";
 import type { ChannelSenders } from "@/server/integrations/chat";
 import { DomainError } from "@/server/repositories/types";
 import { emit, findVisible, newId, nowOf, requireCan, type ServiceContext } from "./context";
+import { fileStore, type FileStore } from "@/server/files";
 import { createDeal } from "./deals";
 import { logActivity } from "./tasks";
 
@@ -25,7 +26,7 @@ async function visibleConversations(tx: Tx, ctx: ServiceContext): Promise<Conver
   return all.filter((c) => (c.contact_id && contacts.has(c.contact_id)) || (c.lead_id && leads.has(c.lead_id)));
 }
 
-async function visibleConversation(tx: Tx, ctx: ServiceContext, id: string): Promise<Conversation> {
+export async function visibleConversation(tx: Tx, ctx: ServiceContext, id: string): Promise<Conversation> {
   const found = (await visibleConversations(tx, ctx)).find((c) => c.id === id);
   if (!found) throw new DomainError("Conversation not found.", "not_found");
   return found;
@@ -49,7 +50,8 @@ export async function listConversations(ctx: ServiceContext, filters: InboxFilte
   });
 }
 
-export type ConversationView = { conversation: InboxRow; messages: Array<ChatMessage & { author_name: string | null }>; record: { label: string; detail: string } | null };
+export type MessageFile = { id: string; file_name: string; content_type: string; size: number };
+export type ConversationView = { conversation: InboxRow; messages: Array<ChatMessage & { author_name: string | null; files: MessageFile[] }>; record: { label: string; detail: string } | null };
 
 /** One conversation with its messages; opening it marks it read. */
 export async function openConversation(ctx: ServiceContext, id: string): Promise<ConversationView> {
@@ -58,7 +60,11 @@ export async function openConversation(ctx: ServiceContext, id: string): Promise
     let conversation = await visibleConversation(tx, ctx, id);
     if (conversation.unread) conversation = await tx.update("conversations", id, { unread: false });
     const names = new Map((await tx.find("profiles")).map((p) => [p.id, p.full_name]));
-    const messages = (await tx.find("chat_messages", { conversation_id: id })).sort((a, b) => a.created_at.localeCompare(b.created_at)).map((m) => ({ ...m, author_name: m.author_id ? (names.get(m.author_id) ?? null) : null }));
+    const files = new Map<string, MessageFile[]>();
+    for (const a of await tx.find("attachments", { entity: "conversation", entity_id: id, archived_at: null })) {
+      if (a.chat_message_id) files.set(a.chat_message_id, [...(files.get(a.chat_message_id) ?? []), { id: a.id, file_name: a.file_name, content_type: a.content_type, size: a.size }]);
+    }
+    const messages = (await tx.find("chat_messages", { conversation_id: id })).sort((a, b) => a.created_at.localeCompare(b.created_at)).map((m) => ({ ...m, author_name: m.author_id ? (names.get(m.author_id) ?? null) : null, files: files.get(m.id) ?? [] }));
     let record: ConversationView["record"] = null;
     if (conversation.contact_id) {
       const c = await tx.get("contacts", conversation.contact_id);
@@ -72,25 +78,45 @@ export async function openConversation(ctx: ServiceContext, id: string): Promise
   });
 }
 
-export const replyInput = z.object({ conversation_id: z.uuid(), text: z.string().trim().min(1, "Required").max(4096) }).strict();
+export const replyInput = z
+  .object({ conversation_id: z.uuid(), text: z.string().trim().max(4096), /** Files uploaded to the conversation (/api/files) to send with the reply. */ attachment_ids: z.array(z.uuid()).max(5).default([]) })
+  .strict()
+  .refine((r) => r.text.length > 0 || r.attachment_ids.length > 0, { path: ["text"], message: "Required" });
 
 /** Sends a reply through the conversation's channel, then stores it and logs it on the timeline. */
-export async function replyToConversation(ctx: ServiceContext, senders: ChannelSenders, input: z.output<typeof replyInput>): Promise<ChatMessage> {
+export async function replyToConversation(ctx: ServiceContext, senders: ChannelSenders, input: z.output<typeof replyInput>, store: FileStore = fileStore()): Promise<ChatMessage> {
   requireCan(ctx, "create", "activity");
-  const conversation = await ctx.db.read(ctx.actor.organization_id, (tx) => visibleConversation(tx, ctx, input.conversation_id));
+  const { conversation, attachments } = await ctx.db.read(ctx.actor.organization_id, async (tx) => {
+    const conversation = await visibleConversation(tx, ctx, input.conversation_id);
+    const attachments = [];
+    for (const id of input.attachment_ids) {
+      const a = await tx.get("attachments", id);
+      if (!a || a.archived_at || a.entity !== "conversation" || a.entity_id !== conversation.id || a.chat_message_id || a.uploaded_by !== ctx.actor.id) throw new DomainError("File not found.", "not_found");
+      attachments.push(a);
+    }
+    return { conversation, attachments };
+  });
   const sender = senders[conversation.channel];
   if (!sender.configured) throw new DomainError(`${CHANNEL_LABELS[conversation.channel]} is not connected, so replies cannot be sent. An admin can connect it in Integrations.`);
-  let sent: { id: string | null };
+  if (attachments.length && !sender.sendFile) throw new DomainError(`Files cannot be sent in ${CHANNEL_LABELS[conversation.channel]} yet.`);
+  let sent: { id: string | null } = { id: null };
   try {
-    sent = await sender.send(conversation.external_id, input.text);
+    for (const [i, a] of attachments.entries()) {
+      const bytes = await store.get(a.storage_key);
+      if (!bytes) throw new Error(`${a.file_name} is missing`);
+      sent = await sender.sendFile!(conversation.external_id, { file_name: a.file_name, content_type: a.content_type, bytes }, i === 0 ? input.text : "");
+    }
+    if (!attachments.length) sent = await sender.send(conversation.external_id, input.text);
   } catch (error) {
     throw new DomainError(`The reply was not delivered: ${error instanceof Error ? error.message : String(error)}`);
   }
+  const body = input.text || attachments.map((a) => `📎 ${a.file_name}`).join("\n");
   const at = nowOf(ctx).toISOString();
-  const message: ChatMessage = { id: newId(), organization_id: ctx.actor.organization_id, conversation_id: conversation.id, direction: "out", body: input.text, author_id: ctx.actor.id, external_id: sent.id, created_at: at };
+  const message: ChatMessage = { id: newId(), organization_id: ctx.actor.organization_id, conversation_id: conversation.id, direction: "out", body, author_id: ctx.actor.id, external_id: sent.id, created_at: at };
   await ctx.db.write(ctx.actor.organization_id, async (tx) => {
     await tx.insert("chat_messages", message);
-    await tx.update("conversations", conversation.id, { unread: false, status: "open", last_message_at: at, last_message_preview: input.text.replace(/\s+/g, " ").slice(0, 200), updated_at: at });
+    for (const a of attachments) await tx.update("attachments", a.id, { chat_message_id: message.id });
+    await tx.update("conversations", conversation.id, { unread: false, status: "open", last_message_at: at, last_message_preview: body.replace(/\s+/g, " ").slice(0, 200), updated_at: at });
   });
   if (conversation.contact_id || conversation.lead_id) {
     await logActivity(

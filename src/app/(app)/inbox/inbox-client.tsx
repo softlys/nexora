@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, Briefcase, MessageSquareText, Pencil, Send } from "lucide-react";
+import { Archive, ArchiveRestore, Briefcase, MessageSquareText, Paperclip, Pencil, Send, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { uploadFile } from "@/components/crm/attachments-client";
 import { tr } from "@/lib/i18n";
 import { assignConversationAction, dealFromConversationAction, replyAction, saveQuickRepliesAction, setConversationStatusAction } from "@/server/actions/inbox";
 
@@ -34,16 +35,20 @@ export function ScrollToEnd({ count }: { count: number }) {
   return <div ref={ref} />;
 }
 
-export function ReplyBox({ conversationId, channelName, disabledReason, quickReplies, canEditReplies }: { conversationId: string; channelName: string; disabledReason: string | null; quickReplies: string[]; canEditReplies: boolean }) {
+export function ReplyBox({ conversationId, channelName, disabledReason, quickReplies, canEditReplies, canSendFiles }: { conversationId: string; channelName: string; disabledReason: string | null; quickReplies: string[]; canEditReplies: boolean; canSendFiles: boolean }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [editing, setEditing] = useState(false);
+  const [files, setFiles] = useState<Array<{ id: string; name: string }>>([]);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
+  const ready = (text.trim() || files.length > 0) && !disabledReason;
   const send = () =>
     start(async () => {
-      const r = await replyAction({ conversation_id: conversationId, text });
+      const r = await replyAction({ conversation_id: conversationId, text, attachment_ids: files.map((f) => f.id) });
       if (!r.ok) return void toast.error(r.fieldErrors?.text?.[0] ?? r.error);
       setText("");
+      setFiles([]);
       router.refresh();
     });
   return (
@@ -62,7 +67,7 @@ export function ReplyBox({ conversationId, channelName, disabledReason, quickRep
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && text.trim()) send();
+            if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && ready) send();
           }}
           rows={2}
           maxLength={4096}
@@ -70,6 +75,28 @@ export function ReplyBox({ conversationId, channelName, disabledReason, quickRep
           disabled={!!disabledReason}
           data-testid="reply-text"
         />
+        {canSendFiles && (
+          <>
+            <input
+              ref={fileInput}
+              type="file"
+              className="sr-only"
+              data-testid="reply-file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                start(async () => {
+                  const id = await uploadFile(file, "conversation", conversationId);
+                  if (id) setFiles((cur) => [...cur, { id, name: file.name }].slice(0, 5));
+                });
+              }}
+            />
+            <Button type="button" variant="outline" size="icon" aria-label={tr("Attach a file")} title={tr("Attach a file")} disabled={!!disabledReason || pending || files.length >= 5} onClick={() => fileInput.current?.click()}>
+              <Paperclip aria-hidden />
+            </Button>
+          </>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="outline" size="icon" aria-label={tr("Quick replies")} title={tr("Quick replies")} disabled={!!disabledReason} data-testid="quick-replies">
@@ -94,11 +121,24 @@ export function ReplyBox({ conversationId, channelName, disabledReason, quickRep
             )}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button type="submit" disabled={pending || !text.trim() || !!disabledReason} data-testid="reply-send">
+        <Button type="submit" disabled={pending || !ready} data-testid="reply-send">
           <Send aria-hidden />
           {pending ? tr("Sending…") : tr("Send")}
         </Button>
       </div>
+      {files.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {files.map((f) => (
+            <li key={f.id} className="flex items-center gap-1 rounded-md border border-border bg-surface-subtle px-2 py-0.5 text-xs">
+              <Paperclip className="size-3" aria-hidden />
+              {f.name}
+              <button type="button" aria-label={tr("Remove {p0}", { p0: f.name })} onClick={() => setFiles((cur) => cur.filter((x) => x.id !== f.id))}>
+                <X className="size-3" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="text-[11px] text-text-muted">{tr("Ctrl+Enter to send. The reply is also saved on the timeline.")}</p>
       {editing && <QuickRepliesEditor initial={quickReplies} onClose={() => setEditing(false)} />}
     </form>

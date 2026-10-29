@@ -96,6 +96,10 @@ export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
     data.campaigns = [];
     changed = true;
   }
+  if (!data.attachments) {
+    data.attachments = [];
+    changed = true;
+  }
   if (!data.web_forms) {
     data.web_forms = data.organizations.some((o) => o.id === DEMO_ORG_ID) ? [demoWebForm(DEMO_ORG_ID, now)] : [];
     changed = true;

@@ -4,6 +4,8 @@ import { leadInput } from "@/domain/inputs";
 import { getDataMode } from "@/server/env";
 import type { Tx } from "@/server/db/types";
 import { emit, newId, type ServiceContext } from "@/server/services/context";
+import { fileStore } from "@/server/files";
+import { storeAttachment, type NewFile } from "@/server/services/attachments";
 import { insertLead } from "@/server/services/leads";
 import { claimExternal, findParty, linkExternal, openDealOf, recordActivity } from "./inbound";
 import { whatsappSender } from "./messaging";
@@ -16,7 +18,12 @@ import { whatsappSender } from "./messaging";
 
 export const CHANNEL_NAMES: Record<ChatChannel, string> = { telegram: "Telegram", whatsapp: "WhatsApp", vk: "VK", site: "Website chat" };
 
-export type ChannelSender = { readonly configured: boolean; send(chat: string, text: string): Promise<{ id: string | null }> };
+export type ChannelSender = {
+  readonly configured: boolean;
+  send(chat: string, text: string): Promise<{ id: string | null }>;
+  /** Channels that can deliver a file (with an optional caption). */
+  sendFile?(chat: string, file: NewFile, caption: string): Promise<{ id: string | null }>;
+};
 export type ChannelSenders = Record<ChatChannel, ChannelSender>;
 
 const timeout = () => AbortSignal.timeout(8000);
@@ -52,6 +59,17 @@ export function channelSenders(env: NodeJS.ProcessEnv = process.env, fetchImpl: 
         });
         const body = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string; result?: { message_id?: number } };
         if (!res.ok || !body.ok) throw new Error(`Telegram refused the message: ${body.description ?? `HTTP ${res.status}`}`);
+        return { id: body.result?.message_id ? String(body.result.message_id) : null };
+      },
+      async sendFile(chat, file, caption) {
+        const photo = /^image\/(jpeg|png)$/.test(file.content_type);
+        const form = new FormData();
+        form.set("chat_id", chat);
+        if (caption) form.set("caption", caption.slice(0, 1024));
+        form.set(photo ? "photo" : "document", new Blob([file.bytes as BlobPart], { type: file.content_type }), file.file_name);
+        const res = await fetchImpl(`https://api.telegram.org/bot${tg.token}/${photo ? "sendPhoto" : "sendDocument"}`, { method: "POST", body: form, signal: AbortSignal.timeout(30_000) });
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string; result?: { message_id?: number } };
+        if (!res.ok || !body.ok) throw new Error(`Telegram refused the file: ${body.description ?? `HTTP ${res.status}`}`);
         return { id: body.result?.message_id ? String(body.result.message_id) : null };
       },
     },
@@ -92,6 +110,8 @@ export type IncomingMessage = {
   /** UTM tags of the visit (website chat). */
   utm?: Record<string, string> | null;
   occurredAt?: string;
+  /** Photos and documents that came with the message. */
+  files?: NewFile[];
 };
 
 const norm = (v: string) => v.replace(/^@/, "").toLowerCase();
@@ -170,6 +190,9 @@ export async function receiveMessage(tx: Tx, ctx: ServiceContext, msg: IncomingM
   }
   const message: ChatMessage = { id: newId(), organization_id: ctx.actor.organization_id, conversation_id: conversation.id, direction: "in", body: text, author_id: null, external_id: msg.messageId?.slice(0, 255) ?? null, created_at: at };
   await tx.insert("chat_messages", message);
+  for (const file of msg.files ?? []) {
+    await storeAttachment(tx, ctx, fileStore(), { entity: "conversation", entity_id: conversation.id, chat_message_id: message.id }, file, null).catch(() => undefined);
+  }
   conversation = await tx.update("conversations", conversation.id, { status: "open", unread: true, last_message_at: at, last_message_preview: text.replace(/\s+/g, " ").slice(0, 200), updated_at: at });
   const activity = await recordActivity(tx, ctx, {
     type: "message",

@@ -833,6 +833,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     ad_spend: seedSpend(org, now),
     campaigns: [],
     web_forms: [demoWebForm(DEMO_ORG_ID, now)],
+    attachments: [],
     deal_stage_history,
     products,
     orders,

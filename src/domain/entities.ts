@@ -300,6 +300,27 @@ export const campaignSegmentSchema = z
   .strict();
 export type CampaignSegment = z.infer<typeof campaignSegmentSchema>;
 
+export const ATTACHMENT_ENTITIES = ["company", "contact", "lead", "deal", "order", "conversation"] as const;
+export type AttachmentEntity = (typeof ATTACHMENT_ENTITIES)[number];
+
+/** A file on a record card or in a chat. The bytes live in the file store (see src/server/files.ts). */
+export const attachmentSchema = z.object({
+  id,
+  organization_id: id,
+  entity: z.enum(ATTACHMENT_ENTITIES),
+  entity_id: id,
+  /** The chat message the file came with or was sent in. */
+  chat_message_id: id.nullable(),
+  file_name: requiredText(255),
+  content_type: z.string().min(1).max(127),
+  size: z.number().int().min(0),
+  storage_key: z.string().min(1).max(512),
+  uploaded_by: id.nullable(),
+  archived_at: timestamp.nullable(),
+  created_at: timestamp,
+});
+export type Attachment = z.infer<typeof attachmentSchema>;
+
 export const WEB_FORM_FIELDS = ["phone", "email", "company", "message"] as const;
 export type WebFormField = (typeof WEB_FORM_FIELDS)[number];
 
@@ -738,6 +759,7 @@ export const TABLES = [
   "ad_spend",
   "campaigns",
   "web_forms",
+  "attachments",
   "pipelines",
   "pipeline_stages",
   "deals",
@@ -777,6 +799,7 @@ export type Dataset = {
   ad_spend: AdSpend[];
   campaigns: Campaign[];
   web_forms: WebForm[];
+  attachments: Attachment[];
   pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
@@ -815,6 +838,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   ad_spend: adSpendSchema,
   campaigns: campaignSchema,
   web_forms: webFormSchema,
+  attachments: attachmentSchema,
   pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,

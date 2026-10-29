@@ -57,17 +57,17 @@ describe("unified inbox", () => {
     const view = await openConversation(rep(), a!.conversation.id);
     expect(view.conversation.unread).toBe(false);
     const { senders, sent } = fakeSenders();
-    await replyToConversation(rep(), senders, { conversation_id: a!.conversation.id, text: "Добрый день!" });
+    await replyToConversation(rep(), senders, { conversation_id: a!.conversation.id, text: "Добрый день!", attachment_ids: [] });
     expect(sent).toEqual([{ channel: "whatsapp", chat: "79990000001", text: "Добрый день!" }]);
     expect(data().chat_messages.find((m) => m.direction === "out" && m.body === "Добрый день!")).toMatchObject({ author_id: DEMO_USER_IDS.repDaniel, external_id: "m-1" });
     expect(data().activities.some((a2) => a2.subject === "Reply in WhatsApp: Добрый день!" && a2.actor_id === DEMO_USER_IDS.repDaniel)).toBe(true);
-    await expect(replyToConversation(rep(), senders, { conversation_id: b!.conversation.id, text: "x" })).rejects.toThrow();
+    await expect(replyToConversation(rep(), senders, { conversation_id: b!.conversation.id, text: "x", attachment_ids: [] })).rejects.toThrow();
   });
 
   it("does not reply through a channel that is not connected, and closes conversations", async () => {
     const r = await receive({ channel: "vk", chat: "2000000001", name: "VK id1", text: "hello", messageId: "vk1", handle: "1" });
     const off = fakeSenders(false);
-    await expect(replyToConversation(admin(), off.senders, { conversation_id: r!.conversation.id, text: "x" })).rejects.toThrow(/not connected/);
+    await expect(replyToConversation(admin(), off.senders, { conversation_id: r!.conversation.id, text: "x", attachment_ids: [] })).rejects.toThrow(/not connected/);
     expect(off.sent).toEqual([]);
     await setConversationStatus(admin(), { id: r!.conversation.id, status: "closed" });
     expect((await listConversations(admin(), { status: "closed" })).rows.map((c) => c.id)).toContain(r!.conversation.id);

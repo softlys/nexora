@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Attachments } from "@/components/crm/attachments";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { ConvertLeadDialog } from "@/components/crm/convert-lead-dialog";
 import { DetailHeader, Facts, Panel, customFacts } from "@/components/crm/detail";
@@ -84,6 +85,9 @@ export default async function LeadPage({ params }: PageProps<"/leads/[id]">) {
           {!lead.archived_at && <ActivityComposer links={{ lead_id: lead.id }} />}
           <Panel title={tr("Activity timeline")}>
             <Timeline entries={timeline} names={people.names} />
+          </Panel>
+          <Panel title={tr("Files")}>
+            <Attachments entity="lead" id={lead.id} canUpload={!lead.archived_at} />
           </Panel>
           <Panel title={tr("Comments")}>
             <CommentComposer entityType="lead" entityId={lead.id} />

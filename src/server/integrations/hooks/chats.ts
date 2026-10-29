@@ -1,4 +1,5 @@
 import "server-only";
+import { MAX_FILE_BYTES, type NewFile } from "@/server/services/attachments";
 import { receiveMessage, telegramChatConfig, vkConfig } from "../chat";
 import { linkPersonalChat } from "../personal-telegram-link";
 import { telegramChatSender } from "../personal-telegram";
@@ -15,8 +16,24 @@ type TgUpdate = {
     text?: string;
     caption?: string;
     contact?: { phone_number?: string };
+    photo?: Array<{ file_id: string; file_size?: number }>;
+    document?: { file_id: string; file_name?: string; mime_type?: string; file_size?: number };
   };
 };
+
+/** Downloads a photo or document the customer sent (bots may download files up to 20 MB; we keep up to 10). */
+async function telegramFile(token: string, fileId: string, name: string, type: string): Promise<NewFile | null> {
+  try {
+    const meta = (await (await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(fileId)}`, { signal: AbortSignal.timeout(8000) })).json()) as { ok?: boolean; result?: { file_path?: string; file_size?: number } };
+    const filePath = meta.result?.file_path;
+    if (!meta.ok || !filePath || (meta.result?.file_size ?? 0) > MAX_FILE_BYTES) return null;
+    const res = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`, { signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) return null;
+    return { file_name: name || filePath.split("/").pop() || "file", content_type: type, bytes: new Uint8Array(await res.arrayBuffer()) };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Telegram bot updates: https://<host>/api/hooks/telegram, registered with setWebhook and
@@ -39,7 +56,10 @@ export const telegramHook: HookHandler = {
         return json({ ok: true });
       }
     }
-    const body = m.text ?? (m.contact?.phone_number ? `Shared phone number: ${m.contact.phone_number}` : m.caption ? `[attachment] ${m.caption}` : "[attachment]");
+    const photo = m.photo?.length ? m.photo[m.photo.length - 1]! : null;
+    const file = photo ? await telegramFile(c.token, photo.file_id, `photo-${m.message_id}.jpg`, "image/jpeg") : m.document ? await telegramFile(c.token, m.document.file_id, m.document.file_name ?? "", m.document.mime_type ?? "application/octet-stream") : null;
+    const label = photo ? "📷" : m.document ? `📎 ${m.document.file_name ?? ""}`.trim() : "";
+    const body = m.text ?? (m.contact?.phone_number ? `Shared phone number: ${m.contact.phone_number}` : [label, m.caption].filter(Boolean).join(" ") || "[attachment]");
     const name = [m.from?.first_name, m.from?.last_name].filter(Boolean).join(" ");
     const ctx = await inboundContext(inboundMeta(request));
     await ctx.db.write(ctx.actor.organization_id, (tx) =>
@@ -52,6 +72,7 @@ export const telegramHook: HookHandler = {
         handle: m.from?.username ?? null,
         phone: m.contact?.phone_number ? `+${m.contact.phone_number.replace(/^\+/, "")}` : null,
         occurredAt: m.date ? new Date(m.date * 1000).toISOString() : undefined,
+        files: file ? [file] : undefined,
       }),
     );
     await finishInbound(ctx);

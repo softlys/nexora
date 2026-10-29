@@ -111,6 +111,22 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 - **Data.** Table `deal_items` (migration `20261027000001_deal_items.sql`), RLS like the deal.
 - **Tests.** Totals and amount, deal form keeps the calculated amount, lines copied into the order, permissions (unit); RLS (PGlite); e2e: add a line, amount updates.
 
+## Files on cards and in chats (2026-10-30)
+
+- **Files panel** on companies, contacts, leads, deals and orders.
+  - Upload goes through `POST /api/files` (multipart, signed-in users), download through `GET /api/files/<id>`. Both check that the user can see the record.
+  - Images and PDFs open in the browser; everything else downloads, and pages are served sandboxed by CSP.
+  - The limit is 10 MB. Executables, HTML and SVG are refused.
+  - The uploader or an admin can remove a file (archived).
+- **Storage** (`src/server/files.ts`).
+  - Demo mode keeps files on disk (`NEXORA_FILES_DIR`, default `.data/files`, the Docker volume).
+  - Supabase mode uses the private Storage bucket `attachments`, created on first upload.
+  - Table `attachments`, migration `20261030000001_attachments.sql`. RLS lets a user see a file when they can see its record.
+- **Chats.**
+  - Photos and documents customers send to the Telegram bot are kept with their message and shown in the thread.
+  - A manager can attach up to 5 files to a reply. They go out via `sendPhoto`/`sendDocument`, and the text becomes the caption.
+  - Other channels do not send files yet (no attach button there).
+
 ## Small gaps vs Bitrix24: forms, act/UPD, Telegram notifications, PWA (2026-10-29)
 
 - **Website forms (CRM-формы)**, Settings → Website forms (admins).

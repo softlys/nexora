@@ -1,4 +1,4 @@
-import { ExternalLink, MessagesSquare } from "lucide-react";
+import { ExternalLink, MessagesSquare, Paperclip } from "lucide-react";
 import Link from "next/link";
 import { EmptyState } from "@/components/patterns/empty-state";
 import { PageHeader } from "@/components/patterns/page-header";
@@ -127,6 +127,19 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                   <div key={m.id} className={cn("flex", m.direction === "out" ? "justify-end" : "justify-start")}>
                     <div className={cn("max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap", m.direction === "out" ? "bg-brand text-brand-foreground" : "border border-border bg-surface")}>
                       {m.body}
+                      {m.files.map((f) =>
+                        f.content_type.startsWith("image/") ? (
+                          <a key={f.id} href={`/api/files/${f.id}`} target="_blank" rel="noreferrer" className="mt-2 block">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- a private file behind an access check */}
+                            <img src={`/api/files/${f.id}`} alt={f.file_name} className="max-h-60 rounded-md" />
+                          </a>
+                        ) : (
+                          <a key={f.id} href={`/api/files/${f.id}`} target="_blank" rel="noreferrer" className="mt-2 flex items-center gap-1 underline">
+                            <Paperclip className="size-3.5" aria-hidden />
+                            {f.file_name}
+                          </a>
+                        ),
+                      )}
                       <span className={cn("mt-1 block text-[11px]", m.direction === "out" ? "text-brand-foreground/80" : "text-text-muted")}>
                         {m.direction === "out" && m.author_name ? `${m.author_name} · ` : ""}
                         {new Date(m.created_at).toLocaleString(intlLocale(), { dateStyle: "short", timeStyle: "short" })}
@@ -141,6 +154,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                 channelName={tr(CHANNEL_NAMES[view.conversation.channel])}
                 quickReplies={quickReplies.length ? quickReplies : DEFAULT_QUICK_REPLIES.map((r) => tr(r))}
                 canEditReplies={role !== "sales_rep"}
+                canSendFiles={Boolean(senders[view.conversation.channel].sendFile)}
                 disabledReason={senders[view.conversation.channel].configured ? null : tr("{p0} is not connected, so replies cannot be sent. An admin can connect it in Integrations.", { p0: tr(CHANNEL_NAMES[view.conversation.channel]) })}
               />
             </section>

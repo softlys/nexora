@@ -40,6 +40,7 @@ export const LOAD_ORDER: TableName[] = [
   "api_idempotency_keys",
   "integration_records",
   "audit_logs",
+  "attachments",
 ];
 
 export function rowsForLoad(data: Dataset, table: TableName): Record<string, unknown>[] {

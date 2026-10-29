@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Attachments } from "@/components/crm/attachments";
 import { ActivityComposer, CommentComposer } from "@/components/crm/composers";
 import { DetailHeader, Facts, Panel } from "@/components/crm/detail";
 import { OrderStatusActions, RecordPaymentButton } from "@/components/crm/order-controls";
@@ -146,6 +147,9 @@ export default async function OrderPage({ params }: PageProps<"/orders/[id]">) {
           {!order.archived_at && <ActivityComposer links={{ order_id: order.id, company_id: order.company_id }} />}
           <Panel title={tr("Timeline")}>
             <Timeline entries={timeline} names={people.names} />
+          </Panel>
+          <Panel title={tr("Files")}>
+            <Attachments entity="order" id={order.id} canUpload={!order.archived_at} />
           </Panel>
           <Panel title={tr("Comments")}>
             <CommentComposer entityType="order" entityId={order.id} />
