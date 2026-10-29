@@ -1,4 +1,5 @@
 import { ArrowRightLeft, CheckCircle2, Circle, Mail, MessageCircle, MessageSquare, NotebookPen, Phone, Repeat, Settings2, Users } from "lucide-react";
+import { CallSummaryButton } from "./call-summary-button";
 import type { TimelineEntry } from "@/domain/timeline";
 import { formatDate, formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ export function Timeline({ entries, names, emptyText = "No activity yet." }: { e
               </span>
             </div>
             {e.kind === "activity" && e.body && <p className="mt-1 text-sm whitespace-pre-wrap text-text-subtle">{e.body}</p>}
+            {e.kind === "activity" && e.activity_type === "call" && /Recording: https:\/\//.test(e.body) && <CallSummaryButton activityId={e.id} />}
             {e.kind === "comment" && <p className="mt-1 text-sm whitespace-pre-wrap text-text-subtle">{e.body}</p>}
             {e.kind === "task" && e.due_at && e.status !== "done" && <p className="mt-0.5 text-xs text-text-muted">{tr("Due")} {formatDate(e.due_at)}</p>}
           </li>

@@ -111,6 +111,16 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 - **Data.** Table `deal_items` (migration `20261027000001_deal_items.sql`), RLS like the deal.
 - **Tests.** Totals and amount, deal form keeps the calculated amount, lines copied into the order, permissions (unit); RLS (PGlite); e2e: add a line, amount updates.
 
+## Call recordings: transcript and AI summary (2026-10-30)
+
+- A recorded call on a timeline (Mango, Zadarma or Twilio put the link in the call) gets a **"Transcribe and summarize"** button.
+  - The server downloads the recording (HTTPS only, the providers' own hosts, up to 25 MB).
+  - It transcribes it with Yandex SpeechKit v3 (async recognition, Russian; speakers by channel) in `src/server/integrations/speech.ts`.
+  - It asks the configured AI (YandexGPT or Claude) for what was agreed, needs and objections, and next steps.
+  - The result is a note next to the call, with the transcript below the summary.
+- Variables: `YANDEX_FOLDER_ID`, plus `YANDEX_SPEECHKIT_API_KEY` (or the YandexGPT key when its service account has `ai.speechkit-stt.user`).
+- Not tested against the real SpeechKit or with real recordings.
+
 ## Avito and Instagram in the Inbox (2026-10-30)
 
 - **Avito Messenger** (`src/server/integrations/marketplaces.ts`, hook `/api/hooks/avito?secret=…`).
