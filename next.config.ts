@@ -29,7 +29,12 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    // Website forms (/api/forms/<id>) are made to be embedded in customers' sites in an iframe.
+    const embeddable = [...securityHeaders.filter((h) => h.key !== "X-Frame-Options"), { key: "Content-Security-Policy", value: "frame-ancestors *" }];
+    return [
+      { source: "/:path((?!api/forms/).*)", headers: securityHeaders },
+      { source: "/api/forms/:path*", headers: embeddable },
+    ];
   },
 };
 

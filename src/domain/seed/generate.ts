@@ -7,6 +7,7 @@
  * the Supabase seed script.
  */
 import { LEAD_SOURCES, Pipeline, type Activity, type Comment, type Company, type Contact, type Dataset, type Deal, type DealStageHistory, type EmailTemplate, type Lead, type LeadSource, type Notification, type Order, type OrderItem, type OrderStatus, type Organization, type Payment, type PipelineStage, type Product, type Profile, type Task, type TaskPriority, type TaskStatus } from "../entities";
+import { demoWebForm } from "./web-forms";
 import { computeLineTotals, computeOrderTotals, roundMoney } from "../orders/totals";
 import { derivePaymentStatus } from "../orders/payment-status";
 import { seedAutomation } from "./automation";
@@ -831,6 +832,7 @@ export function generateSeed(now: Date = new Date()): Dataset {
     sales_targets: seedTargets(org, profiles, deals, pipeline_stages, now),
     ad_spend: seedSpend(org, now),
     campaigns: [],
+    web_forms: [demoWebForm(DEMO_ORG_ID, now)],
     deal_stage_history,
     products,
     orders,

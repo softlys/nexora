@@ -111,6 +111,26 @@ VIGIL, the companion SIEM, is built in its own repository (https://github.com/so
 - **Data.** Table `deal_items` (migration `20261027000001_deal_items.sql`), RLS like the deal.
 - **Tests.** Totals and amount, deal form keeps the calculated amount, lines copied into the order, permissions (unit); RLS (PGlite); e2e: add a line, amount updates.
 
+## Small gaps vs Bitrix24: forms, act/UPD, Telegram notifications, PWA (2026-10-29)
+
+- **Website forms (CRM-формы)**, Settings → Website forms (admins).
+  - A form has a heading, a button, a thank-you text, and the phone, e-mail, company and message fields, each off, optional or required. The visitor's name is always asked.
+  - Each form sets who gets its leads.
+  - The public page `/api/forms/<id>` works without JavaScript and can be embedded in an iframe: only this path drops `X-Frame-Options` and sends `frame-ancestors *`.
+  - The embed code passes the page's UTM tags to the form.
+  - Protection: a honeypot field, the `web_form` rate limit (10 per 10 minutes per IP), and a 152-FZ consent line.
+  - A submission becomes a lead with source "website", and the message is logged as a note on the lead.
+  - Table `web_forms` (migration `20261029000003_web_forms.sql`). The demo seeds one form.
+- **Act and UPD.**
+  - `?doc=act` prints an act of completed work (Исполнитель/Заказчик, acceptance sentence, signatures, stamp).
+  - `?doc=upd` prints a UPD with status 1 in landscape, after the recommended form, with tax per line.
+  - Available for orders (order documents) and deals (next to the КП button).
+- **Personal Telegram notifications.**
+  - Settings → Profile has a `t.me/<bot>?start=<signed token>` link (`TELEGRAM_BOT_USERNAME`). The bot webhook links the chat; `/stop` unlinks it.
+  - The scheduler (every 5 minutes) creates "new lead" notifications (to the owner, or to admins and managers when the lead has no owner) and "overdue task" notifications. It then sends every unsent notification from the last day to linked chats (`notifications.pushed_at`).
+  - Migration: `20261029000002_personal_telegram.sql`.
+- **Install as an app (PWA).** `app/manifest.ts`, icons in `public/`, and Apple web-app metadata. Phones offer "Add to home screen".
+
 ## Inbox: assignment, quick replies, deal from chat (2026-10-29)
 
 - **Assignment.**

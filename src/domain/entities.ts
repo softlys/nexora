@@ -300,6 +300,27 @@ export const campaignSegmentSchema = z
   .strict();
 export type CampaignSegment = z.infer<typeof campaignSegmentSchema>;
 
+export const WEB_FORM_FIELDS = ["phone", "email", "company", "message"] as const;
+export type WebFormField = (typeof WEB_FORM_FIELDS)[number];
+
+/**
+ * A CRM form (CRM-форма) for a website: visitors fill it in and each submission becomes a lead.
+ * The name field is always asked; the other fields are off, optional or required.
+ */
+export const webFormSchema = z.object({
+  ...base,
+  name: requiredText(120),
+  title: requiredText(160),
+  button_text: requiredText(60),
+  success_text: requiredText(500),
+  fields: z.partialRecord(z.enum(WEB_FORM_FIELDS), z.enum(["off", "optional", "required"])),
+  /** New leads go to this user; nobody (admins and managers are notified) when null. */
+  owner_id: id.nullable(),
+  is_active: z.boolean(),
+  submissions: z.number().int().min(0),
+});
+export type WebForm = z.infer<typeof webFormSchema>;
+
 /** A mass mailing (рассылка) by e-mail or SMS to a segment of contacts. */
 export const campaignSchema = z.object({
   ...base,
@@ -716,6 +737,7 @@ export const TABLES = [
   "sales_targets",
   "ad_spend",
   "campaigns",
+  "web_forms",
   "pipelines",
   "pipeline_stages",
   "deals",
@@ -754,6 +776,7 @@ export type Dataset = {
   sales_targets: SalesTarget[];
   ad_spend: AdSpend[];
   campaigns: Campaign[];
+  web_forms: WebForm[];
   pipelines: Pipeline[];
   pipeline_stages: PipelineStage[];
   deals: Deal[];
@@ -791,6 +814,7 @@ export const entitySchemas: Record<TableName, z.ZodType> = {
   sales_targets: salesTargetSchema,
   ad_spend: adSpendSchema,
   campaigns: campaignSchema,
+  web_forms: webFormSchema,
   pipelines: pipelineSchema,
   pipeline_stages: pipelineStageSchema,
   deals: dealSchema,

@@ -11,6 +11,7 @@ import type { Dataset } from "../../domain/entities";
 import { defaultEmailTemplates, DEMO_ORG_ID, DEMO_PIPELINE_IDS, generateSeed, SEED_NUMBER, seedMessengers } from "../../domain/seed/generate";
 import { capPastTimestamps, daysBetween, shiftDataset } from "../../domain/seed/shift";
 import { seedConversations } from "../../domain/seed/conversations";
+import { demoWebForm } from "../../domain/seed/web-forms";
 import { seedTargets } from "../../domain/seed/targets";
 import { seedSpend, seedUtm } from "../../domain/seed/utm";
 
@@ -93,6 +94,10 @@ export function upgradeDataset(data: Dataset, now: Date = new Date()): boolean {
   }
   if (!data.campaigns) {
     data.campaigns = [];
+    changed = true;
+  }
+  if (!data.web_forms) {
+    data.web_forms = data.organizations.some((o) => o.id === DEMO_ORG_ID) ? [demoWebForm(DEMO_ORG_ID, now)] : [];
     changed = true;
   }
   // Tables added after a store was written start empty.

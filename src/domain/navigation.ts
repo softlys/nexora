@@ -87,6 +87,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   { href: "/settings/roles", label: "Roles", description: "What managers and sales reps may see and do, per record type.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/pipeline", label: "Pipelines", description: "Pipelines and their stages: rename, reorder, probabilities, won and lost.", requires: { action: "manage", resource: "pipeline_stage" } },
   { href: "/settings/fields", label: "Fields", description: "Your own fields on companies, contacts, leads and deals.", requires: { action: "manage", resource: "organization" } },
+  { href: "/settings/forms", label: "Website forms", description: "Forms for your website: each submission becomes a lead.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/email-templates", label: "E-mail templates", description: "Ready-made e-mails for writing to customers from record pages.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/import", label: "Move from another CRM", description: "Bitrix24 and amoCRM: pipelines, companies, contacts and deals.", requires: { action: "manage", resource: "organization" } },
   { href: "/settings/api-keys", label: "API keys", description: "Keys for the public API and the SIEM, with scopes. Shown once, stored hashed.", requires: { action: "view", resource: "api_key" } },

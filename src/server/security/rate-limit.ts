@@ -21,6 +21,7 @@ export const RATE_LIMITS = {
   poll: { limit: 40, windowSeconds: 60 },
   /** Website chat widget requests (sending and checking for replies), per client IP. */
   site_chat: { limit: 60, windowSeconds: 60 },
+  web_form: { limit: 10, windowSeconds: 600 },
   /** Demo access code attempts, per client IP. */
   demo_access: { limit: 10, windowSeconds: 600 },
 } satisfies Record<string, RateLimitRule>;
