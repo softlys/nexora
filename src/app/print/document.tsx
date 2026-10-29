@@ -6,6 +6,10 @@ const TEXT = {
   ru: {
     invoice: "Счёт на оплату",
     quote: "Коммерческое предложение",
+    act: "Акт",
+    executor: "Исполнитель",
+    customer: "Заказчик",
+    actStatement: "Вышеперечисленные работы (услуги) выполнены полностью и в срок. Заказчик претензий по объёму, качеству и срокам оказания услуг не имеет.",
     from: "Поставщик",
     to: "Покупатель",
     date: "от",
@@ -35,6 +39,10 @@ const TEXT = {
   en: {
     invoice: "Invoice",
     quote: "Quote",
+    act: "Certificate of completion",
+    executor: "Contractor",
+    customer: "Customer",
+    actStatement: "The work (services) above has been completed in full and on time. The customer has no claims as to scope, quality or timing.",
     from: "From",
     to: "Bill to",
     date: "dated",
@@ -65,7 +73,7 @@ const TEXT = {
 
 export type PrintLine = { description: string; quantity: number; unit_price: number; discount_pct: number; tax_rate: number; line_total: number };
 export type PrintDocumentProps = {
-  doc: "invoice" | "quote";
+  doc: "invoice" | "quote" | "act";
   lang: "ru" | "en";
   number: string;
   date: string;
@@ -140,7 +148,7 @@ export function PrintDocument(p: PrintDocumentProps) {
       )}
       <header className="border-b-2 border-black pb-2">
         <h1 className="text-xl font-bold">
-          {p.doc === "invoice" ? t.invoice : t.quote} № {p.number} {t.date} {date(p.date)}
+          {p.doc === "invoice" ? t.invoice : p.doc === "act" ? t.act : t.quote} № {p.number} {t.date} {date(p.date)}
         </h1>
         {p.doc === "invoice" && p.due && (
           <p className="text-neutral-700">
@@ -150,13 +158,13 @@ export function PrintDocument(p: PrintDocumentProps) {
       </header>
       <section className="space-y-1 py-3">
         <p>
-          <span className="inline-block w-28 text-neutral-600">{t.from}:</span>
+          <span className="inline-block w-28 text-neutral-600">{p.doc === "act" ? t.executor : t.from}:</span>
           <span className="font-medium">{sellerLine}</span>
         </p>
         {!r.legal_name && p.sellerLines.length > 0 && <p className="pl-28 text-neutral-700">{p.sellerLines.join(", ")}</p>}
         {p.buyer && (
           <p>
-            <span className="inline-block w-28 text-neutral-600">{t.to}:</span>
+            <span className="inline-block w-28 text-neutral-600">{p.doc === "act" ? t.customer : t.to}:</span>
             <span className="font-medium">{buyerLine}</span>
           </p>
         )}
@@ -228,6 +236,11 @@ export function PrintDocument(p: PrintDocumentProps) {
         </p>
       )}
       {p.doc === "quote" && <p className="mt-4 text-neutral-700">{t.validity}</p>}
+      {p.doc === "act" && (
+        <p className="mt-4" data-testid="act-statement">
+          {t.actStatement}
+        </p>
+      )}
       {p.notes && (
         <section className="mt-4">
           <h2 className="text-xs font-semibold tracking-wide text-neutral-500 uppercase">{t.notes}</h2>
@@ -237,7 +250,7 @@ export function PrintDocument(p: PrintDocumentProps) {
       <section className="relative mt-10 border-t-2 border-black pt-6" data-testid="signatures">
         <div className="grid grid-cols-2 gap-8">
           <div className="relative">
-            <span>{t.director}</span>
+            <span>{p.doc === "act" ? t.executor : t.director}</span>
             <span className="relative mx-2 inline-block w-36 border-b border-black align-bottom">
               {r.signature && (
                 // eslint-disable-next-line @next/next/no-img-element -- a data: URL image, nothing for next/image to optimize
@@ -247,11 +260,19 @@ export function PrintDocument(p: PrintDocumentProps) {
             </span>
             <span>{r.director}</span>
           </div>
-          <div>
-            <span>{t.accountant}</span>
-            <span className="mx-2 inline-block w-36 border-b border-black align-bottom">&nbsp;</span>
-            <span>{r.accountant}</span>
-          </div>
+          {p.doc === "act" ? (
+            <div>
+              <span>{t.customer}</span>
+              <span className="mx-2 inline-block w-36 border-b border-black align-bottom">&nbsp;</span>
+              <span>{p.buyer?.name}</span>
+            </div>
+          ) : (
+            <div>
+              <span>{t.accountant}</span>
+              <span className="mx-2 inline-block w-36 border-b border-black align-bottom">&nbsp;</span>
+              <span>{r.accountant}</span>
+            </div>
+          )}
         </div>
         {r.stamp && (
           // eslint-disable-next-line @next/next/no-img-element -- a data: URL image, nothing for next/image to optimize

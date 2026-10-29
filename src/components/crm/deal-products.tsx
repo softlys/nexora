@@ -129,6 +129,13 @@ export function DealProducts({ dealId, currency, items, products, canEdit }: { d
             {tr("Quote (КП)")}
           </a>
         </Button>
+        {(["invoice", "act", "upd"] as const).map((doc) => (
+          <Button key={doc} size="sm" variant="ghost" asChild>
+            <a href={`/print/deals/${dealId}?doc=${doc}`} target="_blank" rel="noreferrer" data-testid={`deal-${doc}`}>
+              {{ invoice: "Счёт", act: "Акт", upd: "УПД" }[doc]}
+            </a>
+          </Button>
+        ))}
         </div>
       </div>
     );

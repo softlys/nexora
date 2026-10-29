@@ -5,6 +5,7 @@ import { loadPage } from "@/server/page-data";
 import { getOrder } from "@/server/services/orders";
 import { getRequisites } from "@/server/services/requisites";
 import { PrintDocument } from "../../document";
+import { UpdDocument } from "../../upd-document";
 
 export const metadata = { title: "Document" };
 
@@ -24,9 +25,13 @@ export default async function PrintOrderPage({ params, searchParams }: PageProps
   if (!data) notFound();
   const { order, items, company, collected, outstanding } = data;
   const custom = (company?.custom ?? {}) as Record<string, unknown>;
+  const buyer = company ? { name: company.name, inn: custom.inn ? String(custom.inn) : undefined, kpp: custom.kpp ? String(custom.kpp) : undefined, address: [company.address, company.city, countryName(company.country)].filter(Boolean).join(", "), phone: company.phone } : null;
+  const lines = items.map((i) => ({ description: i.description, quantity: Number(i.quantity), unit_price: Number(i.unit_price), discount_pct: Number(i.discount_pct), tax_rate: Number(i.tax_rate), line_total: Number(i.line_total) }));
+  const sellerLines = (process.env.NEXORA_SELLER_DETAILS ?? "").split(/\\n|\n/).map((l) => l.trim()).filter(Boolean);
+  if (q.doc === "upd") return <UpdDocument number={order.order_number} date={order.order_date} currency={order.currency} orgName={data.orgName} requisites={data.requisites} sellerLines={sellerLines} buyer={buyer} lines={lines} totals={order} />;
   return (
     <PrintDocument
-      doc={q.doc === "quote" ? "quote" : "invoice"}
+      doc={q.doc === "quote" ? "quote" : q.doc === "act" ? "act" : "invoice"}
       lang={q.lang === "en" ? "en" : "ru"}
       number={order.order_number}
       date={order.order_date}
@@ -34,9 +39,9 @@ export default async function PrintOrderPage({ params, searchParams }: PageProps
       currency={order.currency}
       orgName={data.orgName}
       requisites={data.requisites}
-      sellerLines={(process.env.NEXORA_SELLER_DETAILS ?? "").split(/\\n|\n/).map((l) => l.trim()).filter(Boolean)}
-      buyer={company ? { name: company.name, inn: custom.inn ? String(custom.inn) : undefined, kpp: custom.kpp ? String(custom.kpp) : undefined, address: [company.address, company.city, countryName(company.country)].filter(Boolean).join(", "), phone: company.phone } : null}
-      lines={items.map((i) => ({ description: i.description, quantity: Number(i.quantity), unit_price: Number(i.unit_price), discount_pct: Number(i.discount_pct), tax_rate: Number(i.tax_rate), line_total: Number(i.line_total) }))}
+      sellerLines={sellerLines}
+      buyer={buyer}
+      lines={lines}
       totals={order}
       collected={collected}
       outstanding={outstanding}

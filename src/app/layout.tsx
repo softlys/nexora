@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   title: { default: "NEXORA", template: "%s · NEXORA" },
   description: tr("B2B operations platform: CRM, sales pipeline, orders and workflow automation."),
   robots: { index: false, follow: false },
+  appleWebApp: { capable: true, title: "NEXORA", statusBarStyle: "default" },
+  icons: { apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

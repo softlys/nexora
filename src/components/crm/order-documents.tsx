@@ -10,6 +10,8 @@ import { tr } from "@/lib/i18n";
 const DOCS = [
   { doc: "invoice", lang: "ru", label: tr("Счёт (RU)") },
   { doc: "quote", lang: "ru", label: tr("КП (RU)") },
+  { doc: "act", lang: "ru", label: "Акт" },
+  { doc: "upd", lang: "ru", label: "УПД" },
   { doc: "invoice", lang: "en", label: tr("Invoice (EN)") },
   { doc: "quote", lang: "en", label: tr("Quote (EN)") },
 ] as const;
