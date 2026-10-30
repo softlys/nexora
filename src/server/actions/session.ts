@@ -14,7 +14,8 @@ import { supabaseCounter } from "@/server/security/shared-counter";
 import { DomainError, getRepositories } from "@/server/repositories";
 import { getDemoStore } from "@/server/repositories/demo";
 import { signValue } from "@/server/session-signing";
-import { recordSecurity } from "@/server/security/record";
+import { recordSecurity, recordSystemSecurity } from "@/server/security/record";
+import { DEMO_ORG_ID } from "@/domain/seed/generate";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 const switchInput = z.object({ profile_id: z.uuid() }).strict();
@@ -53,13 +54,23 @@ export async function demoAccessAction(_prev: DemoAccessState, form: FormData): 
   if (!code) redirect("/");
   const meta = await getRequestMeta();
   const limit = await hitRateLimit(meta.ip ?? "unknown", "demo_access", supabaseCounter());
-  if (!limit.allowed) return { error: "Too many attempts. Try again in 10 minutes." };
+  // Who tried to open a closed demo, in the security log (the IP comes from the request).
+  const log = (ok: boolean, reason: string) => {
+    const payload = { target: { type: "account", id: null }, account_key: "demo-access-code", reason };
+    return recordSystemSecurity([DEMO_ORG_ID], "anonymous", ok ? { type: "auth.login_succeeded", payload } : { type: "auth.login_failed", payload });
+  };
+  if (!limit.allowed) {
+    await log(false, "demo_access_rate_limited");
+    return { error: "Too many attempts. Try again in 10 minutes." };
+  }
   const given = Buffer.from(String(form.get("code") ?? "").trim().slice(0, 200));
   const expected = Buffer.from(code);
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
+    await log(false, "wrong_demo_access_code");
     await new Promise((r) => setTimeout(r, 500));
     return { error: "That access code is not correct." };
   }
+  await log(true, "demo_access_code");
   (await cookies()).set(DEMO_ACCESS_COOKIE, await signValue(demoAccessToken(code)), {
     httpOnly: true,
     sameSite: "lax",
