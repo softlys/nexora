@@ -24,6 +24,16 @@ export function demoAccessToken(code: string): string {
   return `demo-access:${createHash("sha256").update(code).digest("hex").slice(0, 32)}`;
 }
 
+/**
+ * Demo with NEXORA_DEMO_ACCESS_CODE: whether this request carries the access cookie. The public
+ * endpoints (website form, chat widget) check it too, so a closed demo stays closed to outsiders.
+ */
+export async function hasDemoAccess(): Promise<boolean> {
+  const code = getDataMode() === "demo" ? demoAccessCode() : null;
+  if (!code) return true;
+  return (await verifySignedValue((await cookies()).get(DEMO_ACCESS_COOKIE)?.value)) === demoAccessToken(code);
+}
+
 export type SessionUser = {
   profile: Profile;
   actor: Actor;
@@ -49,8 +59,7 @@ async function demoSession(): Promise<SessionUser> {
   // Read the cookie first: it marks the route dynamic before any file I/O, so builds never
   // prerender (and write the demo store from) an authenticated page.
   const cookieStore = await cookies();
-  const code = demoAccessCode();
-  if (code && (await verifySignedValue(cookieStore.get(DEMO_ACCESS_COOKIE)?.value)) !== demoAccessToken(code)) redirect("/login");
+  if (!(await hasDemoAccess())) redirect("/login");
   const data = await getDemoStore().read();
   const chosenId = await verifySignedValue(cookieStore.get(DEMO_USER_COOKIE)?.value);
   const profiles = data.profiles.filter((p) => p.organization_id === DEMO_ORG_ID);

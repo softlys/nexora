@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { receiveMessage, siteChatEnabled } from "@/server/integrations/chat";
 import { finishInbound, inboundContext, InboundConfigError } from "@/server/integrations/inbound";
+import { hasDemoAccess } from "@/server/auth";
 import { getServiceDb } from "@/server/db";
 import { clientIp } from "@/server/security/client-ip";
 import { hitRateLimit } from "@/server/security/rate-limit";
@@ -27,7 +28,7 @@ const sendInput = z
   .strict();
 
 async function guard(request: Request): Promise<Response | null> {
-  if (!siteChatEnabled()) return reply({ error: "The chat is not enabled." }, 404);
+  if (!siteChatEnabled() || !(await hasDemoAccess())) return reply({ error: "The chat is not enabled." }, 404);
   const ip = clientIp(request.headers.get("x-forwarded-for"), request.headers.get("x-real-ip")) ?? "unknown";
   const limit = await hitRateLimit(`ip:${ip}`, "site_chat", supabaseCounter());
   return limit.allowed ? null : reply({ error: "Too many messages. Please wait a minute." }, 429);

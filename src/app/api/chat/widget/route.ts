@@ -1,3 +1,4 @@
+import { hasDemoAccess } from "@/server/auth";
 import { siteChatEnabled } from "@/server/integrations/chat";
 import { locale } from "@/lib/i18n";
 
@@ -92,8 +93,8 @@ function script(texts: (typeof TEXTS)["en"], policyUrl: string | null): string {
 })();`;
 }
 
-export function GET() {
-  if (!siteChatEnabled()) return new Response("/* NEXORA website chat is not enabled (NEXORA_SITE_CHAT=on). */", { status: 404, headers: { "Content-Type": "text/javascript; charset=utf-8" } });
+export async function GET() {
+  if (!siteChatEnabled() || !(await hasDemoAccess())) return new Response("/* NEXORA website chat is not enabled (NEXORA_SITE_CHAT=on). */", { status: 404, headers: { "Content-Type": "text/javascript; charset=utf-8" } });
   const policy = process.env.NEXORA_PRIVACY_URL?.trim();
   return new Response(script(TEXTS[locale() === "ru" ? "ru" : "en"], policy && /^https:\/\//.test(policy) ? policy : null), { headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*" } });
 }

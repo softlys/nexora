@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { WebForm } from "@/domain/entities";
 import { locale, tr } from "@/lib/i18n";
+import { hasDemoAccess } from "@/server/auth";
 import { getServiceDb } from "@/server/db";
 import { finishInbound, inboundContext, InboundConfigError } from "@/server/integrations/inbound";
 import { clientIp } from "@/server/security/client-ip";
@@ -19,7 +20,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 const UTM = ["source", "medium", "campaign", "content", "term"] as const;
 
 async function loadForm(id: string): Promise<WebForm | null> {
-  if (!z.uuid().safeParse(id).success) return null;
+  if (!z.uuid().safeParse(id).success || !(await hasDemoAccess())) return null;
   try {
     const ctx = await inboundContext({ ip: null, user_agent: null, request_id: crypto.randomUUID() });
     const form = await getServiceDb().read(ctx.actor.organization_id, (tx) => tx.get("web_forms", id));

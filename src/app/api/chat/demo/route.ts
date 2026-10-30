@@ -1,9 +1,10 @@
+import { hasDemoAccess } from "@/server/auth";
 import { siteChatEnabled } from "@/server/integrations/chat";
 import { locale } from "@/lib/i18n";
 
 /** A sample company website with the chat widget, to try the website chat (and to show it in demos). */
-export function GET() {
-  if (!siteChatEnabled()) return new Response("Not found", { status: 404 });
+export async function GET() {
+  if (!siteChatEnabled() || !(await hasDemoAccess())) return new Response("Not found", { status: 404 });
   const ru = locale() === "ru";
   const html = `<!doctype html>
 <html lang="${ru ? "ru" : "en"}">
