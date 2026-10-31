@@ -3,7 +3,6 @@ node_modules
 .data
 .git
 .github
-.claude
 test-results
 playwright-report
 coverage

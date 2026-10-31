@@ -1,5 +1,7 @@
 # NEXORA
 
+> **Demo project from my portfolio.** Built and maintained by [psmoolyakov](https://github.com/softlys). All company and person data in it is fictional.
+
 **B2B operations platform for an equipment supplier: CRM, sales pipeline, orders, workflow automation and integrations.**
 
 NEXORA is a portfolio project built to production standards:
